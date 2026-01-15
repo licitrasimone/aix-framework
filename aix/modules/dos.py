@@ -150,7 +150,7 @@ class DoSScanner(BaseScanner):
                             severity=p['severity'],
                             technique=p['name'],
                             payload=payload[:200],
-                            response=f"{vulnerability_reason}. Response preview: {resp[:200]}",
+                            response=f"{vulnerability_reason}. Response preview: {resp[:5000]}",
                             target=self.target
                         )
                         self.findings.append(finding)
@@ -213,7 +213,8 @@ def run(target: str = None, api_key: str = None, profile: str = None,
                          headers=kwargs.get('headers'),
                          injection_param=kwargs.get('injection_param'),
                          body_format=kwargs.get('body_format'),
-                         safe_mode=kwargs.get('safe_mode', True)) # Explicitly pass safe_mode from kwargs or default? args usually has it.
+                         safe_mode=kwargs.get('safe_mode', True),
+                         refresh_config=kwargs.get('refresh_config')) # Explicitly pass safe_mode from kwargs or default? args usually has it.
     # run function didn't have safe_mode before? Checking original file definition... 
     # Original run def: `def run(..., **kwargs):`
     # Original DoSScanner init: `safe_mode: bool = True`.

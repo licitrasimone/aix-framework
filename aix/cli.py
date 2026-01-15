@@ -121,7 +121,11 @@ def main(ctx, version):
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
 @click.option('--headers', '-H', help='Custom headers (key:value; ...)')
 @click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
-def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, headers, format):
+@click.option('--refresh-url', help='URL to fetch new session ID if expired')
+@click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
+@click.option('--refresh-param', help='Parameter to update with new session ID')
+@click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
+def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
     """
     Reconnaissance - Discover AI endpoint details
 
@@ -143,7 +147,8 @@ def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, h
     target, parsed_request = validate_input(target, request, param)
     recon.run(target, output=output, timeout=timeout, verbose=verbose,
               parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
-              injection_param=param, body_format=format)
+              injection_param=param, body_format=format,
+              refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error})
 
 
 # Alias for recon
@@ -201,7 +206,11 @@ main.add_command(intercept_cmd, name='intercept')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
 @click.option('--headers', '-H', help='Custom headers (key:value; ...)')
 @click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
-def inject_cmd(target, request, param, key, profile, targets, evasion, payloads, threads, verbose, output, proxy, cookie, headers, format):
+@click.option('--refresh-url', help='URL to fetch new session ID if expired')
+@click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
+@click.option('--refresh-param', help='Parameter to update with new session ID')
+@click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
+def inject_cmd(target, request, param, key, profile, targets, evasion, payloads, threads, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
     """
     Inject - Prompt injection attacks
 
@@ -226,7 +235,8 @@ def inject_cmd(target, request, param, key, profile, targets, evasion, payloads,
         evasion=evasion, payloads_file=payloads,
         threads=threads, verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
-        injection_param=param, body_format=format
+        injection_param=param, body_format=format,
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
     )
 
 
@@ -250,7 +260,11 @@ main.add_command(inject_cmd, name='inject')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
 @click.option('--headers', '-H', help='Custom headers (key:value; ...)')
 @click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
-def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, verbose, output, proxy, cookie, headers, format):
+@click.option('--refresh-url', help='URL to fetch new session ID if expired')
+@click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
+@click.option('--refresh-param', help='Parameter to update with new session ID')
+@click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
+def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
     """
     Jailbreak - Bypass AI restrictions
 
@@ -272,7 +286,8 @@ def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, v
         target=target, api_key=key, profile=profile,
         evasion=evasion, test_harmful=test_harmful, verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
-        injection_param=param, body_format=format
+        injection_param=param, body_format=format,
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
     )
 
 
@@ -294,7 +309,11 @@ main.add_command(jailbreak_cmd, name='jailbreak')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
 @click.option('--headers', '-H', help='Custom headers (key:value; ...)')
 @click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
-def extract_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format):
+@click.option('--refresh-url', help='URL to fetch new session ID if expired')
+@click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
+@click.option('--refresh-param', help='Parameter to update with new session ID')
+@click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
+def extract_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
     """
     Extract - System prompt extraction
 
@@ -317,7 +336,8 @@ def extract_cmd(target, request, param, key, profile, verbose, output, proxy, co
         target=target, api_key=key, profile=profile,
         verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
-        injection_param=param, body_format=format
+        injection_param=param, body_format=format,
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
     )
 
 
@@ -339,7 +359,11 @@ main.add_command(extract_cmd, name='extract')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
 @click.option('--headers', '-H', help='Custom headers (key:value; ...)')
 @click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
-def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format):
+@click.option('--refresh-url', help='URL to fetch new session ID if expired')
+@click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
+@click.option('--refresh-param', help='Parameter to update with new session ID')
+@click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
+def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
     """
     Leak - Training data extraction
 
@@ -362,7 +386,8 @@ def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cooki
         target=target, api_key=key, profile=profile,
         verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
-        injection_param=param, body_format=format
+        injection_param=param, body_format=format,
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
     )
 
 
@@ -431,7 +456,11 @@ main.add_command(exfil_cmd, name='exfil')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
 @click.option('--headers', '-H', help='Custom headers (key:value; ...)')
 @click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
-def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format):
+@click.option('--refresh-url', help='URL to fetch new session ID if expired')
+@click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
+@click.option('--refresh-param', help='Parameter to update with new session ID')
+@click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
+def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
     """
     Agent - AI agent exploitation
 
@@ -454,7 +483,8 @@ def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cook
         target=target, api_key=key, profile=profile,
         verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
-        injection_param=param, body_format=format
+        injection_param=param, body_format=format,
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
     )
 
 
@@ -476,7 +506,11 @@ main.add_command(agent_cmd, name='agent')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
 @click.option('--headers', '-H', help='Custom headers (key:value; ...)')
 @click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
-def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format):
+@click.option('--refresh-url', help='URL to fetch new session ID if expired')
+@click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
+@click.option('--refresh-param', help='Parameter to update with new session ID')
+@click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
+def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
     """
     DoS - Denial of Service testing
 
@@ -499,7 +533,8 @@ def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie
         target=target, api_key=key, profile=profile,
         verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
-        injection_param=param, body_format=format
+        injection_param=param, body_format=format,
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
     )
 
 
@@ -522,7 +557,11 @@ main.add_command(dos_cmd, name='dos')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
 @click.option('--headers', '-H', help='Custom headers (key:value; ...)')
 @click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
-def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, proxy, cookie, headers, format):
+@click.option('--refresh-url', help='URL to fetch new session ID if expired')
+@click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
+@click.option('--refresh-param', help='Parameter to update with new session ID')
+@click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
+def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
     """
     Fuzz - Fuzzing and edge cases
 
@@ -545,7 +584,8 @@ def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, 
         target=target, api_key=key, profile=profile,
         iterations=iterations, verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
-        injection_param=param, body_format=format
+        injection_param=param, body_format=format,
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
     )
 
 
@@ -607,7 +647,11 @@ def db(export, clear, target, module):
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
 @click.option('--headers', '-H', help='Custom headers (key:value; ...)')
 @click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
-def scan(target, request, param, key, profile, evasion, output, verbose, proxy, cookie, headers, format):
+@click.option('--refresh-url', help='URL to fetch new session ID if expired')
+@click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
+@click.option('--refresh-param', help='Parameter to update with new session ID')
+@click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
+def scan(target, request, param, key, profile, evasion, output, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
     """
     Scan - Run all modules against target
 
@@ -650,7 +694,8 @@ def scan(target, request, param, key, profile, evasion, output, verbose, proxy, 
                 target=target, api_key=key, profile=profile,
                 verbose=verbose,
                 parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
-                injection_param=param, body_format=format
+                injection_param=param, body_format=format,
+                refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
             )
         except Exception as e:
             console.print(f"[red][-][/red] {name} failed: {e}")

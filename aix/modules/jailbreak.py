@@ -36,8 +36,8 @@ class JailbreakScanner(BaseScanner):
                         self.stats['success'] += 1
                         self._print('success', '', j['name'])
                         self.findings.append(Finding(title=f"Jailbreak - {j['name']}", severity=j['severity'],
-                            technique=j['name'], payload=j['payload'][:200], response=resp[:300], target=self.target))
-                        self.db.add_result(self.target, 'jailbreak', j['name'], 'success', j['payload'][:200], resp[:300], j['severity'].value)
+                            technique=j['name'], payload=j['payload'][:200], response=resp[:5000], target=self.target))
+                        self.db.add_result(self.target, 'jailbreak', j['name'], 'success', j['payload'][:200], resp[:5000], j['severity'].value)
                     else:
                         self.stats['blocked'] += 1
                         self._print('blocked', '', j['name'])
@@ -64,6 +64,7 @@ def run(target: str = None, api_key: str = None, profile: str = None, browser: b
         parsed_request=parsed_request, proxy=kwargs.get('proxy'), cookies=cookies,
         headers=kwargs.get('headers'),
         injection_param=kwargs.get('injection_param'),
-        body_format=kwargs.get('body_format')
+        body_format=kwargs.get('body_format'),
+        refresh_config=kwargs.get('refresh_config')
     )
     asyncio.run(scanner.run())

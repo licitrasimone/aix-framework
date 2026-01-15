@@ -36,8 +36,8 @@ class ExtractScanner(BaseScanner):
                         self.stats['success'] += 1
                         self._print('success', '', e['name'])
                         self.findings.append(Finding(title=f"Extract - {e['name']}", severity=e['severity'],
-                            technique=e['name'], payload=e['payload'], response=resp[:500], target=self.target))
-                        self.db.add_result(self.target, 'extract', e['name'], 'success', e['payload'], resp[:500], e['severity'].value)
+                            technique=e['name'], payload=e['payload'], response=resp[:5000], target=self.target))
+                        self.db.add_result(self.target, 'extract', e['name'], 'success', e['payload'], resp[:5000], e['severity'].value)
                     else:
                         self.stats['blocked'] += 1
                         self._print('blocked', '', e['name'])
@@ -61,5 +61,6 @@ def run(target: str = None, api_key: str = None, profile: str = None,
                              parsed_request=parsed_request, proxy=kwargs.get('proxy'), cookies=cookies,
                              headers=kwargs.get('headers'),
                              injection_param=kwargs.get('injection_param'),
-                             body_format=kwargs.get('body_format'))
+                             body_format=kwargs.get('body_format'),
+                             refresh_config=kwargs.get('refresh_config'))
     asyncio.run(scanner.run())

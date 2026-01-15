@@ -19,6 +19,7 @@ from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 
 import httpx
+import urllib.parse
 from rich.console import Console
 
 console = Console()
@@ -160,6 +161,7 @@ class APIConnector(Connector):
         self.injection_param = kwargs.get('injection_param')
         self.body_format = kwargs.get('body_format', 'json')
         self.client: Optional[httpx.AsyncClient] = None
+        self.refresh_config = kwargs.get('refresh_config', {})
         
         # Detect API format from URL if not specified
         if api_format == 'generic':
@@ -286,68 +288,166 @@ class APIConnector(Connector):
             cookies=cookies,
             verify=False  # Disable SSL verification for proxying (Burp/ZAP)
         )
-    
+
+    async def _refresh_session(self) -> bool:
+        """
+        Attempt to refresh the session ID/token.
+        Returns True if successful, False otherwise.
+        """
+        refresh_url = self.refresh_config.get('url')
+        refresh_regex = self.refresh_config.get('regex')
+        refresh_param = self.refresh_config.get('param')
+
+        if not refresh_url or not refresh_regex or not refresh_param:
+            return False
+
+        console.print("[yellow]CONNECTOR[/yellow] [!] Session expired or error detected. Attempting refresh...")
+        console.print(f"[yellow]CONNECTOR[/yellow] [*] Fetching fresh token from: {refresh_url}")
+
+        try:
+            # Create a localized client for the refresh
+            proxy = self.config.get('proxy')
+            if proxy and not (proxy.startswith('http://') or proxy.startswith('https://')):
+                 proxy = 'http://' + proxy
+
+            # EXPLICITLY disable redirect following to capture Location header
+            async with httpx.AsyncClient(proxy=proxy, verify=False, trust_env=False, follow_redirects=False) as client:
+                response = await client.get(refresh_url)
+                
+                content_to_search = ""
+                
+                # Check for Redirect (3xx)
+                if 300 <= response.status_code < 400:
+                    console.print(f"[cyan]CONNECTOR[/cyan] [*] Refresh endpoint returned redirect: {response.status_code}")
+                    if 'Location' in response.headers:
+                        content_to_search = response.headers['Location']
+                        # Append to current text just in case regex needs more context or body has it
+                        # But usually Location is just the URL.
+                    else:
+                        console.print("[red]CONNECTOR[/red] [-] Redirect caught but no Location header found")
+                
+                # Check for Success (2xx)
+                elif 200 <= response.status_code < 300:
+                    content_to_search = response.text
+                
+                # Errors
+                else:
+                    console.print(f"[red]CONNECTOR[/red] [-] Refresh request failed with status: {response.status_code}")
+                    return False
+                
+                # Extract new ID using regex
+                match = re.search(refresh_regex, content_to_search)
+                if match:
+                    new_id = match.group(1)
+                    console.print(f"[green]CONNECTOR[/green] [+] Refreshed session ID: {new_id}")
+                    
+                    # Update the target URL with the new parameter
+                    parsed_url = urllib.parse.urlparse(self.url)
+                    query_params = urllib.parse.parse_qs(parsed_url.query)
+                    query_params[refresh_param] = [new_id]
+                    
+                    new_query = urllib.parse.urlencode(query_params, doseq=True)
+                    self.url = urllib.parse.urlunparse(parsed_url._replace(query=new_query))
+                    
+                    console.print(f"[green]CONNECTOR[/green] [*] Updated target: {self.url}")
+                    return True
+                else:
+                    console.print(f"[red]CONNECTOR[/red] [-] Could not extract session ID using regex: {refresh_regex}")
+                    if 300 <= response.status_code < 400:
+                         console.print(f"[red]CONNECTOR[/red] [-] Checked Location: {content_to_search}")
+                    return False
+
+        except Exception as e:
+            console.print(f"[red]CONNECTOR[/red] [-] Refresh failed: {e}")
+            return False
+
     async def send(self, payload: str) -> str:
         """Send message to API and return response"""
         if not self.client:
             await self.connect()
         
-        # Build URL with endpoint
-        endpoint = self.format_config.get('endpoint', '')
-        url = self.url.rstrip('/') + endpoint
+        # Retry loop for session refresh
+        max_retries = 1
+        attempt = 0
         
-        # Use profile URL if available
-        if self.profile and self.profile.endpoint:
-            url = self.profile.url.rstrip('/') + self.profile.endpoint
-        
-        headers = self._build_headers()
-
-        # Verbose logging for debugging proxy usage
-        body = self._build_payload(payload)
-
-        try:
-            verbose = bool(self.config.get('verbose'))
-        except Exception:
-            verbose = False
-        if verbose:
-            console.print(f"[cyan]CONNECTOR[/cyan] [*] POST {url}")
-            console.print(f"[cyan]CONNECTOR[/cyan] [*] Headers: {headers}")
-            console.print(f"[cyan]CONNECTOR[/cyan] [*] Body keys: {list(body.keys()) if isinstance(body, dict) else 'raw'}")
-        
-        try:
-            if self.body_format == 'json':
-                response = await self.client.post(url, json=body, headers=headers)
-            elif self.body_format == 'form':
-                response = await self.client.post(url, data=body, headers=headers)
-            elif self.body_format == 'multipart':
-                # Use files kwarg with (None, value) tuple to send as multipart fields
-                files = {k: (None, str(v)) for k, v in body.items()} if isinstance(body, dict) else body
-                response = await self.client.post(url, files=files, headers=headers)
-            else:
-                # Default to json
-                response = await self.client.post(url, json=body, headers=headers)
-                
-            response.raise_for_status()
+        while attempt <= max_retries:
+            attempt += 1
             
-            data = response.json()
-            return self._extract_response(data)
-        
-        except httpx.HTTPStatusError as e:
-            status = e.response.status_code
-            if status in [401, 403]:
-                console.print(f"[red][!] Authentication failed (HTTP {status})[/red]")
-            elif status >= 500:
-                console.print(f"[red][!] Server error (HTTP {status})[/red]")
-            elif status == 429:
-                console.print(f"[yellow][!] Rate limit exceeded (HTTP {status})[/yellow]")
+            # Build URL with endpoint
+            endpoint = self.format_config.get('endpoint', '')
+            url = self.url.rstrip('/') + endpoint
+            
+            # Use profile URL if available
+            if self.profile and self.profile.endpoint:
+                url = self.profile.url.rstrip('/') + self.profile.endpoint
+            
+            headers = self._build_headers()
+            body = self._build_payload(payload)
+
+            try:
+                if self.body_format == 'json':
+                    response = await self.client.post(url, json=body, headers=headers)
+                elif self.body_format == 'form':
+                    response = await self.client.post(url, data=body, headers=headers)
+                elif self.body_format == 'multipart':
+                    files = {k: (None, str(v)) for k, v in body.items()} if isinstance(body, dict) else body
+                    response = await self.client.post(url, files=files, headers=headers)
+                else:
+                    response = await self.client.post(url, json=body, headers=headers)
                 
-            raise ConnectionError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
-        except json.JSONDecodeError:
-            return response.text
-        except httpx.ConnectError:
-             raise ConnectionError(f"Failed to connect to {url}. Check your proxy settings.")
-        except Exception as e:
-            raise ConnectionError(f"Request failed: {str(e)}")
+                # Check for triggering conditions for refresh
+                should_refresh = False
+                
+                # 1. HTTP Error Status codes
+                if response.status_code in [401, 403, 500]:
+                    should_refresh = True
+                
+                # 2. Content-based error trigger (for 200 OK errors)
+                refresh_error_sig = self.refresh_config.get('error')
+                if refresh_error_sig:
+                     if re.search(refresh_error_sig, response.text):
+                         console.print(f"[yellow]CONNECTOR[/yellow] [!] Response matches error signature: '{refresh_error_sig}'")
+                         should_refresh = True
+
+                # Perform refresh if needed and we haven't retried yet
+                if should_refresh and self.refresh_config.get('url') and attempt <= max_retries:
+                    if await self._refresh_session():
+                        continue # Retry loop with new URL
+                    else:
+                        # Refresh failed, let it error out naturally or return the error response
+                        pass
+
+                response.raise_for_status()
+                
+                data = response.json()
+                return self._extract_response(data)
+            
+            except httpx.HTTPStatusError as e:
+                # If we are here, it means we either didn't refresh or refresh failed
+                status = e.response.status_code
+                if status in [401, 403]:
+                    console.print(f"[red][!] Authentication failed (HTTP {status})[/red]")
+                elif status >= 500:
+                    console.print(f"[red][!] Server error (HTTP {status})[/red]")
+                elif status == 429:
+                    console.print(f"[yellow][!] Rate limit exceeded (HTTP {status})[/yellow]")
+                    
+                raise ConnectionError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
+            except json.JSONDecodeError:
+                # Check for content error match on non-JSON response too
+                refresh_error_sig = self.refresh_config.get('error')
+                if refresh_error_sig and attempt <= max_retries and self.refresh_config.get('url'):
+                    # We might have failed JSON decode because of an error page
+                     if re.search(refresh_error_sig, response.text):
+                         console.print(f"[yellow]CONNECTOR[/yellow] [!] Response matches error signature (Auto-Refresh Triggered)")
+                         if await self._refresh_session():
+                             continue # Retry loop
+
+                return response.text
+            except httpx.ConnectError:
+                 raise ConnectionError(f"Failed to connect to {url}. Check your proxy settings.")
+            except Exception as e:
+                raise ConnectionError(f"Request failed: {str(e)}")
     
     async def close(self) -> None:
         """Close HTTP client"""

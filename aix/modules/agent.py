@@ -88,7 +88,7 @@ class AgentScanner(BaseScanner):
                             severity=p['severity'],
                             technique=p['name'],
                             payload=p['payload'][:200],
-                            response=resp[:500],
+                            response=resp[:5000],
                             target=self.target
                         )
                         self.findings.append(finding)
@@ -96,7 +96,7 @@ class AgentScanner(BaseScanner):
                         self.db.add_result(
                             self.target, 'agent', p['name'],
                             'success', p['payload'][:200],
-                            resp[:500], p['severity'].value
+                            resp[:5000], p['severity'].value
                         )
                     else:
                         self.stats['blocked'] += 1
@@ -142,5 +142,6 @@ def run(target: str = None, api_key: str = None, profile: str = None,
                            parsed_request=parsed_request, proxy=kwargs.get('proxy'), cookies=kwargs.get('cookies'),
                            headers=kwargs.get('headers'),
                            injection_param=kwargs.get('injection_param'),
-                           body_format=kwargs.get('body_format'))
+                           body_format=kwargs.get('body_format'),
+                           refresh_config=kwargs.get('refresh_config'))
     asyncio.run(scanner.run())

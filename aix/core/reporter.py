@@ -45,7 +45,7 @@ class Finding:
             'severity': self.severity.value,
             'technique': self.technique,
             'payload': self.payload,
-            'response': self.response[:500],
+            'response': self.response, # Removed truncation
             'target': self.target,
             'details': self.details,
             'timestamp': self.timestamp.isoformat(),
@@ -171,7 +171,7 @@ class Reporter:
                     </div>
                     <div class="finding-field">
                         <strong>Response:</strong>
-                        <pre><code>{self._escape_html(finding.response[:1000])}</code></pre>
+                        <pre><code>{self._escape_html(finding.response)}</code></pre>
                     </div>
                     {f'<div class="finding-field"><strong>Details:</strong> {finding.details}</div>' if finding.details else ''}
                 </div>
@@ -314,8 +314,26 @@ class Reporter:
             background: #0a0a0f;
             padding: 1rem;
             border-radius: 4px;
-            overflow-x: auto;
+            overflow: auto;
+            max-height: 400px;
             margin-top: 0.5rem;
+            border: 1px solid #333;
+        }}
+
+        /* Custom Scrollbar */
+        pre::-webkit-scrollbar {{
+            width: 8px;
+            height: 8px;
+        }}
+        pre::-webkit-scrollbar-track {{
+            background: #0a0a0f; 
+        }}
+        pre::-webkit-scrollbar-thumb {{
+            background: #2a2a3a; 
+            border-radius: 4px;
+        }}
+        pre::-webkit-scrollbar-thumb:hover {{
+            background: #00d4ff; 
         }}
         
         code {{

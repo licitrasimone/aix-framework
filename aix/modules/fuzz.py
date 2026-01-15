@@ -172,7 +172,7 @@ class FuzzScanner(BaseScanner):
                             severity=p['severity'],
                             technique=p['name'],
                             payload=p['payload'][:200] if len(p['payload']) < 500 else f"{p['payload'][:100]}... ({len(p['payload'])} chars)",
-                            response=resp[:500],
+                            response=resp[:5000],
                             target=self.target
                         )
                         self.findings.append(finding)
@@ -180,7 +180,7 @@ class FuzzScanner(BaseScanner):
                         self.db.add_result(
                             self.target, 'fuzz', p['name'],
                             'anomaly', p['payload'][:200],
-                            resp[:500], p['severity'].value
+                            resp[:5000], p['severity'].value
                         )
                     else:
                         self.stats['blocked'] += 1
@@ -229,7 +229,7 @@ def run(target: str = None, api_key: str = None, profile: str = None, browser: b
     scanner = FuzzScanner(target, api_key=api_key, verbose=verbose,
                           parsed_request=parsed_request, iterations=iterations, 
                           proxy=kwargs.get('proxy'), cookies=cookies, headers=kwargs.get('headers'), injection_param=kwargs.get('injection_param'),
-                          body_format=kwargs.get('body_format'))
+                          body_format=kwargs.get('body_format'), refresh_config=kwargs.get('refresh_config'))
     asyncio.run(scanner.run())
 
 __all__ = ["run"]
