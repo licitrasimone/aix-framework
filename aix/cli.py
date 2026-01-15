@@ -600,6 +600,7 @@ def db(export, clear, target, module):
 @click.option('--param', '-p', help='Parameter path for injection (e.g., messages[0].content)')
 @click.option('--key', '-k', help='API key for direct API access')
 @click.option('--profile', '-P', help='Use saved profile')
+@click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='light', help='Evasion level')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
