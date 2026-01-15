@@ -1,4 +1,4 @@
-# AIX Framework - Roadmap & TODO
+# AIX Framework - Roadmap
 
 This document outlines the planned improvements, feature requests, and future direction for the AIX Framework.
 
