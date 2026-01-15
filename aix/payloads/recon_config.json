@@ -1,0 +1,269 @@
+{
+    "model_signatures": {
+        "gpt-4": [
+            [
+                "gpt-4",
+                10
+            ],
+            [
+                "openai",
+                5
+            ],
+            [
+                "as an ai language model",
+                1
+            ],
+            [
+                "model: gpt",
+                8
+            ]
+        ],
+        "gpt-3.5": [
+            [
+                "gpt-3.5",
+                10
+            ],
+            [
+                "chatgpt",
+                8
+            ],
+            [
+                "openai",
+                5
+            ],
+            [
+                "turbo",
+                3
+            ]
+        ],
+        "claude": [
+            [
+                "claude",
+                10
+            ],
+            [
+                "anthropic",
+                10
+            ],
+            [
+                "h, h, human",
+                5
+            ],
+            [
+                "constitutional ai",
+                8
+            ]
+        ],
+        "llama": [
+            [
+                "llama",
+                10
+            ],
+            [
+                "meta ai",
+                8
+            ],
+            [
+                "llama 2",
+                8
+            ],
+            [
+                "llama 3",
+                8
+            ],
+            [
+                "facebook",
+                5
+            ]
+        ],
+        "gemini": [
+            [
+                "gemini",
+                10
+            ],
+            [
+                "google",
+                5
+            ],
+            [
+                "bard",
+                8
+            ],
+            [
+                "paalm",
+                8
+            ],
+            [
+                "lamda",
+                5
+            ]
+        ],
+        "mistral": [
+            [
+                "mistral",
+                10
+            ],
+            [
+                "mixtral",
+                10
+            ],
+            [
+                "le chat",
+                5
+            ]
+        ],
+        "cohere": [
+            [
+                "cohere",
+                10
+            ],
+            [
+                "command r",
+                8
+            ],
+            [
+                "command-r",
+                8
+            ]
+        ]
+    },
+    "negative_signatures": {
+        "gpt-4": [
+            "anthropic",
+            "claude",
+            "google",
+            "bard",
+            "gemini",
+            "llama",
+            "meta",
+            "mistral"
+        ],
+        "gpt-3.5": [
+            "anthropic",
+            "claude",
+            "google",
+            "bard",
+            "gemini",
+            "llama",
+            "meta",
+            "mistral"
+        ],
+        "claude": [
+            "openai",
+            "gpt",
+            "chatgpt",
+            "google",
+            "bard",
+            "gemini",
+            "llama",
+            "meta"
+        ],
+        "llama": [
+            "openai",
+            "gpt",
+            "chatgpt",
+            "anthropic",
+            "claude",
+            "google",
+            "gemini"
+        ],
+        "gemini": [
+            "openai",
+            "gpt",
+            "chatgpt",
+            "anthropic",
+            "claude",
+            "llama",
+            "meta"
+        ],
+        "mistral": [
+            "openai",
+            "gpt",
+            "google",
+            "anthropic",
+            "meta"
+        ],
+        "cohere": [
+            "openai",
+            "gpt",
+            "google",
+            "anthropic",
+            "meta",
+            "llama"
+        ]
+    },
+    "version_patterns": {
+        "gpt-4": [
+            "(gpt-4-[a-z0-9]+)",
+            "(gpt-4)"
+        ],
+        "gpt-3.5": [
+            "(gpt-3\\.5-turbo)",
+            "(gpt-3\\.5)"
+        ],
+        "claude": [
+            "(claude[\\s-]?3[\\s-]?[a-z]+)",
+            "(claude[\\s-]?2\\.[0-9])",
+            "(claude[\\s-]?instant)"
+        ],
+        "llama": [
+            "(llama[\\s-]?3\\.?[0-9]?)",
+            "(llama[\\s-]?3)",
+            "(llama[\\s-]?2)",
+            "(llama[\\s-]?1)",
+            "([0-9]+b)",
+            "(meta[\\s-]?llama)",
+            "(llama)"
+        ],
+        "mistral": [
+            "(mixtral[\\s-]?8x7b)",
+            "(mistral[\\s-]?7b)",
+            "(mistral[\\s-]?large)",
+            "(mistral[\\s-]?medium)"
+        ],
+        "gemini": [
+            "(gemini[\\s-]?1\\.5)",
+            "(gemini[\\s-]?pro)",
+            "(gemini[\\s-]?ultra)"
+        ]
+    },
+    "waf_signatures": {
+        "cloudflare": [
+            "cloudflare",
+            "cf-ray",
+            "__cfruid"
+        ],
+        "akamai": [
+            "akamai",
+            "ak_bmsc"
+        ],
+        "aws_waf": [
+            "awswaf",
+            "x-amzn-requestid"
+        ],
+        "imperva": [
+            "incapsula",
+            "visid_incap"
+        ],
+        "custom": [
+            "blocked",
+            "forbidden",
+            "rate limit",
+            "too many requests"
+        ]
+    },
+    "discovery_params": [
+        "temperature",
+        "top_p",
+        "top_k",
+        "stream",
+        "max_tokens",
+        "stop",
+        "frequency_penalty",
+        "presence_penalty",
+        "seed",
+        "tools",
+        "functions",
+        "response_format"
+    ]
+}

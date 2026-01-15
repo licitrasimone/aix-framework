@@ -314,7 +314,6 @@ def extract_cmd(target, request, param, key, profile, browser, verbose, output, 
         aix extract --profile company.com
     """
     print_banner()
-    print_banner()
     target, parsed_request = validate_input(target, request, param)
     extract.run(
         target=target, api_key=key, profile=profile,
@@ -360,7 +359,6 @@ def leak_cmd(target, request, param, key, profile, browser, verbose, output, pro
         aix leak -r request.txt -p "messages[0].content"
         aix leak --profile company.com
     """
-    print_banner()
     print_banner()
     target, parsed_request = validate_input(target, request, param)
     leak.run(
@@ -456,7 +454,6 @@ def agent_cmd(target, request, param, key, profile, browser, verbose, output, pr
         aix agent --profile company.com
     """
     print_banner()
-    print_banner()
     target, parsed_request = validate_input(target, request, param)
     agent.run(
         target=target, api_key=key, profile=profile,
@@ -502,7 +499,6 @@ def dos_cmd(target, request, param, key, profile, browser, verbose, output, prox
         aix dos -r request.txt -p "messages[0].content"
         aix dos --profile company.com
     """
-    print_banner()
     print_banner()
     target, parsed_request = validate_input(target, request, param)
     dos.run(
@@ -550,7 +546,6 @@ def fuzz_cmd(target, request, param, key, profile, browser, iterations, verbose,
         aix fuzz -r request.txt -p "messages[0].content"
         aix fuzz --profile company.com --iterations 500
     """
-    print_banner()
     print_banner()
     target, parsed_request = validate_input(target, request, param)
     fuzz.run(

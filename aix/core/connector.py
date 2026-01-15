@@ -241,15 +241,20 @@ class APIConnector(Connector):
         # Navigate nested path like "choices.0.message.content"
         result = data
         for key in path.split('.'):
-            if key.isdigit():
-                result = result[int(key)]
-            else:
+            if isinstance(result, list):
+                if key.isdigit() and int(key) < len(result):
+                    result = result[int(key)]
+                else:
+                    return ""
+            elif isinstance(result, dict):
                 result = result.get(key, '')
+            else:
+                return str(result)
             
             if not result:
                 break
         
-        return str(result) if result else ""
+        return str(result) if result is not None else ""
     
     async def connect(self) -> None:
         """Initialize HTTP client"""
@@ -326,6 +331,14 @@ class APIConnector(Connector):
             return self._extract_response(data)
         
         except httpx.HTTPStatusError as e:
+            status = e.response.status_code
+            if status in [401, 403]:
+                console.print(f"[red][!] Authentication failed (HTTP {status})[/red]")
+            elif status >= 500:
+                console.print(f"[red][!] Server error (HTTP {status})[/red]")
+            elif status == 429:
+                console.print(f"[yellow][!] Rate limit exceeded (HTTP {status})[/yellow]")
+                
             raise ConnectionError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
         except json.JSONDecodeError:
             return response.text
@@ -734,6 +747,14 @@ class RequestConnector(Connector):
                 return response.text
 
         except httpx.HTTPStatusError as e:
+            status = e.response.status_code
+            if status in [401, 403]:
+                console.print(f"[red][!] Authentication failed (HTTP {status})[/red]")
+            elif status >= 500:
+                console.print(f"[red][!] Server error (HTTP {status})[/red]")
+            elif status == 429:
+                console.print(f"[yellow][!] Rate limit exceeded (HTTP {status})[/yellow]")
+
             raise ConnectionError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
         except httpx.ConnectError:
              raise ConnectionError(f"Failed to connect to {injected_request.url}. Check your proxy settings.")
@@ -768,10 +789,16 @@ class RequestConnector(Connector):
         """Navigate nested path in response data"""
         result = data
         for key in path.split('.'):
-            if key.isdigit():
-                result = result[int(key)]
-            else:
+            if isinstance(result, list):
+                if key.isdigit() and int(key) < len(result):
+                    result = result[int(key)]
+                else:
+                    return ""
+            elif isinstance(result, dict):
                 result = result.get(key, '')
+            else:
+                return str(result)
+            
             if not result:
                 break
         return result

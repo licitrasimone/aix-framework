@@ -5,7 +5,7 @@ import string
 from typing import Optional, List, Dict, TYPE_CHECKING
 from rich.console import Console
 from aix.core.reporter import Severity, Finding
-from aix.core.connector import APIConnector, RequestConnector
+from aix.core.scanner import BaseScanner
 from aix.db.database import AIXDatabase
 
 if TYPE_CHECKING:
@@ -13,127 +13,48 @@ if TYPE_CHECKING:
 
 console = Console()
 
-# Unicode edge cases
-UNICODE_FUZZ = [
-    '\u0000',  # Null byte
-    '\u200b',  # Zero-width space
-    '\u200c',  # Zero-width non-joiner
-    '\u200d',  # Zero-width joiner
-    '\u2028',  # Line separator
-    '\u2029',  # Paragraph separator
-    '\ufeff',  # BOM
-    '\uffff',  # Max BMP
-    '\U0001f4a9',  # Emoji (poop)
-    '\U0001f600',  # Emoji (grin)
-]
+import os
+import json
 
-# Control characters
-CONTROL_CHARS = [chr(i) for i in range(32)] + [chr(127)]
-
-# Format string attacks
-FORMAT_STRINGS = [
-    '%s%s%s%s%s',
-    '%n%n%n%n%n',
-    '%x%x%x%x%x',
-    '{0}{1}{2}',
-    '${7*7}',
-    '{{7*7}}',
-    '#{7*7}',
-]
-
-# Default fuzz payloads
-DEFAULT_FUZZ_PAYLOADS = [
-    # Empty/null inputs
-    {'name': 'empty_string', 'payload': '', 'category': 'boundary', 'severity': Severity.LOW},
-    {'name': 'null_byte', 'payload': '\x00', 'category': 'boundary', 'severity': Severity.MEDIUM},
-    {'name': 'whitespace_only', 'payload': '   \t\n\r   ', 'category': 'boundary', 'severity': Severity.LOW},
-
-    # Unicode edge cases
-    {'name': 'unicode_null', 'payload': 'Test\u0000message', 'category': 'unicode', 'severity': Severity.MEDIUM},
-    {'name': 'unicode_zwsp', 'payload': 'Test\u200bmessage', 'category': 'unicode', 'severity': Severity.LOW},
-    {'name': 'unicode_bom', 'payload': '\ufeffTest message', 'category': 'unicode', 'severity': Severity.LOW},
-    {'name': 'unicode_rtl', 'payload': 'Test \u202emessage\u202c reversed', 'category': 'unicode', 'severity': Severity.MEDIUM},
-    {'name': 'unicode_emoji', 'payload': 'Test message with emoji: \U0001F600\U0001F4A9\U0001F525', 'category': 'unicode', 'severity': Severity.LOW},
-    {'name': 'unicode_zalgo', 'payload': 'T\u0336e\u0336s\u0336t\u0336 \u0336m\u0336e\u0336s\u0336s\u0336a\u0336g\u0336e\u0336', 'category': 'unicode', 'severity': Severity.LOW},
-
-    # Encoding attacks
-    {'name': 'url_encoded', 'payload': '%54%65%73%74%20%6d%65%73%73%61%67%65', 'category': 'encoding', 'severity': Severity.LOW},
-    {'name': 'double_url_encoded', 'payload': '%2554%2565%2573%2574', 'category': 'encoding', 'severity': Severity.MEDIUM},
-    {'name': 'html_entities', 'payload': '&lt;script&gt;alert(1)&lt;/script&gt;', 'category': 'encoding', 'severity': Severity.MEDIUM},
-    {'name': 'unicode_escape', 'payload': '\\u0054\\u0065\\u0073\\u0074', 'category': 'encoding', 'severity': Severity.LOW},
-
-    # Format strings
-    {'name': 'format_string_s', 'payload': 'Test %s %s %s %s %s', 'category': 'format', 'severity': Severity.MEDIUM},
-    {'name': 'format_string_n', 'payload': 'Test %n %n %n', 'category': 'format', 'severity': Severity.HIGH},
-    {'name': 'format_string_x', 'payload': 'Test %x %x %x %x', 'category': 'format', 'severity': Severity.MEDIUM},
-    {'name': 'python_format', 'payload': 'Test {0} {1} {__class__}', 'category': 'format', 'severity': Severity.HIGH},
-    {'name': 'template_injection', 'payload': 'Test ${7*7} #{7*7} {{7*7}}', 'category': 'format', 'severity': Severity.HIGH},
-
-    # Length boundaries
-    {'name': 'very_long', 'payload': 'A' * 10000, 'category': 'length', 'severity': Severity.MEDIUM},
-    {'name': 'many_words', 'payload': ' '.join(['word'] * 5000), 'category': 'length', 'severity': Severity.MEDIUM},
-    {'name': 'many_lines', 'payload': '\n'.join(['line'] * 1000), 'category': 'length', 'severity': Severity.MEDIUM},
-
-    # Special characters
-    {'name': 'special_chars', 'payload': '!@#$%^&*()_+-=[]{}|;\':",./<>?`~', 'category': 'special', 'severity': Severity.LOW},
-    {'name': 'backslash_heavy', 'payload': '\\\\\\\\\\test\\n\\r\\t\\\\', 'category': 'special', 'severity': Severity.MEDIUM},
-    {'name': 'quote_heavy', 'payload': '"""\'\'\'`````', 'category': 'special', 'severity': Severity.MEDIUM},
-
-    # JSON edge cases
-    {'name': 'json_nested', 'payload': '{"a":' * 100 + '1' + '}' * 100, 'category': 'json', 'severity': Severity.MEDIUM},
-    {'name': 'json_unicode', 'payload': '{"key": "\\u0000\\u200b\\ufeff"}', 'category': 'json', 'severity': Severity.MEDIUM},
-    {'name': 'json_number', 'payload': '{"num": 99999999999999999999999999999999}', 'category': 'json', 'severity': Severity.LOW},
-
-    # XML/markup
-    {'name': 'xml_entity', 'payload': '<!DOCTYPE foo [<!ENTITY xxe "test">]>&xxe;', 'category': 'xml', 'severity': Severity.HIGH},
-    {'name': 'cdata', 'payload': '<![CDATA[<script>alert(1)</script>]]>', 'category': 'xml', 'severity': Severity.MEDIUM},
-    {'name': 'comment', 'payload': '<!-- comment --> test <!-- another -->', 'category': 'xml', 'severity': Severity.LOW},
-
-    # Path traversal
-    {'name': 'path_traversal', 'payload': '../../../etc/passwd', 'category': 'path', 'severity': Severity.HIGH},
-    {'name': 'path_null', 'payload': '../../../etc/passwd\x00.txt', 'category': 'path', 'severity': Severity.HIGH},
-    {'name': 'path_encoded', 'payload': '..%2f..%2f..%2fetc%2fpasswd', 'category': 'path', 'severity': Severity.HIGH},
-
-    # Command injection
-    {'name': 'cmd_semicolon', 'payload': 'test; ls -la', 'category': 'injection', 'severity': Severity.HIGH},
-    {'name': 'cmd_pipe', 'payload': 'test | cat /etc/passwd', 'category': 'injection', 'severity': Severity.HIGH},
-    {'name': 'cmd_backtick', 'payload': 'test `id`', 'category': 'injection', 'severity': Severity.HIGH},
-    {'name': 'cmd_subshell', 'payload': 'test $(whoami)', 'category': 'injection', 'severity': Severity.HIGH},
-]
-
-
-class FuzzScanner:
+class FuzzScanner(BaseScanner):
     def __init__(self, target: str, api_key: Optional[str] = None, verbose: bool = False,
                  parsed_request: Optional['ParsedRequest'] = None, iterations: int = 100, **kwargs):
-        self.target = target
-        self.api_key = api_key
-        self.verbose = verbose
-        self.parsed_request = parsed_request
+        super().__init__(target, api_key, verbose, parsed_request, **kwargs)
+        self.module_name = "FUZZ"
+        self.console_color = "cyan"
         self.iterations = iterations
-        self.proxy = kwargs.get('proxy')
-        self.cookies = kwargs.get('cookies')
-        self.headers = kwargs.get('headers')
-        self.injection_param = kwargs.get('injection_param')
-        self.body_format = kwargs.get('body_format')
-        self.findings = []
-        self.stats = {'total': 0, 'anomalies': 0, 'errors': 0, 'blocked': 0}
-        self.db = AIXDatabase()
+        self._init_stats(errors=0, anomalies=0) # We'll map anomalies to success usually, but keeping separate for clarity if needed, or just use success?
+        # Code uses 'anomalies'. base has 'success'.
+        # Let's map 'anomalies' -> 'success' in this refactor to standardize.
+        self.stats['anomalies'] = 0 # Explicitly keeping it for backward compat in logic if needed, or just remove and use success.
+        # I'll use success for anomalies.
+        
+        # Load config
+        config_path = os.path.join(os.path.dirname(__file__), '..', 'payloads', 'fuzz_config.json')
+        try:
+            with open(config_path, 'r') as f:
+                self.config = json.load(f)
+        except Exception as e:
+            console.print(f"[yellow][!] Could not load config from {config_path}: {e}[/yellow]")
+            self.config = {"unicode_fuzz": [], "format_strings": []}
+            
+        # Re-initialize control chars dynamically (not in config)
+        self.control_chars = [chr(i) for i in range(32)] + [chr(127)]
+        
+        self.default_payloads = self.load_payloads('fuzz.json')
         self.baseline_response = None
 
     def _print(self, status: str, msg: str, tech: str = ''):
         t = self.target[:28] + '...' if len(self.target) > 30 else self.target
-        if status == 'info':
-            console.print(f"[cyan]FUZZ[/cyan]    {t:30} [cyan][*][/cyan] {msg}")
-        elif status == 'success':
-            console.print(f"[cyan]FUZZ[/cyan]    {t:30} [green][+][/green] {tech} [bold green](Anomaly!)[/bold green]")
-        elif status == 'detail':
-            console.print(f"[cyan]FUZZ[/cyan]    {t:30}        [dim]└─→ {msg}[/dim]")
-        elif status == 'warning':
-            console.print(f"[cyan]FUZZ[/cyan]    {t:30} [yellow][!][/yellow] {msg}")
-        elif status == 'error':
-            console.print(f"[cyan]FUZZ[/cyan]    {t:30} [red][-][/red] {msg}")
+        name = self.module_name[:7].upper()
+        
+        if status == 'success':
+            # Custom message for anomaly
+            console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [green][+][/green] {tech} [bold green](Anomaly!)[/bold green]")
         elif status == 'progress':
             console.print(f"[dim]Fuzz iteration {msg}[/dim]")
+        else:
+            super()._print(status, msg, tech)
 
     def _generate_random_fuzz(self) -> List[Dict]:
         """Generate random fuzz payloads"""
@@ -141,7 +62,7 @@ class FuzzScanner:
 
         # Random unicode strings
         for i in range(10):
-            chars = [random.choice(UNICODE_FUZZ) for _ in range(random.randint(1, 10))]
+            chars = [random.choice(self.config['unicode_fuzz']) for _ in range(random.randint(1, 10))]
             payloads.append({
                 'name': f'random_unicode_{i}',
                 'payload': 'Test ' + ''.join(chars) + ' message',
@@ -151,7 +72,7 @@ class FuzzScanner:
 
         # Random control characters
         for i in range(5):
-            chars = [random.choice(CONTROL_CHARS) for _ in range(random.randint(1, 5))]
+            chars = [random.choice(self.control_chars) for _ in range(random.randint(1, 5))]
             payloads.append({
                 'name': f'random_control_{i}',
                 'payload': 'Test ' + ''.join(chars) + ' message',
@@ -205,8 +126,7 @@ class FuzzScanner:
         return len(anomalies) > 0, anomalies
 
     async def run(self, payloads: List[Dict] = None):
-        if payloads is None:
-            payloads = DEFAULT_FUZZ_PAYLOADS.copy()
+        if payloads is None: payloads = self.default_payloads.copy()
 
         # Add random fuzzing if iterations are high
         if self.iterations > len(payloads):
@@ -218,12 +138,7 @@ class FuzzScanner:
 
         self._print('info', f'Running {len(payloads)} fuzz tests...')
 
-        # Create connector
-        if self.parsed_request:
-            connector = RequestConnector(self.parsed_request, proxy=self.proxy, verbose=self.verbose, cookies=self.cookies, headers=self.headers)
-        else:
-            connector = APIConnector(self.target, api_key=self.api_key, proxy=self.proxy, verbose=self.verbose, cookies=self.cookies, headers=self.headers, injection_param=self.injection_param, body_format=self.body_format)
-
+        connector = self._create_connector()
         await connector.connect()
 
         try:
@@ -247,7 +162,7 @@ class FuzzScanner:
                     is_anomaly, anomaly_details = self._is_anomaly(resp, p)
 
                     if is_anomaly:
-                        self.stats['anomalies'] += 1
+                        self.stats['success'] += 1 # Anomalies -> Success
                         self._print('success', '', p['name'])
                         for detail in anomaly_details[:3]:
                             self._print('detail', detail)
@@ -294,12 +209,12 @@ class FuzzScanner:
             await connector.close()
 
         # Print summary
-        if self.stats['anomalies'] > 0:
-            self._print('warning', f"Found {self.stats['anomalies']} anomalies!")
+        if self.stats['success'] > 0:
+            self._print('warning', f"Found {self.stats['success']} anomalies!")
         else:
             self._print('info', 'No anomalies detected')
 
-        self._print('info', f"{self.stats['anomalies']} anomalies, {self.stats['errors']} errors, {self.stats['blocked']} normal")
+        self._print('info', f"{self.stats['success']} anomalies, {self.stats['errors']} errors, {self.stats['blocked']} normal")
 
         return self.findings
 
@@ -316,6 +231,5 @@ def run(target: str = None, api_key: str = None, profile: str = None, browser: b
                           proxy=kwargs.get('proxy'), cookies=cookies, headers=kwargs.get('headers'), injection_param=kwargs.get('injection_param'),
                           body_format=kwargs.get('body_format'))
     asyncio.run(scanner.run())
-
 
 __all__ = ["run"]

@@ -1,0 +1,218 @@
+[
+    {
+        "name": "empty_string",
+        "payload": "",
+        "category": "boundary",
+        "severity": "LOW"
+    },
+    {
+        "name": "null_byte",
+        "payload": "\u0000",
+        "category": "boundary",
+        "severity": "MEDIUM"
+    },
+    {
+        "name": "whitespace_only",
+        "payload": "   \t\n\r   ",
+        "category": "boundary",
+        "severity": "LOW"
+    },
+    {
+        "name": "unicode_null",
+        "payload": "Test\u0000message",
+        "category": "unicode",
+        "severity": "MEDIUM"
+    },
+    {
+        "name": "unicode_zwsp",
+        "payload": "Test\u200bmessage",
+        "category": "unicode",
+        "severity": "LOW"
+    },
+    {
+        "name": "unicode_bom",
+        "payload": "\ufeffTest message",
+        "category": "unicode",
+        "severity": "LOW"
+    },
+    {
+        "name": "unicode_rtl",
+        "payload": "Test \u202emessage\u202c reversed",
+        "category": "unicode",
+        "severity": "MEDIUM"
+    },
+    {
+        "name": "unicode_emoji",
+        "payload": "Test message with emoji: \ud83d\ude00\ud83d\udca9\ud83d\udd25",
+        "category": "unicode",
+        "severity": "LOW"
+    },
+    {
+        "name": "unicode_zalgo",
+        "payload": "T\u0336e\u0336s\u0336t\u0336 \u0336m\u0336e\u0336s\u0336s\u0336a\u0336g\u0336e\u0336",
+        "category": "unicode",
+        "severity": "LOW"
+    },
+    {
+        "name": "url_encoded",
+        "payload": "%54%65%73%74%20%6d%65%73%73%61%67%65",
+        "category": "encoding",
+        "severity": "LOW"
+    },
+    {
+        "name": "double_url_encoded",
+        "payload": "%2554%2565%2573%2574",
+        "category": "encoding",
+        "severity": "MEDIUM"
+    },
+    {
+        "name": "html_entities",
+        "payload": "&lt;script&gt;alert(1)&lt;/script&gt;",
+        "category": "encoding",
+        "severity": "MEDIUM"
+    },
+    {
+        "name": "unicode_escape",
+        "payload": "\\u0054\\u0065\\u0073\\u0074",
+        "category": "encoding",
+        "severity": "LOW"
+    },
+    {
+        "name": "format_string_s",
+        "payload": "Test %s %s %s %s %s",
+        "category": "format",
+        "severity": "MEDIUM"
+    },
+    {
+        "name": "format_string_n",
+        "payload": "Test %n %n %n",
+        "category": "format",
+        "severity": "HIGH"
+    },
+    {
+        "name": "format_string_x",
+        "payload": "Test %x %x %x %x",
+        "category": "format",
+        "severity": "MEDIUM"
+    },
+    {
+        "name": "python_format",
+        "payload": "Test {0} {1} {__class__}",
+        "category": "format",
+        "severity": "HIGH"
+    },
+    {
+        "name": "template_injection",
+        "payload": "Test ${7*7} #{7*7} {{7*7}}",
+        "category": "format",
+        "severity": "HIGH"
+    },
+    {
+        "name": "very_long",
+        "payload": "A... (10000 chars)",
+        "category": "length",
+        "severity": "MEDIUM"
+    },
+    {
+        "name": "many_words",
+        "payload": "word word word... (5000 words)",
+        "category": "length",
+        "severity": "MEDIUM"
+    },
+    {
+        "name": "many_lines",
+        "payload": "line\nline\nline... (1000 lines)",
+        "category": "length",
+        "severity": "MEDIUM"
+    },
+    {
+        "name": "special_chars",
+        "payload": "!@#$%^&*()_+-=[]{}|;':\",./<>?`~",
+        "category": "special",
+        "severity": "LOW"
+    },
+    {
+        "name": "backslash_heavy",
+        "payload": "\\\\\\\\\\test\\n\\r\\t\\\\",
+        "category": "special",
+        "severity": "MEDIUM"
+    },
+    {
+        "name": "quote_heavy",
+        "payload": "\"\"\"'''`````",
+        "category": "special",
+        "severity": "MEDIUM"
+    },
+    {
+        "name": "json_nested",
+        "payload": "{\"a\":...} (100 deep)",
+        "category": "json",
+        "severity": "MEDIUM"
+    },
+    {
+        "name": "json_unicode",
+        "payload": "{\"key\": \"\\u0000\\u200b\\ufeff\"}",
+        "category": "json",
+        "severity": "MEDIUM"
+    },
+    {
+        "name": "json_number",
+        "payload": "{\"num\": 99999999999999999999999999999999}",
+        "category": "json",
+        "severity": "LOW"
+    },
+    {
+        "name": "xml_entity",
+        "payload": "<!DOCTYPE foo [<!ENTITY xxe \"test\">]>&xxe;",
+        "category": "xml",
+        "severity": "HIGH"
+    },
+    {
+        "name": "cdata",
+        "payload": "<![CDATA[<script>alert(1)</script>]]>",
+        "category": "xml",
+        "severity": "MEDIUM"
+    },
+    {
+        "name": "comment",
+        "payload": "<!-- comment --> test <!-- another -->",
+        "category": "xml",
+        "severity": "LOW"
+    },
+    {
+        "name": "path_traversal",
+        "payload": "../../../etc/passwd",
+        "category": "path",
+        "severity": "HIGH"
+    },
+    {
+        "name": "path_null",
+        "payload": "../../../etc/passwd\u0000.txt",
+        "category": "path",
+        "severity": "HIGH"
+    },
+    {
+        "name": "path_encoded",
+        "payload": "..%2f..%2f..%2fetc%2fpasswd",
+        "category": "path",
+        "severity": "HIGH"
+    },
+    {
+        "name": "cmd_semicolon",
+        "payload": "test; ls -la",
+        "category": "injection",
+        "severity": "HIGH"
+    },
+    {
+        "name": "cmd_pipe",
+        "payload": "test | cat /etc/passwd",
+        "category": "injection",
+        "severity": "HIGH"
+    },
+    {
+        "name": "cmd_backtick",
+        "payload": "test `id`",
+        "category": "injection",
+        "severity": "HIGH"
+    }
+]
