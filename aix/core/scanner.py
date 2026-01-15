@@ -8,7 +8,8 @@ from typing import Optional, List, Dict, Any, Union
 from rich.console import Console
 
 from aix.core.reporter import Severity, Finding
-from aix.core.connector import APIConnector, RequestConnector, WebConnector
+from aix.core.connector import APIConnector, RequestConnector
+
 from aix.db.database import AIXDatabase
 from aix.core.request_parser import ParsedRequest
 
@@ -31,7 +32,7 @@ class BaseScanner:
         self.injection_param = kwargs.get('injection_param')
         self.body_format = kwargs.get('body_format')
         self.body_format = kwargs.get('body_format')
-        self.browser = kwargs.get('browser', False)
+
         self.timeout = kwargs.get('timeout', 30)
         
         # State
@@ -72,16 +73,6 @@ class BaseScanner:
         if self.parsed_request:
             return RequestConnector(
                 self.parsed_request, 
-                proxy=self.proxy, 
-                verbose=self.verbose, 
-                cookies=self.cookies, 
-                headers=self.headers,
-                timeout=self.timeout
-            )
-        elif self.browser:
-            return WebConnector(
-                self.target, 
-                headless=False, 
                 proxy=self.proxy, 
                 verbose=self.verbose, 
                 cookies=self.cookies, 

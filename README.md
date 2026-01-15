@@ -7,7 +7,7 @@
     AI Security Testing Framework
 ```
 
-**The first comprehensive AI/LLM security testing tool. Like NetExec, but for AI.**
+**The first comprehensive AI/LLM security testing tool.**
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -29,31 +29,91 @@ AIX is an automated security testing framework for AI/LLM endpoints. It provides
 
 ### Installation
 
+**The Easy Way (Recommended)**
 ```bash
-# Install from PyPI
-pip install aix-framework
-
-# Or install with browser support
-pip install aix-framework[browser]
-
-# Or install everything
-pip install aix-framework[full]
+./install.sh
 ```
 
-### Basic Usage
+**The Manual Way**
+```bash
+# Install dependencies and tool
+pip install . 
+```
+
+## 🎯 Usage Scenarios
+
+AIX adapts to your target environment. Here are the common patterns:
+
+### 1. Public API Testing
+Test a public LLM endpoint directly.
+*   **Best for**: REST APIs, cloud LLM providers.
+*   **Key Flags**: `-k` (optional API key).
 
 ```bash
-# Scan an AI endpoint
-aix inject https://api.target.com/chat -k YOUR_API_KEY
+# Test an endpoint (no auth)
+aix inject https://api.target.com/v1/chat
 
-# Run jailbreak tests
-aix jailbreak https://chat.company.com --browser
+# Test with an API key (Bearer/Header injection)
+aix recon https://api.openai.com/v1/chat -k sk-123456789
+```
 
-# Extract system prompt
-aix extract https://api.target.com -k YOUR_API_KEY
+### 2. Authenticated Web Applications
+Test an internal or private chatbot protected by login.
+*   **Best for**: Corporate chatbots, internal tools.
+*   **Key Flags**: `-C` (Cookies), `-H` (Headers).
 
-# Full scan
-aix scan https://api.target.com -k YOUR_API_KEY
+```bash
+# Pass session cookies
+aix inject http://internal-chat.corp --cookie "session=abc123; user_id=99"
+
+# Pass custom auth headers
+aix recon http://internal-chat.corp --headers "X-Custom-Auth: secret_token"
+```
+
+### 3. Complex Requests (Request File Mode)
+Replicate a specific request structure captured from Burp Suite or DevTools.
+*   **Best for**: JSON nested parameters, specific payload placements, proxied traffic.
+*   **Key Flags**: `-r` (Request file), `-p` (Injection parameter).
+
+**How to use:**
+1.  Save the raw HTTP request to a file (e.g., `req.txt`).
+2.  Identify the parameter path to inject into (e.g., `messages[0].content`).
+
+```bash
+# Inject into a nested JSON field
+aix recon -r req.txt -p "messages[0].content"
+
+# Inject into a generic form field
+aix inject -r post.txt -p "query"
+```
+
+### 4. Advanced: Body Formats & Custom Parameters
+When using **Direct URL Mode** (no request file), AIX defaults to sending a JSON body with a standard structure (e.g., `{"messages": [{"role": "user", "content": "PAYLOAD"}]}`).
+
+You can customize this behavior using `--format` (`-F`) and `--param` (`-p`).
+
+**1. Changing the Body Format (`-F`)**
+Control how the data is sent to the server.
+*   `json` (Default): `Content-Type: application/json`
+*   `form`: `Content-Type: application/x-www-form-urlencoded`
+*   `multipart`: `Content-Type: multipart/form-data`
+
+```bash
+# Send as Form Data: query=PAYLOAD
+aix inject http://target.com/search -F form -p query
+```
+
+**2. Custom Injection Parameter (`-p`)**
+Change the key name where the payload is placed.
+*   **Default**: `messages` (for OpenAI-like APIs) or `message`.
+*   **Custom**: Use `-p` to specify any key.
+
+```bash
+# Resulting JSON: {"prompt": "PAYLOAD"}
+aix inject http://api.target.com/generate -p prompt
+
+# Resulting Form: text=PAYLOAD
+aix inject http://target.com/process -F form -p text
 ```
 
 ## 📖 Modules
@@ -152,13 +212,17 @@ AGENT   agent.target.com               [!] CRITICAL: Full agent compromise possi
 
 | Option | Description |
 |--------|-------------|
-| `-k, --key` | API key for authentication |
+| `-k, --key` | API key (optional, for direct API access patterns) |
 | `-P, --profile` | Use saved target profile |
 | `-T, --targets` | File with multiple targets |
-| `-b, --browser` | Use browser mode for JS-heavy sites |
 | `-e, --evasion` | Evasion level: none, light, aggressive |
 | `-v, --verbose` | Verbose output |
 | `-o, --output` | Output file for results |
+| `--proxy` | HTTP proxy (host:port) |
+| `-C, --cookie` | Dictionary of cookies |
+| `-H, --headers` | Custom headers |
+| `-F, --format` | Body format (json, form, multipart) |
+| `-t, --timeout` | Request timeout (default: 30s) |
 
 ### Evasion Levels
 
@@ -213,7 +277,10 @@ Payload format:
     "name": "custom_injection",
     "payload": "Your custom payload here",
     "indicators": ["SUCCESS", "PWNED"],
-    "severity": "critical"
+    "name": "custom_injection",
+    "payload": "Your custom payload here",
+    "indicators": ["SUCCESS", "PWNED"],
+    "severity": "CRITICAL"
   }
 ]
 ```
@@ -235,8 +302,9 @@ aix/
 │   ├── leak.py         # Data leakage detection
 │   ├── exfil.py        # Data exfiltration
 │   ├── agent.py        # Agent exploitation
-│   └── ...
-├── payloads/           # Payload database
+│   ├── dos.py          # Denial of Service
+│   └── fuzz.py         # Fuzzing
+├── payloads/           # Externalized JSON payloads (customizable)
 └── db/                 # SQLite database
 ```
 
@@ -261,6 +329,5 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-**Made with ❤️ by the AIX Team**
+**Made with ❤️ by the r08t**
 
-*"Breaking AI so you don't have to"*

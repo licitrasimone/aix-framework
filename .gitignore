@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+.venv/
+env/
+.env/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# AIX Framework Specific
+# Database
+aix/db/*.db
+*.sqlite
+*.sqlite3
+
+# Logs and Reports
+*.log
+*.html
+report.html
+aix_report_*.html
+
+# User Data
+request.txt
+req.txt
+targets.txt
+*.json
+!aix/payloads/*.json
+!aix/modules/*.json
+!package.json
+
+# Output
+results/
+outputs/
