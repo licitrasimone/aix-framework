@@ -33,6 +33,7 @@ class BaseScanner:
         self.body_format = kwargs.get('body_format')
         self.body_format = kwargs.get('body_format')
         self.refresh_config = kwargs.get('refresh_config')
+        self.response_regex = kwargs.get('response_regex')
 
         self.timeout = kwargs.get('timeout', 30)
         
@@ -79,7 +80,8 @@ class BaseScanner:
                 cookies=self.cookies, 
                 headers=self.headers,
                 timeout=self.timeout,
-                refresh_config=self.refresh_config
+                refresh_config=self.refresh_config,
+                response_regex=self.response_regex
             )
         else:
             return APIConnector(
@@ -92,7 +94,8 @@ class BaseScanner:
                 injection_param=self.injection_param, 
                 body_format=self.body_format,
                 timeout=self.timeout,
-                refresh_config=self.refresh_config
+                refresh_config=self.refresh_config,
+                response_regex=self.response_regex
             )
 
     def _print(self, status: str, msg: str, tech: str = ''):

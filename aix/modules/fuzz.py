@@ -229,7 +229,8 @@ def run(target: str = None, api_key: str = None, profile: str = None, browser: b
     scanner = FuzzScanner(target, api_key=api_key, verbose=verbose,
                           parsed_request=parsed_request, iterations=iterations, 
                           proxy=kwargs.get('proxy'), cookies=cookies, headers=kwargs.get('headers'), injection_param=kwargs.get('injection_param'),
-                          body_format=kwargs.get('body_format'), refresh_config=kwargs.get('refresh_config'))
+                          body_format=kwargs.get('body_format'), refresh_config=kwargs.get('refresh_config'),
+                          response_regex=kwargs.get('response_regex'))
     asyncio.run(scanner.run())
 
 __all__ = ["run"]

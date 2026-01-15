@@ -325,7 +325,8 @@ def run(target: str = None, browser: bool = False, output: Optional[str] = None,
         headers=kwargs.get('headers'),
         body_format=kwargs.get('body_format'),
         injection_param=kwargs.get('injection_param'),
-        refresh_config=kwargs.get('refresh_config')
+        refresh_config=kwargs.get('refresh_config'),
+        response_regex=kwargs.get('response_regex')
     )
     results = asyncio.run(scanner.run())
 

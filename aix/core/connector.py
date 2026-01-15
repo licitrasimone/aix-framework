@@ -96,6 +96,26 @@ class Connector(ABC):
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
 
+    def _apply_regex(self, text: str) -> str:
+        """Apply response regex to extracted text"""
+        if not hasattr(self, 'response_regex') or not self.response_regex or not text:
+            return text
+            
+        try:
+            matches = re.findall(self.response_regex, text, re.DOTALL)
+            if matches:
+                # Return the LAST match (latest response)
+                last_match = matches[-1]
+                if isinstance(last_match, tuple):
+                    return last_match[0] # Return content of first capture group
+                return last_match
+            else:
+                console.print(f"[yellow]CONNECTOR[/yellow] [!] Regex '{self.response_regex}' found no matches in response.")
+                return text
+        except re.error as e:
+            console.print(f"[red]CONNECTOR[/red] [!] Invalid regex: {e}")
+            return text
+
 
 class APIConnector(Connector):
     """
@@ -162,6 +182,7 @@ class APIConnector(Connector):
         self.body_format = kwargs.get('body_format', 'json')
         self.client: Optional[httpx.AsyncClient] = None
         self.refresh_config = kwargs.get('refresh_config', {})
+        self.response_regex = kwargs.get('response_regex')
         
         # Detect API format from URL if not specified
         if api_format == 'generic':
@@ -236,29 +257,34 @@ class APIConnector(Connector):
     
     def _extract_response(self, data: Dict[str, Any]) -> str:
         """Extract response text from API response"""
+        
+        # Helper to extract from data structure
+        def extract_from_path(d, p):
+            result = d
+            for key in p.split('.'):
+                if isinstance(result, list):
+                    if key.isdigit() and int(key) < len(result):
+                        result = result[int(key)]
+                    else:
+                        return ""
+                elif isinstance(result, dict):
+                    result = result.get(key, '')
+                else:
+                    return str(result)
+                
+                if result is None:
+                    return ""
+            return str(result) if result is not None else ""
+
+        extracted_text = ""
         path = self.format_config['response_path']
         
         # Handle profile-specific response path
         if self.profile and hasattr(self.profile, 'response_path'):
             path = self.profile.response_path
         
-        # Navigate nested path like "choices.0.message.content"
-        result = data
-        for key in path.split('.'):
-            if isinstance(result, list):
-                if key.isdigit() and int(key) < len(result):
-                    result = result[int(key)]
-                else:
-                    return ""
-            elif isinstance(result, dict):
-                result = result.get(key, '')
-            else:
-                return str(result)
-            
-            if not result:
-                break
-        
-        return str(result) if result is not None else ""
+        extracted_text = extract_from_path(data, path)
+        return self._apply_regex(extracted_text)
     
     async def connect(self) -> None:
         """Initialize HTTP client"""
@@ -438,12 +464,12 @@ class APIConnector(Connector):
                 refresh_error_sig = self.refresh_config.get('error')
                 if refresh_error_sig and attempt <= max_retries and self.refresh_config.get('url'):
                     # We might have failed JSON decode because of an error page
-                     if re.search(refresh_error_sig, response.text):
-                         console.print(f"[yellow]CONNECTOR[/yellow] [!] Response matches error signature (Auto-Refresh Triggered)")
-                         if await self._refresh_session():
-                             continue # Retry loop
+                    if re.search(refresh_error_sig, response.text):
+                        console.print(f"[yellow]CONNECTOR[/yellow] [!] Response matches error signature (Auto-Refresh Triggered)")
+                        if await self._refresh_session():
+                            continue # Retry loop
 
-                return response.text
+                return self._apply_regex(response.text)
             except httpx.ConnectError:
                  raise ConnectionError(f"Failed to connect to {url}. Check your proxy settings.")
             except Exception as e:
@@ -617,6 +643,7 @@ class RequestConnector(Connector):
         super().__init__(parsed_request.url, **kwargs)
         self.parsed_request = parsed_request
         self.response_path = response_path
+        self.response_regex = kwargs.get('response_regex')
         self.client: Optional[httpx.AsyncClient] = None
 
     async def connect(self) -> None:
@@ -710,7 +737,7 @@ class RequestConnector(Connector):
                 data = response.json()
                 return self._extract_response(data)
             except json.JSONDecodeError:
-                return response.text
+                return self._apply_regex(response.text)
 
         except httpx.HTTPStatusError as e:
             status = e.response.status_code
@@ -729,6 +756,8 @@ class RequestConnector(Connector):
 
     def _extract_response(self, data: Any) -> str:
         """Extract response text from API response"""
+        extracted_text = ""
+        
         if not self.response_path:
             # Try common response paths
             common_paths = [
@@ -743,13 +772,19 @@ class RequestConnector(Connector):
                 try:
                     result = self._navigate_path(data, path)
                     if result:
-                        return str(result)
+                        extracted_text = str(result)
+                        break
                 except (KeyError, IndexError, TypeError):
                     continue
-            # Return full response as string if no path matches
-            return json.dumps(data) if isinstance(data, dict) else str(data)
+            
+            # If still empty, use full dump
+            if not extracted_text:
+                extracted_text = json.dumps(data) if isinstance(data, dict) else str(data)
 
-        return str(self._navigate_path(data, self.response_path))
+        else:
+            extracted_text = str(self._navigate_path(data, self.response_path))
+            
+        return self._apply_regex(extracted_text)
 
     def _navigate_path(self, data: Any, path: str) -> Any:
         """Navigate nested path in response data"""

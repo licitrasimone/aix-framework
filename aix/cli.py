@@ -125,7 +125,8 @@ def main(ctx, version):
 @click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
-def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
+@click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
+def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
     """
     Reconnaissance - Discover AI endpoint details
 
@@ -148,7 +149,8 @@ def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, h
     recon.run(target, output=output, timeout=timeout, verbose=verbose,
               parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
               injection_param=param, body_format=format,
-              refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error})
+              refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
+              response_regex=response_regex)
 
 
 # Alias for recon
@@ -210,7 +212,8 @@ main.add_command(intercept_cmd, name='intercept')
 @click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
-def inject_cmd(target, request, param, key, profile, targets, evasion, payloads, threads, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
+@click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
+def inject_cmd(target, request, param, key, profile, targets, evasion, payloads, threads, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
     """
     Inject - Prompt injection attacks
 
@@ -236,7 +239,8 @@ def inject_cmd(target, request, param, key, profile, targets, evasion, payloads,
         threads=threads, verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
-        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
+        response_regex=response_regex
     )
 
 
@@ -264,7 +268,8 @@ main.add_command(inject_cmd, name='inject')
 @click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
-def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
+@click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
+def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
     """
     Jailbreak - Bypass AI restrictions
 
@@ -287,7 +292,8 @@ def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, v
         evasion=evasion, test_harmful=test_harmful, verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
-        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
+        response_regex=response_regex
     )
 
 
@@ -313,7 +319,8 @@ main.add_command(jailbreak_cmd, name='jailbreak')
 @click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
-def extract_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
+@click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
+def extract_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
     """
     Extract - System prompt extraction
 
@@ -337,7 +344,8 @@ def extract_cmd(target, request, param, key, profile, verbose, output, proxy, co
         verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
-        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
+        response_regex=response_regex
     )
 
 
@@ -363,7 +371,8 @@ main.add_command(extract_cmd, name='extract')
 @click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
-def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
+@click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
+def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
     """
     Leak - Training data extraction
 
@@ -387,7 +396,8 @@ def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cooki
         verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
-        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
+        response_regex=response_regex
     )
 
 
@@ -460,7 +470,8 @@ main.add_command(exfil_cmd, name='exfil')
 @click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
-def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
+@click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
+def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
     """
     Agent - AI agent exploitation
 
@@ -484,7 +495,8 @@ def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cook
         verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
-        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
+        response_regex=response_regex
     )
 
 
@@ -510,7 +522,8 @@ main.add_command(agent_cmd, name='agent')
 @click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
-def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
+@click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
+def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
     """
     DoS - Denial of Service testing
 
@@ -561,7 +574,8 @@ main.add_command(dos_cmd, name='dos')
 @click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
-def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
+@click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
+def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
     """
     Fuzz - Fuzzing and edge cases
 
@@ -585,7 +599,8 @@ def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, 
         iterations=iterations, verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
-        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
+        response_regex=response_regex
     )
 
 
@@ -651,7 +666,8 @@ def db(export, clear, target, module):
 @click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
-def scan(target, request, param, key, profile, evasion, output, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error):
+@click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
+def scan(target, request, param, key, profile, evasion, output, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
     """
     Scan - Run all modules against target
 
@@ -695,7 +711,8 @@ def scan(target, request, param, key, profile, evasion, output, verbose, proxy, 
                 verbose=verbose,
                 parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
                 injection_param=param, body_format=format,
-                refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
+                refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
+                response_regex=response_regex
             )
         except Exception as e:
             console.print(f"[red][-][/red] {name} failed: {e}")

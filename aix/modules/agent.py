@@ -143,5 +143,6 @@ def run(target: str = None, api_key: str = None, profile: str = None,
                            headers=kwargs.get('headers'),
                            injection_param=kwargs.get('injection_param'),
                            body_format=kwargs.get('body_format'),
-                           refresh_config=kwargs.get('refresh_config'))
+                           refresh_config=kwargs.get('refresh_config'),
+                           response_regex=kwargs.get('response_regex'))
     asyncio.run(scanner.run())

@@ -214,7 +214,8 @@ def run(target: str = None, api_key: str = None, profile: str = None,
                          injection_param=kwargs.get('injection_param'),
                          body_format=kwargs.get('body_format'),
                          safe_mode=kwargs.get('safe_mode', True),
-                         refresh_config=kwargs.get('refresh_config')) # Explicitly pass safe_mode from kwargs or default? args usually has it.
+                         refresh_config=kwargs.get('refresh_config'),
+                         response_regex=kwargs.get('response_regex'))
     # run function didn't have safe_mode before? Checking original file definition... 
     # Original run def: `def run(..., **kwargs):`
     # Original DoSScanner init: `safe_mode: bool = True`.
