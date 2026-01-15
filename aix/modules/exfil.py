@@ -131,11 +131,17 @@ class ExfilScanner:
                  webhook: Optional[str] = None, parsed_request: Optional['ParsedRequest'] = None, **kwargs):
         self.target = target
         self.api_key = api_key
+        self.browser = kwargs.get('browser') # Added browser from kwargs
         self.verbose = verbose
         self.webhook = webhook or DEFAULT_WEBHOOK
         self.parsed_request = parsed_request
+        self.proxy = kwargs.get('proxy')
+        self.cookies = kwargs.get('cookies') # Added cookies from kwargs
+        self.headers = kwargs.get('headers')
+        self.injection_param = kwargs.get('injection_param')
+        self.body_format = kwargs.get('body_format')
         self.findings = []
-        self.stats = {'total': 0, 'vulnerable': 0, 'blocked': 0}
+        self.stats = {'total': 0, 'success': 0, 'blocked': 0} # Changed 'vulnerable' to 'success'
         self.db = AIXDatabase()
 
     def _print(self, status: str, msg: str, tech: str = ''):
@@ -174,9 +180,9 @@ class ExfilScanner:
 
         # Create connector
         if self.parsed_request:
-            connector = RequestConnector(self.parsed_request)
+            connector = RequestConnector(self.parsed_request, proxy=self.proxy, verbose=self.verbose, cookies=self.cookies, headers=self.headers)
         else:
-            connector = APIConnector(self.target, api_key=self.api_key)
+            connector = APIConnector(self.target, api_key=self.api_key, proxy=self.proxy, verbose=self.verbose, cookies=self.cookies, headers=self.headers, injection_param=self.injection_param, body_format=self.body_format)
 
         await connector.connect()
 
@@ -198,7 +204,7 @@ class ExfilScanner:
                     has_external_url = any(self.webhook in url or 'http' in url for url in urls_in_response)
 
                     if is_vulnerable or has_external_url:
-                        self.stats['vulnerable'] += 1
+                        self.stats['success'] += 1 # Changed 'vulnerable' to 'success'
                         self._print('success', '', p['name'])
                         self._print('detail', p['description'])
 
@@ -235,12 +241,12 @@ class ExfilScanner:
             await connector.close()
 
         # Print summary
-        if self.stats['vulnerable'] > 0:
-            self._print('warning', f"Data exfiltration POSSIBLE via {self.stats['vulnerable']} channels!")
+        if self.stats['success'] > 0: # Changed 'vulnerable' to 'success'
+            self._print('warning', f"Data exfiltration POSSIBLE via {self.stats['success']} channels!") # Changed 'vulnerable' to 'success'
         else:
             self._print('info', 'No obvious exfiltration channels found')
 
-        self._print('info', f"{self.stats['vulnerable']} vulnerable, {self.stats['blocked']} blocked")
+        self._print('info', f"{self.stats['success']} vulnerable, {self.stats['blocked']} blocked") # Changed 'vulnerable' to 'success'
 
         return self.findings
 
@@ -252,8 +258,9 @@ def run(target: str = None, api_key: str = None, profile: str = None, webhook: s
         console.print("[red][-][/red] No target specified")
         return
 
-    scanner = ExfilScanner(
-        target, api_key=api_key, verbose=verbose,
-        webhook=webhook, parsed_request=parsed_request
-    )
+    scanner = ExfilScanner(target, api_key=api_key, webhook=webhook, browser=browser, verbose=verbose,
+                           parsed_request=parsed_request, proxy=kwargs.get('proxy'), cookies=kwargs.get('cookies'),
+                           headers=kwargs.get('headers'),
+                           injection_param=kwargs.get('injection_param'),
+                           body_format=kwargs.get('body_format'))
     asyncio.run(scanner.run())

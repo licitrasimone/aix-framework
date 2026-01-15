@@ -33,6 +33,8 @@ class ConnectorConfig:
     timeout: int = 30
     message_field: str = "message"
     response_field: str = "response"
+    proxy: Optional[str] = None
+    cookies: Optional[str] = None
     extra_fields: Dict[str, Any] = None
 
 
@@ -45,6 +47,30 @@ class Connector(ABC):
         self.config = kwargs
         self.session = None
     
+    def _parse_cookies(self, cookies: Optional[str]) -> Dict[str, str]:
+        """Parse cookie string into dictionary"""
+        if not cookies:
+            return {}
+        
+        cookie_dict = {}
+        for item in cookies.split(';'):
+            if '=' in item:
+                key, value = item.strip().split('=', 1)
+                cookie_dict[key] = value
+        return cookie_dict
+
+    def _parse_headers(self, headers: Optional[str]) -> Dict[str, str]:
+        """Parse header string into dictionary"""
+        if not headers:
+            return {}
+        
+        header_dict = {}
+        for item in headers.split(';'):
+            if ':' in item:
+                key, value = item.strip().split(':', 1)
+                header_dict[key.strip()] = value.strip()
+        return header_dict
+
     @abstractmethod
     async def connect(self) -> None:
         """Establish connection to target"""
@@ -128,6 +154,9 @@ class APIConnector(Connector):
         self.api_key = api_key
         self.api_format = api_format
         self.model = model
+        self.model = model
+        self.injection_param = kwargs.get('injection_param')
+        self.body_format = kwargs.get('body_format', 'json')
         self.client: Optional[httpx.AsyncClient] = None
         
         # Detect API format from URL if not specified
@@ -152,6 +181,10 @@ class APIConnector(Connector):
     def _build_headers(self) -> Dict[str, str]:
         """Build request headers"""
         headers = dict(self.format_config.get('headers', {}))
+
+        # Remove default Content-Type if not using JSON format so httpx can set it correctly
+        if self.body_format != 'json' and headers.get('Content-Type') == 'application/json':
+            del headers['Content-Type']
         
         if self.api_key:
             if self.api_format == 'anthropic':
@@ -162,12 +195,17 @@ class APIConnector(Connector):
         # Add custom headers from profile
         if self.profile and hasattr(self.profile, 'headers'):
             headers.update(self.profile.headers or {})
+            
+        # Add custom headers from CLI
+        custom_headers = self._parse_headers(self.config.get('headers'))
+        if custom_headers:
+            headers.update(custom_headers)
         
         return headers
     
     def _build_payload(self, message: str) -> Dict[str, Any]:
         """Build request payload"""
-        msg_field = self.format_config['message_field']
+        msg_field = self.injection_param or self.format_config['message_field']
         msg_format = self.format_config['message_format']
         
         payload = {
@@ -220,11 +258,6 @@ class APIConnector(Connector):
         if proxy and not (proxy.startswith('http://') or proxy.startswith('https://')):
             proxy = 'http://' + proxy
 
-        # If an explicit proxy was provided, set env vars so httpx with trust_env=True uses it
-        if proxy:
-            os.environ['HTTP_PROXY'] = proxy
-            os.environ['HTTPS_PROXY'] = proxy
-
         # Verbose log about proxy
         try:
             verbose = bool(self.config.get('verbose'))
@@ -233,10 +266,18 @@ class APIConnector(Connector):
         if verbose:
             console.print(f"[cyan]CONNECTOR[/cyan] [*] Using proxy: {proxy}")
 
+        # Parse cookies
+        cookies = self._parse_cookies(self.config.get('cookies'))
+        if verbose and cookies:
+            console.print(f"[cyan]CONNECTOR[/cyan] [*] Using cookies: {list(cookies.keys())}")
+
         self.client = httpx.AsyncClient(
             timeout=self.config.get('timeout', 30),
             follow_redirects=True,
-            trust_env=True,
+            trust_env=False,
+            proxy=proxy,
+            cookies=cookies,
+            verify=False  # Disable SSL verification for proxying (Burp/ZAP)
         )
     
     async def send(self, payload: str) -> str:
@@ -255,6 +296,8 @@ class APIConnector(Connector):
         headers = self._build_headers()
 
         # Verbose logging for debugging proxy usage
+        body = self._build_payload(payload)
+
         try:
             verbose = bool(self.config.get('verbose'))
         except Exception:
@@ -263,10 +306,20 @@ class APIConnector(Connector):
             console.print(f"[cyan]CONNECTOR[/cyan] [*] POST {url}")
             console.print(f"[cyan]CONNECTOR[/cyan] [*] Headers: {headers}")
             console.print(f"[cyan]CONNECTOR[/cyan] [*] Body keys: {list(body.keys()) if isinstance(body, dict) else 'raw'}")
-        body = self._build_payload(payload)
         
         try:
-            response = await self.client.post(url, json=body, headers=headers)
+            if self.body_format == 'json':
+                response = await self.client.post(url, json=body, headers=headers)
+            elif self.body_format == 'form':
+                response = await self.client.post(url, data=body, headers=headers)
+            elif self.body_format == 'multipart':
+                # Use files kwarg with (None, value) tuple to send as multipart fields
+                files = {k: (None, str(v)) for k, v in body.items()} if isinstance(body, dict) else body
+                response = await self.client.post(url, files=files, headers=headers)
+            else:
+                # Default to json
+                response = await self.client.post(url, json=body, headers=headers)
+                
             response.raise_for_status()
             
             data = response.json()
@@ -276,6 +329,8 @@ class APIConnector(Connector):
             raise ConnectionError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
         except json.JSONDecodeError:
             return response.text
+        except httpx.ConnectError:
+             raise ConnectionError(f"Failed to connect to {url}. Check your proxy settings.")
         except Exception as e:
             raise ConnectionError(f"Request failed: {str(e)}")
     
@@ -322,8 +377,71 @@ class WebConnector(Connector):
             )
         
         self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(headless=self.headless)
+        
+        # Configure proxy for Playwright
+        launch_args = {'headless': self.headless}
+        proxy_config = None
+        
+        proxy = self.config.get('proxy') or os.environ.get('HTTP_PROXY') or os.environ.get('http_proxy')
+        if proxy:
+            # Playwright expects a dictionary
+            # host:port or http://host:port -> server
+            if '://' not in proxy:
+                proxy = f'http://{proxy}'
+            proxy_config = {'server': proxy}
+            launch_args['proxy'] = proxy_config
+            
+            # Log proxy usage if verbose
+            try:
+                verbose = bool(self.config.get('verbose'))
+                if verbose:
+                    console.print(f"[cyan]WEB-CONNECTOR[/cyan] [*] Using proxy: {proxy}")
+            except Exception:
+                pass
+
+        self.browser = await self.playwright.chromium.launch(**launch_args)
+        
+        # Create context (proxy is applied at browser level by default but contexts inherit it or can override)
+        # We set it at launch(), so it applies globally.
         self.context = await self.browser.new_context()
+        
+        # Add cookies if provided
+        cookies = self.config.get('cookies')
+        if cookies:
+            cookie_dict = self._parse_cookies(cookies)
+            # Playwright cookies need 'name', 'value', 'url' or 'domain'
+            formatted_cookies = []
+            for k, v in cookie_dict.items():
+                formatted_cookies.append({
+                    'name': k,
+                    'value': v,
+                    'url': self.url  # Assuming cookies are for target URL
+                })
+            
+            # Verbose log
+            try:
+                verbose = bool(self.config.get('verbose'))
+                if verbose:
+                    console.print(f"[cyan]WEB-CONNECTOR[/cyan] [*] Using cookies: {list(cookie_dict.keys())}")
+            except Exception:
+                pass
+                
+            await self.context.add_cookies(formatted_cookies)
+
+        # Add headers if provided
+        custom_headers = self.config.get('headers')
+        if custom_headers:
+            header_dict = self._parse_headers(custom_headers)
+            await self.page.set_extra_http_headers(header_dict)
+            
+            # Verbose log
+            try:
+                verbose = bool(self.config.get('verbose'))
+                if verbose:
+                    console.print(f"[cyan]WEB-CONNECTOR[/cyan] [*] Using custom headers: {list(header_dict.keys())}")
+            except Exception:
+                pass
+
         self.page = await self.context.new_page()
         
         await self.page.goto(self.url)
@@ -529,11 +647,6 @@ class RequestConnector(Connector):
         if proxy and not (proxy.startswith('http://') or proxy.startswith('https://')):
             proxy = 'http://' + proxy
 
-        # If an explicit proxy was provided, set env vars so httpx with trust_env=True uses it
-        if proxy:
-            os.environ['HTTP_PROXY'] = proxy
-            os.environ['HTTPS_PROXY'] = proxy
-
         # Verbose log about proxy
         try:
             verbose = bool(self.config.get('verbose'))
@@ -542,10 +655,18 @@ class RequestConnector(Connector):
         if verbose:
             console.print(f"[cyan]REQUEST-CONN[/cyan] [*] Using proxy: {proxy}")
 
+        # Parse cookies
+        cookies = self._parse_cookies(self.config.get('cookies'))
+        if verbose and cookies:
+            console.print(f"[cyan]REQUEST-CONN[/cyan] [*] Using cookies: {list(cookies.keys())}")
+
         self.client = httpx.AsyncClient(
             timeout=self.config.get('timeout', 30),
             follow_redirects=True,
-            trust_env=True,
+            trust_env=False,
+            proxy=proxy,
+            cookies=cookies,
+            verify=False  # Disable SSL verification for proxying (Burp/ZAP)
         )
 
     async def send(self, payload: str) -> str:
@@ -558,9 +679,14 @@ class RequestConnector(Connector):
         # Inject payload into request
         injected_request = inject_payload(self.parsed_request, payload)
 
-        # Build headers (exclude Host as httpx handles it)
+        # Build headers (exclude Host and Content-Length as httpx handles them)
         headers = {k: v for k, v in injected_request.headers.items()
-                   if k.lower() != 'host'}
+                   if k.lower() not in ('host', 'content-length')}
+
+        # Add custom headers from CLI
+        custom_headers = self._parse_headers(self.config.get('headers'))
+        if custom_headers:
+            headers.update(custom_headers)
 
         try:
             # Verbose logging for debugging proxy usage
@@ -609,6 +735,8 @@ class RequestConnector(Connector):
 
         except httpx.HTTPStatusError as e:
             raise ConnectionError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
+        except httpx.ConnectError:
+             raise ConnectionError(f"Failed to connect to {injected_request.url}. Check your proxy settings.")
         except Exception as e:
             raise ConnectionError(f"Request failed: {str(e)}")
 

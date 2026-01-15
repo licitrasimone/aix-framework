@@ -25,9 +25,15 @@ class JailbreakScanner:
     def __init__(self, target: str, api_key: Optional[str] = None, verbose: bool = False,
                  parsed_request: Optional['ParsedRequest'] = None, **kwargs):
         self.target = target
-        self.api_key = api_key
+        self.api_key = api_key # Kept original api_key
         self.verbose = verbose
         self.parsed_request = parsed_request
+        self.proxy = kwargs.get('proxy')
+        self.cookies = kwargs.get('cookies') # Added cookies
+        self.headers = kwargs.get('headers')
+        self.body_format = kwargs.get('body_format')
+        self.browser = kwargs.get('browser', False) # Added browser
+        self.injection_param = kwargs.get('injection_param')
         self.findings = []
         self.stats = {'total': 0, 'success': 0, 'blocked': 0}
         self.db = AIXDatabase()
@@ -40,13 +46,16 @@ class JailbreakScanner:
 
     async def run(self, jailbreaks: List[Dict] = None):
         if jailbreaks is None: jailbreaks = DEFAULT_JAILBREAKS
-        self._print('info', f'Testing {len(jailbreaks)} jailbreak techniques...')
+        self._print('info', f'Testing {len(jailbreaks)} jailbreak techniques...') # Corrected line from diff
 
         # Use RequestConnector if parsed_request is provided, otherwise use APIConnector
+        # Create connector
         if self.parsed_request:
-            connector = RequestConnector(self.parsed_request)
+            connector = RequestConnector(self.parsed_request, proxy=self.proxy, verbose=self.verbose, cookies=self.cookies, headers=self.headers)
+        elif self.browser: # Added browser check
+            connector = WebConnector(self.target, headless=False, proxy=self.proxy, verbose=self.verbose, cookies=self.cookies, headers=self.headers) # Added WebConnector
         else:
-            connector = APIConnector(self.target, api_key=self.api_key)
+            connector = APIConnector(self.target, api_key=self.api_key, proxy=self.proxy, verbose=self.verbose, cookies=self.cookies, headers=self.headers, injection_param=self.injection_param, body_format=self.body_format) # Added cookies
         await connector.connect()
 
         try:
@@ -63,7 +72,10 @@ class JailbreakScanner:
                     else:
                         self.stats['blocked'] += 1
                         self._print('blocked', '', j['name'])
-                except: self.stats['blocked'] += 1
+                except Exception as e:
+                    self.stats['blocked'] += 1
+                    if self.verbose:
+                        console.print(f"[red]Error in {j['name']}: {e}[/red]")
                 await asyncio.sleep(0.5)
         finally:
             await connector.close()
@@ -73,9 +85,16 @@ class JailbreakScanner:
 
 def run(target: str = None, api_key: str = None, profile: str = None, browser: bool = False,
         evasion: str = 'light', test_harmful: bool = False, verbose: bool = False, output: str = None,
-        parsed_request: Optional['ParsedRequest'] = None, **kwargs):
+        parsed_request: Optional['ParsedRequest'] = None, cookies: Optional[Dict] = None, **kwargs): # Added cookies to run signature
     if not target:
         console.print("[red][-][/red] No target specified")
         return
-    scanner = JailbreakScanner(target, api_key=api_key, verbose=verbose, parsed_request=parsed_request)
+    scanner = JailbreakScanner(
+        target, api_key=api_key, browser=browser,
+        test_harmful=test_harmful, verbose=verbose,
+        parsed_request=parsed_request, proxy=kwargs.get('proxy'), cookies=cookies,
+        headers=kwargs.get('headers'),
+        injection_param=kwargs.get('injection_param'),
+        body_format=kwargs.get('body_format')
+    )
     asyncio.run(scanner.run())

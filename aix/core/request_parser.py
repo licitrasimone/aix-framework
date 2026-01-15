@@ -10,6 +10,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
 from pathlib import Path
+from urllib.parse import quote_plus
 
 
 @dataclass
@@ -231,9 +232,44 @@ def inject_payload(request: ParsedRequest, payload: str) -> ParsedRequest:
         )
         new_request.body = json.dumps(new_request.body_json)
     elif request.body:
-        # For non-JSON, do simple string replacement if the param exists in body
-        # This is a fallback for form-data or other formats
-        raise RequestParseError("Non-JSON body injection not yet supported. Use JSON format.")
+        # Handle form-urlencoded body (key=value&key2=value2)
+        # We need to replace the value of the specified parameter
+        
+        # Regex to match: (^|&)param=([^&]*)
+        # We want to replace group 2 with the payload
+        param = re.escape(request.injection_param)
+        pattern = r'(^|&)' + param + r'=([^&]*)'
+        
+        if re.search(pattern, request.body):
+            # Replace logic: keep the delimiter and key, replace value with payload
+            # We use lambda to handle the replacement safely since payload might have backslashes
+            # URL-encode payload for form-urlencoded bodies
+            encoded_payload = quote_plus(payload)
+            new_request.body = re.sub(
+                pattern, 
+                lambda m: f"{m.group(1)}{request.injection_param}={encoded_payload}", 
+                request.body
+            )
+        else:
+            # Fallback: if param not found as key=value, try naive replacement (placeholder style)
+            # This covers cases where user just put "MARKER" in the body
+            if request.injection_param in request.body:
+                 # If it looks like a placeholder, maybe don't encode? 
+                 # But if it's in a form body, it probably should be.
+                 # Let's check if the body looks like url-encoded (has & or =)
+                 if '&' in request.body or '=' in request.body:
+                     new_request.body = request.body.replace(request.injection_param, quote_plus(payload))
+                 else:
+                     new_request.body = request.body.replace(request.injection_param, payload)
+            else:
+                 # If explicit parameter was requested but not found even as text
+                 # effectively append it? Or just error?
+                 # For now, let's append it to be helpful for form-data
+                 encoded_payload = quote_plus(payload)
+                 if new_request.body:
+                     new_request.body += f"&{request.injection_param}={encoded_payload}"
+                 else:
+                     new_request.body = f"{request.injection_param}={encoded_payload}"
     else:
         raise RequestParseError("No body to inject payload into")
 

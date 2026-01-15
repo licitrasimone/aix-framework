@@ -110,6 +110,11 @@ class FuzzScanner:
         self.verbose = verbose
         self.parsed_request = parsed_request
         self.iterations = iterations
+        self.proxy = kwargs.get('proxy')
+        self.cookies = kwargs.get('cookies')
+        self.headers = kwargs.get('headers')
+        self.injection_param = kwargs.get('injection_param')
+        self.body_format = kwargs.get('body_format')
         self.findings = []
         self.stats = {'total': 0, 'anomalies': 0, 'errors': 0, 'blocked': 0}
         self.db = AIXDatabase()
@@ -215,9 +220,9 @@ class FuzzScanner:
 
         # Create connector
         if self.parsed_request:
-            connector = RequestConnector(self.parsed_request)
+            connector = RequestConnector(self.parsed_request, proxy=self.proxy, verbose=self.verbose, cookies=self.cookies, headers=self.headers)
         else:
-            connector = APIConnector(self.target, api_key=self.api_key)
+            connector = APIConnector(self.target, api_key=self.api_key, proxy=self.proxy, verbose=self.verbose, cookies=self.cookies, headers=self.headers, injection_param=self.injection_param, body_format=self.body_format)
 
         await connector.connect()
 
@@ -301,15 +306,15 @@ class FuzzScanner:
 
 def run(target: str = None, api_key: str = None, profile: str = None, browser: bool = False,
         iterations: int = 100, verbose: bool = False, output: str = None,
-        parsed_request: Optional['ParsedRequest'] = None, **kwargs):
+        parsed_request: Optional['ParsedRequest'] = None, cookies: Optional[Dict] = None, **kwargs):
     if not target:
         console.print("[red][-][/red] No target specified")
         return
 
-    scanner = FuzzScanner(
-        target, api_key=api_key, verbose=verbose,
-        parsed_request=parsed_request, iterations=iterations
-    )
+    scanner = FuzzScanner(target, api_key=api_key, verbose=verbose,
+                          parsed_request=parsed_request, iterations=iterations, 
+                          proxy=kwargs.get('proxy'), cookies=cookies, headers=kwargs.get('headers'), injection_param=kwargs.get('injection_param'),
+                          body_format=kwargs.get('body_format'))
     asyncio.run(scanner.run())
 
 

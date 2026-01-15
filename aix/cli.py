@@ -115,7 +115,10 @@ def main(ctx, version):
 @click.option('--timeout', '-t', default=30, help='Request timeout in seconds')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
-def recon_cmd(target, request, param, browser, output, timeout, verbose, proxy):
+@click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
+@click.option('--headers', '-H', help='Custom headers (key:value; ...)')
+@click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
+def recon_cmd(target, request, param, browser, output, timeout, verbose, proxy, cookie, headers, format):
     """
     Reconnaissance - Discover AI endpoint details
 
@@ -135,10 +138,10 @@ def recon_cmd(target, request, param, browser, output, timeout, verbose, proxy):
         aix recon https://api.company.com -o profile.json
     """
     print_banner()
-    _set_proxy_env(proxy)
     target, parsed_request = validate_input(target, request, param)
     recon.run(target, browser=browser, output=output, timeout=timeout, verbose=verbose,
-              parsed_request=parsed_request)
+              parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
+              injection_param=param, body_format=format)
 
 
 # Alias for recon
@@ -194,7 +197,10 @@ main.add_command(intercept_cmd, name='intercept')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
-def inject_cmd(target, request, param, key, profile, targets, browser, evasion, payloads, threads, verbose, output, proxy):
+@click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
+@click.option('--headers', '-H', help='Custom headers (key:value; ...)')
+@click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
+def inject_cmd(target, request, param, key, profile, targets, browser, evasion, payloads, threads, verbose, output, proxy, cookie, headers, format):
     """
     Inject - Prompt injection attacks
 
@@ -213,13 +219,13 @@ def inject_cmd(target, request, param, key, profile, targets, browser, evasion, 
         aix inject -T targets.txt --evasion aggressive
     """
     print_banner()
-    _set_proxy_env(proxy)
     target, parsed_request = validate_input(target, request, param)
     inject.run(
         target=target, api_key=key, profile=profile, targets_file=targets,
         browser=browser, evasion=evasion, payloads_file=payloads,
         threads=threads, verbose=verbose, output=output,
-        parsed_request=parsed_request
+        parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
+        injection_param=param, body_format=format
     )
 
 
@@ -241,7 +247,10 @@ main.add_command(inject_cmd, name='inject')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
-def jailbreak_cmd(target, request, param, key, profile, browser, evasion, test_harmful, verbose, output, proxy):
+@click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
+@click.option('--headers', '-H', help='Custom headers (key:value; ...)')
+@click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
+def jailbreak_cmd(target, request, param, key, profile, browser, evasion, test_harmful, verbose, output, proxy, cookie, headers, format):
     """
     Jailbreak - Bypass AI restrictions
 
@@ -259,12 +268,12 @@ def jailbreak_cmd(target, request, param, key, profile, browser, evasion, test_h
         aix jailbreak --profile company.com --test-harmful
     """
     print_banner()
-    _set_proxy_env(proxy)
     target, parsed_request = validate_input(target, request, param)
     jailbreak.run(
         target=target, api_key=key, profile=profile, browser=browser,
         evasion=evasion, test_harmful=test_harmful, verbose=verbose, output=output,
-        parsed_request=parsed_request
+        parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
+        injection_param=param, body_format=format
     )
 
 
@@ -284,7 +293,10 @@ main.add_command(jailbreak_cmd, name='jailbreak')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
-def extract_cmd(target, request, param, key, profile, browser, verbose, output, proxy):
+@click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
+@click.option('--headers', '-H', help='Custom headers (key:value; ...)')
+@click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
+def extract_cmd(target, request, param, key, profile, browser, verbose, output, proxy, cookie, headers, format):
     """
     Extract - System prompt extraction
 
@@ -302,12 +314,13 @@ def extract_cmd(target, request, param, key, profile, browser, verbose, output, 
         aix extract --profile company.com
     """
     print_banner()
-    _set_proxy_env(proxy)
+    print_banner()
     target, parsed_request = validate_input(target, request, param)
     extract.run(
         target=target, api_key=key, profile=profile,
         browser=browser, verbose=verbose, output=output,
-        parsed_request=parsed_request
+        parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
+        injection_param=param, body_format=format
     )
 
 
@@ -327,7 +340,10 @@ main.add_command(extract_cmd, name='extract')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
-def leak_cmd(target, request, param, key, profile, browser, verbose, output, proxy):
+@click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
+@click.option('--headers', '-H', help='Custom headers (key:value; ...)')
+@click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
+def leak_cmd(target, request, param, key, profile, browser, verbose, output, proxy, cookie, headers, format):
     """
     Leak - Training data extraction
 
@@ -345,12 +361,13 @@ def leak_cmd(target, request, param, key, profile, browser, verbose, output, pro
         aix leak --profile company.com
     """
     print_banner()
-    _set_proxy_env(proxy)
+    print_banner()
     target, parsed_request = validate_input(target, request, param)
     leak.run(
         target=target, api_key=key, profile=profile,
         browser=browser, verbose=verbose, output=output,
-        parsed_request=parsed_request
+        parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
+        injection_param=param, body_format=format
     )
 
 
@@ -371,7 +388,10 @@ main.add_command(leak_cmd, name='leak')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
-def exfil_cmd(target, request, param, key, profile, webhook, browser, verbose, output, proxy):
+@click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
+@click.option('--headers', '-H', help='Custom headers (key:value; ...)')
+@click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
+def exfil_cmd(target, request, param, key, profile, webhook, browser, verbose, output, proxy, cookie, headers, format):
     """
     Exfil - Data exfiltration testing
 
@@ -389,12 +409,13 @@ def exfil_cmd(target, request, param, key, profile, webhook, browser, verbose, o
         aix exfil --profile company.com
     """
     print_banner()
-    _set_proxy_env(proxy)
+    print_banner()
     target, parsed_request = validate_input(target, request, param)
     exfil.run(
         target=target, api_key=key, profile=profile, webhook=webhook,
         browser=browser, verbose=verbose, output=output,
-        parsed_request=parsed_request
+        parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
+        injection_param=param, body_format=format
     )
 
 
@@ -414,7 +435,10 @@ main.add_command(exfil_cmd, name='exfil')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
-def agent_cmd(target, request, param, key, profile, browser, verbose, output, proxy):
+@click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
+@click.option('--headers', '-H', help='Custom headers (key:value; ...)')
+@click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
+def agent_cmd(target, request, param, key, profile, browser, verbose, output, proxy, cookie, headers, format):
     """
     Agent - AI agent exploitation
 
@@ -432,12 +456,13 @@ def agent_cmd(target, request, param, key, profile, browser, verbose, output, pr
         aix agent --profile company.com
     """
     print_banner()
-    _set_proxy_env(proxy)
+    print_banner()
     target, parsed_request = validate_input(target, request, param)
     agent.run(
         target=target, api_key=key, profile=profile,
         browser=browser, verbose=verbose, output=output,
-        parsed_request=parsed_request
+        parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
+        injection_param=param, body_format=format
     )
 
 
@@ -457,7 +482,10 @@ main.add_command(agent_cmd, name='agent')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
-def dos_cmd(target, request, param, key, profile, browser, verbose, output, proxy):
+@click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
+@click.option('--headers', '-H', help='Custom headers (key:value; ...)')
+@click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
+def dos_cmd(target, request, param, key, profile, browser, verbose, output, proxy, cookie, headers, format):
     """
     DoS - Denial of Service testing
 
@@ -475,12 +503,13 @@ def dos_cmd(target, request, param, key, profile, browser, verbose, output, prox
         aix dos --profile company.com
     """
     print_banner()
-    _set_proxy_env(proxy)
+    print_banner()
     target, parsed_request = validate_input(target, request, param)
     dos.run(
         target=target, api_key=key, profile=profile,
         browser=browser, verbose=verbose, output=output,
-        parsed_request=parsed_request
+        parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
+        injection_param=param, body_format=format
     )
 
 
@@ -501,7 +530,10 @@ main.add_command(dos_cmd, name='dos')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
-def fuzz_cmd(target, request, param, key, profile, browser, iterations, verbose, output, proxy):
+@click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
+@click.option('--headers', '-H', help='Custom headers (key:value; ...)')
+@click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
+def fuzz_cmd(target, request, param, key, profile, browser, iterations, verbose, output, proxy, cookie, headers, format):
     """
     Fuzz - Fuzzing and edge cases
 
@@ -519,12 +551,13 @@ def fuzz_cmd(target, request, param, key, profile, browser, iterations, verbose,
         aix fuzz --profile company.com --iterations 500
     """
     print_banner()
-    _set_proxy_env(proxy)
+    print_banner()
     target, parsed_request = validate_input(target, request, param)
     fuzz.run(
         target=target, api_key=key, profile=profile, browser=browser,
         iterations=iterations, verbose=verbose, output=output,
-        parsed_request=parsed_request
+        parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
+        injection_param=param, body_format=format
     )
 
 
@@ -582,8 +615,12 @@ def db(export, clear, target, module):
 @click.option('--browser', '-b', is_flag=True, help='Use browser mode')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='light', help='Evasion level')
 @click.option('--output', '-o', help='Output file for results')
+@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
-def scan(target, request, param, key, profile, browser, evasion, output, proxy):
+@click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
+@click.option('--headers', '-H', help='Custom headers (key:value; ...)')
+@click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
+def scan(target, request, param, key, profile, browser, evasion, output, verbose, proxy, cookie, headers, format):
     """
     Scan - Run all modules against target
 
@@ -624,8 +661,9 @@ def scan(target, request, param, key, profile, browser, evasion, output, proxy):
         try:
             module.run(
                 target=target, api_key=key, profile=profile,
-                browser=browser, verbose=False,
-                parsed_request=parsed_request
+                browser=browser, verbose=verbose,
+                parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
+                injection_param=param, body_format=format
             )
         except Exception as e:
             console.print(f"[red][-][/red] {name} failed: {e}")

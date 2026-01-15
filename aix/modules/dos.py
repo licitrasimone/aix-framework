@@ -142,11 +142,17 @@ class DoSScanner:
                  parsed_request: Optional['ParsedRequest'] = None, safe_mode: bool = True, **kwargs):
         self.target = target
         self.api_key = api_key
+        self.browser = kwargs.get('browser', False) # Added browser from kwargs
         self.verbose = verbose
         self.parsed_request = parsed_request
         self.safe_mode = safe_mode  # Limit intensity of tests
+        self.proxy = kwargs.get('proxy')
+        self.cookies = kwargs.get('cookies') # Added cookies
+        self.headers = kwargs.get('headers')
+        self.injection_param = kwargs.get('injection_param')
+        self.body_format = kwargs.get('body_format')
         self.findings = []
-        self.stats = {'total': 0, 'vulnerable': 0, 'blocked': 0, 'timeouts': 0}
+        self.stats = {'total': 0, 'vulnerable': 0, 'blocked': 0, 'timeouts': 0} # Corrected stats dict
         self.db = AIXDatabase()
         self.baseline_time = None
 
@@ -210,9 +216,9 @@ class DoSScanner:
 
         # Create connector
         if self.parsed_request:
-            connector = RequestConnector(self.parsed_request)
+            connector = RequestConnector(self.parsed_request, proxy=self.proxy, verbose=self.verbose, cookies=self.cookies, headers=self.headers)
         else:
-            connector = APIConnector(self.target, api_key=self.api_key)
+            connector = APIConnector(self.target, api_key=self.api_key, proxy=self.proxy, verbose=self.verbose, cookies=self.cookies, headers=self.headers, injection_param=self.injection_param, body_format=self.body_format)
 
         await connector.connect()
 
@@ -339,12 +345,16 @@ class DoSScanner:
         return self.findings
 
 
-def run(target: str = None, api_key: str = None, profile: str = None, browser: bool = False,
-        verbose: bool = False, output: str = None,
+def run(target: str = None, api_key: str = None, profile: str = None,
+        browser: bool = False, verbose: bool = False, output: str = None,
         parsed_request: Optional['ParsedRequest'] = None, **kwargs):
     if not target:
         console.print("[red][-][/red] No target specified")
         return
 
-    scanner = DoSScanner(target, api_key=api_key, verbose=verbose, parsed_request=parsed_request)
+    scanner = DoSScanner(target, api_key=api_key, browser=browser, verbose=verbose,
+                         parsed_request=parsed_request, proxy=kwargs.get('proxy'), cookies=kwargs.get('cookies'),
+                         headers=kwargs.get('headers'),
+                         injection_param=kwargs.get('injection_param'),
+                         body_format=kwargs.get('body_format'))
     asyncio.run(scanner.run())
