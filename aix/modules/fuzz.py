@@ -167,21 +167,9 @@ class FuzzScanner(BaseScanner):
                         for detail in anomaly_details[:3]:
                             self._print('detail', detail)
 
-                        finding = Finding(
-                            title=f"Fuzz Anomaly - {p['name']}",
-                            severity=p['severity'],
-                            technique=p['name'],
-                            payload=p['payload'][:200] if len(p['payload']) < 500 else f"{p['payload'][:100]}... ({len(p['payload'])} chars)",
-                            response=resp[:5000],
-                            target=self.target
-                        )
-                        self.findings.append(finding)
-
-                        self.db.add_result(
-                            self.target, 'fuzz', p['name'],
-                            'anomaly', p['payload'][:200],
-                            resp[:5000], p['severity'].value
-                        )
+                        self.findings.append(Finding(title=f"Fuzz - {p['name']}", severity=p['severity'],
+                            technique=p['name'], payload=p['payload'], response=resp[:5000], target=self.target, reason=self.last_eval_reason))
+                        self.db.add_result(self.target, 'fuzz', p['name'], 'success', p['payload'], resp[:5000], p['severity'].value, reason=self.last_eval_reason)
                     else:
                         self.stats['blocked'] += 1
 
@@ -230,7 +218,8 @@ def run(target: str = None, api_key: str = None, profile: str = None, browser: b
                           parsed_request=parsed_request, iterations=iterations, 
                           proxy=kwargs.get('proxy'), cookies=cookies, headers=kwargs.get('headers'), injection_param=kwargs.get('injection_param'),
                           body_format=kwargs.get('body_format'), refresh_config=kwargs.get('refresh_config'),
-                          response_regex=kwargs.get('response_regex'))
+                          response_regex=kwargs.get('response_regex'),
+                          eval_config=kwargs.get('eval_config'))
     asyncio.run(scanner.run())
 
 __all__ = ["run"]

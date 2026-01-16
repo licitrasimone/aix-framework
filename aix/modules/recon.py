@@ -194,19 +194,33 @@ class ReconScanner(BaseScanner):
                     elapsed = time.time() - start
                     self.results['response_times'].append(elapsed)
 
+                    
+                    # Validate if probe was successful (answered vs refused)
+                    # We pass empty indicators because recon.json doesn't have them, relying on LLM or simple pass
+                    is_valid = await self.check_success(resp, [], probe['payload'], 'recon')
+                    
+                    if is_valid:
+                        self.findings.append(Finding(title=f"Recon - {probe['name']}", severity=probe.get('severity', Severity.INFO),
+                                technique=probe['name'], payload=probe['payload'], response=resp[:2000], target=self.target, reason=self.last_eval_reason))
+                        self.db.add_result(self.target, 'recon', probe['name'], 'success', probe['payload'], resp[:2000], probe.get('severity', Severity.INFO).value, reason=self.last_eval_reason)
+                    
                     responses.append({
                         'probe': probe['name'],
                         'response': resp,
-                        'time': elapsed
+                        'time': elapsed,
+                        'valid': is_valid
                     })
 
                     if self.verbose:
-                        self._print('info', f'Probe {probe["name"]}: {elapsed:.2f}s')
+                        status_icon = "[green]✓[/green]" if is_valid else "[red]✗[/red]"
+                        self._print('info', f'Probe {probe["name"]}: {elapsed:.2f}s {status_icon}')
 
                 except Exception as e:
                     self.results['errors'].append(str(e))
                     if self.verbose:
+                        import traceback
                         console.print(f"[red]Error probing {probe['name']}: {e}[/red]")
+                        console.print(traceback.format_exc())
                     waf = self._detect_waf(str(e))
                     if waf:
                         self.results['waf_detected'] = waf
@@ -326,7 +340,8 @@ def run(target: str = None, browser: bool = False, output: Optional[str] = None,
         body_format=kwargs.get('body_format'),
         injection_param=kwargs.get('injection_param'),
         refresh_config=kwargs.get('refresh_config'),
-        response_regex=kwargs.get('response_regex')
+        response_regex=kwargs.get('response_regex'),
+        eval_config=kwargs.get('eval_config')
     )
     results = asyncio.run(scanner.run())
 

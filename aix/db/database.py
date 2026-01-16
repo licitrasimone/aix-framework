@@ -49,9 +49,18 @@ class AIXDatabase:
                 payload TEXT,
                 response TEXT,
                 severity TEXT,
+                reason TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        # Migration: Check if reason column exists
+        try:
+             cursor.execute("SELECT reason FROM results LIMIT 1")
+        except sqlite3.OperationalError:
+             # Column missing, add it
+             console.print("[yellow][*] Migrating database: Adding 'reason' column to results table[/yellow]")
+             cursor.execute("ALTER TABLE results ADD COLUMN reason TEXT")
         
         # Profiles table
         cursor.execute("""
@@ -105,13 +114,14 @@ class AIXDatabase:
         payload: str = "",
         response: str = "",
         severity: str = "high",
+        reason: str = "",
     ) -> int:
         """Add a scan result"""
         cursor = self.conn.cursor()
         cursor.execute("""
-            INSERT INTO results (target, module, technique, result, payload, response, severity)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (target, module, technique, result, payload, response, severity))
+            INSERT INTO results (target, module, technique, result, payload, response, severity, reason)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (target, module, technique, result, payload, response, severity, reason))
         self.conn.commit()
         return cursor.lastrowid
     
@@ -295,6 +305,7 @@ class AIXDatabase:
                     payload=r.get('payload', ''),
                     response=r.get('response', ''),
                     target=r['target'],
+                    reason=r.get('reason', ''),
                 )
                 reporter.add_finding(finding)
         

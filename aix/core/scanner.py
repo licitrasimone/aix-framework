@@ -9,6 +9,7 @@ from rich.console import Console
 
 from aix.core.reporter import Severity, Finding
 from aix.core.connector import APIConnector, RequestConnector
+from aix.core.evaluator import LLMEvaluator
 
 from aix.db.database import AIXDatabase
 from aix.core.request_parser import ParsedRequest
@@ -18,7 +19,7 @@ console = Console()
 class BaseScanner:
     """Base class for all AIX scanners to reduce code duplication"""
     
-    def __init__(self, target: str, api_key: Optional[str] = None, verbose: bool = False,
+    def __init__(self, target: str, api_key: Optional[str] = None, verbose: int = 0,
                  parsed_request: Optional['ParsedRequest'] = None, **kwargs):
         self.target = target
         self.api_key = api_key
@@ -42,6 +43,19 @@ class BaseScanner:
         self.stats = {'total': 0, 'success': 0, 'blocked': 0}
         self.db = AIXDatabase()
         self.payloads = []
+        
+        # Evaluator
+        self.eval_config = kwargs.get('eval_config')
+        self.evaluator = None
+        if self.eval_config and (self.eval_config.get('url') or self.eval_config.get('provider')):
+             # Inject proxy into eval config if set
+             if self.proxy:
+                 self.eval_config['proxy'] = self.proxy
+             
+             self.evaluator = LLMEvaluator(**self.eval_config)
+             console.print(f"[bold green][*] LLM-as-a-Judge ENABLED: {self.eval_config.get('provider') or 'custom'} ({self.eval_config.get('model') or 'default'})[/bold green]")
+        
+        self.last_eval_reason = None
         
         # Module specific config (override in subclass)
         self.module_name = "BASE"
@@ -103,22 +117,77 @@ class BaseScanner:
         t = self.target[:28] + '...' if len(self.target) > 30 else self.target
         name = self.module_name[:7].upper() # Limit length
         
+        # Append evaluator reason if available and relevant
+        # Only append for verdicts to avoid polluting detailed logs
+        # Logic: 
+        # Level 0 (default): No reasons
+        # Level 1 (-v): Show reasons
+        # Level 2 (-vv): Show reasons + blocked
+        
+        should_show_reason = self.verbose >= 1
+        
+        if should_show_reason and self.last_eval_reason and status in ['success', 'blocked', 'warning']:
+            if msg:
+                msg += f" - {self.last_eval_reason}"
+            else:
+                msg = f"Evaluator: {self.last_eval_reason}"
+        
         if status == 'info':
             console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [{self.console_color}][*][/{self.console_color}] {msg}")
         elif status == 'success':
-            console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [green][+][/green] {tech} [bold green](Vulnerable!)[/bold green]")
+            # Fixed: Include msg/reason in success output
+            reason_str = f" [dim]({msg})[/dim]" if msg else ""
+            console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [green][+][/green] {tech} [bold green](Vulnerable!)[/bold green]{reason_str}")
         elif status == 'detail':
-            console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30}        [dim]└─→ {msg}[/dim]")
+            # Details are shown if verbose >= 1 ? Usually details are useful.
+            # But "only vulnerable" implies hiding details too?
+            # User didn't specify details. Let's keep details if verbose >= 1 to match "vulnerable + evaluation" (evaluation is detail?)
+            # Actually, `msg` contains the eval reason now.
+            # The 'detail' status is used for things like "Category: ..." in agent.py.
+            # Let's show details only if verbose >= 1.
+            if self.verbose >= 1:
+                console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30}        [dim]└─→ {msg}[/dim]")
         elif status == 'warning':
             console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [yellow][!][/yellow] {msg}")
-        elif status == 'blocked' and self.verbose:
-            console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [red][-][/red] {tech} [red](Blocked)[/red]")
+        elif status == 'blocked':
+             # Show blocked only if verbose >= 2
+             if self.verbose >= 2:
+                 reason_str = f" [dim]({msg})[/dim]" if msg else ""
+                 console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [red][-][/red] {tech} [red](Blocked)[/red]{reason_str}")
         elif status == 'error':
             console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [red][!][/red] {msg}")
+
+    async def check_success(self, response: str, indicators: List[str], payload: str, technique: str) -> bool:
+        """
+        Check if the attack was successful.
+        Uses LLM Evaluator if available, otherwise falls back to string matching.
+        """
+        # Reset reason
+        self.last_eval_reason = None
+        
+        # 1. Use Evaluator if available
+        if self.evaluator:
+            result = await self.evaluator.evaluate(response, payload, technique)
+            self.last_eval_reason = result.get('reason')
+            if result.get('vulnerable'):
+                return True
+            else:
+                return False
+
+        # 2. Fallback to keywords
+        success = any(i.lower() in response.lower() for i in indicators)
+        if success:
+             self.last_eval_reason = f"Matched indicator found in response."
+        return success
 
     async def run(self):
         """Main execution method - usually overridden by subclasses but can provide skeleton"""
         raise NotImplementedError("Subclasses must implement run()")
+
+    async def cleanup(self):
+        """Cleanup resources"""
+        if self.evaluator:
+            await self.evaluator.close()
 
 # Backward compatibility & Missing classes
 class TargetProfile:

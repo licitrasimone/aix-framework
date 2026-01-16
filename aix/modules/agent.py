@@ -65,7 +65,7 @@ class AgentScanner(BaseScanner):
                 try:
                     resp = await connector.send(p['payload'])
 
-                    is_vulnerable, matched = self._check_indicators(resp, p['indicators'])
+                    is_vulnerable = await self.check_success(resp, p['indicators'], p['payload'], p['name'])
 
                     # For discovery payloads, also extract tool names
                     if p['category'] == 'discovery':
@@ -83,21 +83,16 @@ class AgentScanner(BaseScanner):
                         else:
                             self._print('detail', f'Category: {p["category"]}')
 
-                        finding = Finding(
-                            title=f"Agent Exploit - {p['name']}",
+                        self.findings.append(Finding(
+                            title=f"Agent - {p['name']}",
                             severity=p['severity'],
                             technique=p['name'],
-                            payload=p['payload'][:200],
+                            payload=p['payload'],
                             response=resp[:5000],
-                            target=self.target
-                        )
-                        self.findings.append(finding)
-
-                        self.db.add_result(
-                            self.target, 'agent', p['name'],
-                            'success', p['payload'][:200],
-                            resp[:5000], p['severity'].value
-                        )
+                            target=self.target,
+                            reason=self.last_eval_reason
+                        ))
+                        self.db.add_result(self.target, 'agent', p['name'], 'success', p['payload'], resp[:5000], p['severity'].value, reason=self.last_eval_reason)
                     else:
                         self.stats['blocked'] += 1
                         self._print('blocked', '', p['name'])
@@ -144,5 +139,6 @@ def run(target: str = None, api_key: str = None, profile: str = None,
                            injection_param=kwargs.get('injection_param'),
                            body_format=kwargs.get('body_format'),
                            refresh_config=kwargs.get('refresh_config'),
-                           response_regex=kwargs.get('response_regex'))
+                           response_regex=kwargs.get('response_regex'),
+                           eval_config=kwargs.get('eval_config'))
     asyncio.run(scanner.run())

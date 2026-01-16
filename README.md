@@ -216,19 +216,43 @@ AGENT   agent.target.com               [!] CRITICAL: Full agent compromise possi
 | `-P, --profile` | Use saved target profile |
 | `-T, --targets` | File with multiple targets |
 | `-e, --evasion` | Evasion level: none, light, aggressive |
-| `-v, --verbose` | Verbose output |
+| `-v, --verbose` | Verbose level: `-v` (Reasons), `-vv` (Debug Findings), `-vvv` (Full HTTP Dump) |
 | `-o, --output` | Output file for results |
 | `--proxy` | HTTP proxy (host:port) |
 | `-C, --cookie` | Dictionary of cookies |
 | `-H, --headers` | Custom headers |
 | `-F, --format` | Body format (json, form, multipart) |
 | `-t, --timeout` | Request timeout (default: 30s) |
+| `--eval-provider` | LLM Judge provider (openai, anthropic, ollama, gemini) |
+| `--eval-key` | API key for LLM Judge |
+| `--eval-model` | Model name for LLM Judge |
+| `--eval-url` | Custom URL for LLM Judge |
 
 ### Evasion Levels
 
 - **none**: No evasion, raw payloads
 - **light**: Unicode homoglyphs, zero-width characters
 - **aggressive**: Base64, ROT13, leetspeak, multilingual, reverse
+
+## 🧠 LLM-as-a-Judge
+
+AIX can now use a secondary LLM to evaluate attack success more accurately than simple keyword matching.
+
+### Supported Providers
+- **OpenAI** (GPT-4)
+- **Anthropic** (Claude 3.5 Sonnet)
+- **Ollama** (Local Llama 3)
+- **Gemini** (Pro 1.5)
+
+### Usage
+
+```bash
+# Use OpenAI as judge
+aix jailbreak https://chat.target.com --eval-provider openai --eval-key sk-xxx
+
+# Use local Ollama
+aix inject https://target.com --eval-provider ollama --eval-url http://localhost:11434/api/chat --eval-model llama3
+```
 
 ## 📊 Database & Reports
 

@@ -10,7 +10,7 @@ This document outlines the planned improvements, feature requests, and future di
 - [ ] **Obfuscation**: Implement automatic payload encoding (Base64, Leetspeak, Rot13) that LLMs can decode but WAFs might miss.
 
 ### 2. Core Functionality
-- [ ] **AI-Based Evaluation (LLM-as-a-Judge)**: Integrate a secondary LLM (local or API) to autonomously evaluate whether an attack was successful, reducing false positives/negatives.
+- [x] **AI-Based Evaluation (LLM-as-a-Judge)**: Integrate a secondary LLM (local or API) to autonomously evaluate whether an attack was successful, reducing false positives/negatives.
 - [ ] **Non-Determinism Testing**: "Temperature Checks" - option to send the same payload multiple times to analyze variance in responses and catch intermittent vulnerabilities.
 - [ ] **Recursive Scanning**: Ability to spider API endpoints to find undocumented LLM interaction points.
 - [ ] **WAF Evasion**: Add specific evasion techniques for common AI firewalls (e.g., Lakera, Cloudflare for AI).

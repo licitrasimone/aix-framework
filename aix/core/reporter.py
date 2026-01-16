@@ -37,6 +37,7 @@ class Finding:
     response: str
     target: str = ""
     details: str = ""
+    reason: str = ""  # New field for exploit motivation/reason
     timestamp: datetime = field(default_factory=datetime.now)
     
     def to_dict(self) -> Dict[str, Any]:
@@ -45,9 +46,10 @@ class Finding:
             'severity': self.severity.value,
             'technique': self.technique,
             'payload': self.payload,
-            'response': self.response, # Removed truncation
+            'response': self.response, 
             'target': self.target,
             'details': self.details,
+            'reason': self.reason,
             'timestamp': self.timestamp.isoformat(),
         }
 
@@ -89,6 +91,7 @@ class Reporter:
         console.print(Panel(
             f"[bold]{finding.title}[/bold]\n\n"
             f"[dim]Technique:[/dim] {finding.technique}\n"
+            f"[dim]Reason:[/dim] {finding.reason}\n"
             f"[dim]Payload:[/dim] {finding.payload[:100]}...\n"
             f"[dim]Response:[/dim] {finding.response[:200]}...",
             title=f"[{color}]{finding.severity.value.upper()}[/{color}]",
@@ -165,6 +168,7 @@ class Reporter:
                     <div class="finding-field">
                         <strong>Technique:</strong> {finding.technique}
                     </div>
+                    {f'<div class="finding-field"><strong>Reason:</strong> {finding.reason}</div>' if finding.reason else ''}
                     <div class="finding-field">
                         <strong>Payload:</strong>
                         <pre><code>{self._escape_html(finding.payload)}</code></pre>

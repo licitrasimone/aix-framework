@@ -116,7 +116,7 @@ def main(ctx, version):
 @click.option('--param', '-p', help='Parameter path for injection (e.g., messages[0].content)')
 @click.option('--output', '-o', help='Save profile to file')
 @click.option('--timeout', '-t', default=30, help='Request timeout in seconds')
-@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('--verbose', '-v', count=True, help='Verbose output (-v: reasons, -vv: debug)')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
 @click.option('--headers', '-H', help='Custom headers (key:value; ...)')
@@ -126,7 +126,11 @@ def main(ctx, version):
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
 @click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
-def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
+@click.option('--eval-url', help='URL for secondary LLM evaluation')
+@click.option('--eval-key', help='API key for secondary LLM')
+@click.option('--eval-model', help='Model for secondary LLM')
+@click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
     """
     Reconnaissance - Discover AI endpoint details
 
@@ -150,7 +154,8 @@ def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, h
               parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
               injection_param=param, body_format=format,
               refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-              response_regex=response_regex)
+              response_regex=response_regex,
+              eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider})
 
 
 # Alias for recon
@@ -202,7 +207,7 @@ main.add_command(intercept_cmd, name='intercept')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='light', help='Evasion level')
 @click.option('--payloads', help='Custom payloads file')
 @click.option('--threads', default=5, help='Number of threads')
-@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('--verbose', '-v', count=True, help='Verbose output (-v: reasons, -vv: debug)')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
@@ -213,7 +218,11 @@ main.add_command(intercept_cmd, name='intercept')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
 @click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
-def inject_cmd(target, request, param, key, profile, targets, evasion, payloads, threads, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
+@click.option('--eval-url', help='URL for secondary LLM evaluation')
+@click.option('--eval-key', help='API key for secondary LLM')
+@click.option('--eval-model', help='Model for secondary LLM')
+@click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+def inject_cmd(target, request, param, key, profile, targets, evasion, payloads, threads, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
     """
     Inject - Prompt injection attacks
 
@@ -240,7 +249,8 @@ def inject_cmd(target, request, param, key, profile, targets, evasion, payloads,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        response_regex=response_regex
+        response_regex=response_regex,
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
     )
 
 
@@ -258,7 +268,7 @@ main.add_command(inject_cmd, name='inject')
 @click.option('--profile', '-P', help='Use saved profile')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='light', help='Evasion level')
 @click.option('--test-harmful', is_flag=True, help='Test harmful content generation')
-@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('--verbose', '-v', count=True, help='Verbose output (-v: reasons, -vv: debug)')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
@@ -269,7 +279,11 @@ main.add_command(inject_cmd, name='inject')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
 @click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
-def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
+@click.option('--eval-url', help='URL for secondary LLM evaluation')
+@click.option('--eval-key', help='API key for secondary LLM')
+@click.option('--eval-model', help='Model for secondary LLM')
+@click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
     """
     Jailbreak - Bypass AI restrictions
 
@@ -293,7 +307,8 @@ def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, v
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        response_regex=response_regex
+        response_regex=response_regex,
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
     )
 
 
@@ -309,7 +324,7 @@ main.add_command(jailbreak_cmd, name='jailbreak')
 @click.option('--param', '-p', help='Parameter path for injection (e.g., messages[0].content)')
 @click.option('--key', '-k', help='API key for direct API access')
 @click.option('--profile', '-P', help='Use saved profile')
-@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('--verbose', '-v', count=True, help='Verbose output (-v: reasons, -vv: debug)')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
@@ -320,7 +335,11 @@ main.add_command(jailbreak_cmd, name='jailbreak')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
 @click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
-def extract_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
+@click.option('--eval-url', help='URL for secondary LLM evaluation')
+@click.option('--eval-key', help='API key for secondary LLM')
+@click.option('--eval-model', help='Model for secondary LLM')
+@click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+def extract_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
     """
     Extract - System prompt extraction
 
@@ -345,7 +364,8 @@ def extract_cmd(target, request, param, key, profile, verbose, output, proxy, co
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        response_regex=response_regex
+        response_regex=response_regex,
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
     )
 
 
@@ -361,7 +381,7 @@ main.add_command(extract_cmd, name='extract')
 @click.option('--param', '-p', help='Parameter path for injection (e.g., messages[0].content)')
 @click.option('--key', '-k', help='API key for direct API access')
 @click.option('--profile', '-P', help='Use saved profile')
-@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('--verbose', '-v', count=True, help='Verbose output (-v: reasons, -vv: debug)')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
@@ -372,7 +392,11 @@ main.add_command(extract_cmd, name='extract')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
 @click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
-def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
+@click.option('--eval-url', help='URL for secondary LLM evaluation')
+@click.option('--eval-key', help='API key for secondary LLM')
+@click.option('--eval-model', help='Model for secondary LLM')
+@click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
     """
     Leak - Training data extraction
 
@@ -397,7 +421,8 @@ def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cooki
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        response_regex=response_regex
+        response_regex=response_regex,
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
     )
 
 
@@ -414,13 +439,17 @@ main.add_command(leak_cmd, name='leak')
 @click.option('--key', '-k', help='API key for direct API access')
 @click.option('--profile', '-P', help='Use saved profile')
 @click.option('--webhook', '-w', help='Webhook URL for exfiltration testing')
-@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('--verbose', '-v', count=True, help='Verbose output (-v: reasons, -vv: debug)')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
 @click.option('--headers', '-H', help='Custom headers (key:value; ...)')
 @click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
-def exfil_cmd(target, request, param, key, profile, webhook, verbose, output, proxy, cookie, headers, format):
+@click.option('--eval-url', help='URL for secondary LLM evaluation')
+@click.option('--eval-key', help='API key for secondary LLM')
+@click.option('--eval-model', help='Model for secondary LLM')
+@click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+def exfil_cmd(target, request, param, key, profile, webhook, verbose, output, proxy, cookie, headers, format, eval_url, eval_key, eval_model, eval_provider):
     """
     Exfil - Data exfiltration testing
 
@@ -438,13 +467,13 @@ def exfil_cmd(target, request, param, key, profile, webhook, verbose, output, pr
         aix exfil --profile company.com
     """
     print_banner()
-    print_banner()
     target, parsed_request = validate_input(target, request, param)
     exfil.run(
         target=target, api_key=key, profile=profile, webhook=webhook,
         verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
-        injection_param=param, body_format=format
+        injection_param=param, body_format=format,
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
     )
 
 
@@ -460,7 +489,7 @@ main.add_command(exfil_cmd, name='exfil')
 @click.option('--param', '-p', help='Parameter path for injection (e.g., messages[0].content)')
 @click.option('--key', '-k', help='API key for direct API access')
 @click.option('--profile', '-P', help='Use saved profile')
-@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('--verbose', '-v', count=True, help='Verbose output (-v: reasons, -vv: debug)')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
@@ -471,7 +500,11 @@ main.add_command(exfil_cmd, name='exfil')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
 @click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
-def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
+@click.option('--eval-url', help='URL for secondary LLM evaluation')
+@click.option('--eval-key', help='API key for secondary LLM')
+@click.option('--eval-model', help='Model for secondary LLM')
+@click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
     """
     Agent - AI agent exploitation
 
@@ -496,7 +529,8 @@ def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cook
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        response_regex=response_regex
+        response_regex=response_regex,
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
     )
 
 
@@ -512,7 +546,7 @@ main.add_command(agent_cmd, name='agent')
 @click.option('--param', '-p', help='Parameter path for injection (e.g., messages[0].content)')
 @click.option('--key', '-k', help='API key for direct API access')
 @click.option('--profile', '-P', help='Use saved profile')
-@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('--verbose', '-v', count=True, help='Verbose output (-v: reasons, -vv: debug)')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
@@ -522,8 +556,11 @@ main.add_command(agent_cmd, name='agent')
 @click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
-@click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
-def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
+@click.option('--eval-url', help='URL for secondary LLM evaluation')
+@click.option('--eval-key', help='API key for secondary LLM')
+@click.option('--eval-model', help='Model for secondary LLM')
+@click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
     """
     DoS - Denial of Service testing
 
@@ -547,7 +584,8 @@ def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie
         verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
-        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error}
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
     )
 
 
@@ -564,7 +602,7 @@ main.add_command(dos_cmd, name='dos')
 @click.option('--key', '-k', help='API key for direct API access')
 @click.option('--profile', '-P', help='Use saved profile')
 @click.option('--iterations', '-i', default=100, help='Number of fuzz iterations')
-@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('--verbose', '-v', count=True, help='Verbose output (-v: reasons, -vv: debug)')
 @click.option('--output', '-o', help='Output file for results')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
@@ -575,7 +613,11 @@ main.add_command(dos_cmd, name='dos')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
 @click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
-def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
+@click.option('--eval-url', help='URL for secondary LLM evaluation')
+@click.option('--eval-key', help='API key for secondary LLM')
+@click.option('--eval-model', help='Model for secondary LLM')
+@click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
     """
     Fuzz - Fuzzing and edge cases
 
@@ -600,7 +642,8 @@ def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, 
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        response_regex=response_regex
+        response_regex=response_regex,
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
     )
 
 
@@ -657,7 +700,7 @@ def db(export, clear, target, module):
 @click.option('--profile', '-P', help='Use saved profile')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='light', help='Evasion level')
 @click.option('--output', '-o', help='Output file for results')
-@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('--verbose', '-v', count=True, help='Verbose output (-v: reasons, -vv: debug)')
 @click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
 @click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
 @click.option('--headers', '-H', help='Custom headers (key:value; ...)')
@@ -667,7 +710,11 @@ def db(export, clear, target, module):
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
 @click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
-def scan(target, request, param, key, profile, evasion, output, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex):
+@click.option('--eval-url', help='URL for secondary LLM evaluation')
+@click.option('--eval-key', help='API key for secondary LLM')
+@click.option('--eval-model', help='Model for secondary LLM')
+@click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+def scan(target, request, param, key, profile, evasion, output, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
     """
     Scan - Run all modules against target
 
@@ -712,7 +759,8 @@ def scan(target, request, param, key, profile, evasion, output, verbose, proxy, 
                 parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
                 injection_param=param, body_format=format,
                 refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-                response_regex=response_regex
+                response_regex=response_regex,
+                eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
             )
         except Exception as e:
             console.print(f"[red][-][/red] {name} failed: {e}")
