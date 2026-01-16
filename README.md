@@ -227,6 +227,10 @@ AGENT   agent.target.com               [!] CRITICAL: Full agent compromise possi
 | `--eval-key` | API key for LLM Judge |
 | `--eval-model` | Model name for LLM Judge |
 | `--eval-url` | Custom URL for LLM Judge |
+| `--refresh-url` | URL to fetch new session ID |
+| `--refresh-regex` | Regex to extract session ID |
+| `--refresh-param` | Parameter to update (header/cookie) |
+| `--refresh-error` | Trigger string for refresh |
 
 ### Evasion Levels
 
@@ -252,6 +256,26 @@ aix jailbreak https://chat.target.com --eval-provider openai --eval-key sk-xxx
 
 # Use local Ollama
 aix inject https://target.com --eval-provider ollama --eval-url http://localhost:11434/api/chat --eval-model llama3
+```
+
+## 🔄 Session Management
+
+AIX can automatically handle session expiration (e.g., when a JWT token expires during a long scan).
+
+### Auto-Refresh Logic
+1.  **Detection**: If a response matches `--refresh-error` (e.g., "Token expired").
+2.  **Action**: AIX requests a new session from `--refresh-url`.
+3.  **Extraction**: Extracts the new token using `--refresh-regex`.
+4.  **Update**: Updates the component specified by `--refresh-param` (e.g., a header or cookie).
+5.  **Retry**: Re-sends the failed request with the new session.
+
+### Example
+```bash
+aix scan https://api.target.com/v1/chat \
+  --refresh-error "Token expired" \
+  --refresh-url "https://api.target.com/v1/auth/refresh" \
+  --refresh-regex "access_token\":\"(.*?)\"" \
+  --refresh-param "Authorization"
 ```
 
 ## 📊 Database & Reports

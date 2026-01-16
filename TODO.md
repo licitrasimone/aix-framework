@@ -5,7 +5,7 @@ This document outlines the planned improvements, feature requests, and future di
 ## 🚀 High Priority (Next Release)
 
 ### 1. Payload Enhancement
-- [ ] **Modern Jailbreaks**: Update `jailbreak.json` with newer techniques beyond classic DAN (e.g., "Grandmother", "Developer Mode v2", multi-shot attacks).
+- [x] **Modern Jailbreaks**: Update `jailbreak.json` with newer techniques beyond classic DAN (e.g., "Grandmother", "Developer Mode v2", multi-shot attacks).
 - [ ] **Polyglot Injections**: Add payloads that simultaneously test for Prompt Injection, SQLi, and XSS.
 - [ ] **Obfuscation**: Implement automatic payload encoding (Base64, Leetspeak, Rot13) that LLMs can decode but WAFs might miss.
 
