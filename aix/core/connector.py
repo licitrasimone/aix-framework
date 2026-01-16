@@ -155,6 +155,13 @@ class APIConnector(Connector):
             'response_path': 'message.content',
             'headers': {'Content-Type': 'application/json'},
         },
+        'gemini': {
+             'endpoint': ':generateContent',
+             'message_field': 'contents',
+             'message_format': lambda m: [{"parts": [{"text": m}]}],
+             'response_path': 'candidates.0.content.parts.0.text',
+             'headers': {'Content-Type': 'application/json'},
+        },
         'generic': {
             'endpoint': '',
             'message_field': 'message',
@@ -200,6 +207,8 @@ class APIConnector(Connector):
             return 'anthropic'
         elif 'ollama' in url_lower or ':11434' in url_lower:
             return 'ollama'
+        elif 'generativelanguage.googleapis.com' in url_lower:
+             return 'gemini'
         
         return 'generic'
     
@@ -214,6 +223,8 @@ class APIConnector(Connector):
         if self.api_key:
             if self.api_format == 'anthropic':
                 headers['x-api-key'] = self.api_key
+            elif self.api_format == 'gemini':
+                headers['x-goog-api-key'] = self.api_key
             else:
                 headers['Authorization'] = f'Bearer {self.api_key}'
         
@@ -295,16 +306,20 @@ class APIConnector(Connector):
 
         # Verbose log about proxy
         try:
-            verbose = bool(self.config.get('verbose'))
+            verbose = int(self.config.get('verbose', 0))
         except Exception:
-            verbose = False
-        if verbose:
-            console.print(f"[cyan]CONNECTOR[/cyan] [*] Using proxy: {proxy}")
+            verbose = 0
+            
+        if verbose >= 3:
+            if proxy:
+                console.print(f"[cyan]CONNECTOR[/cyan] [*] Using proxy: {proxy}")
 
-        # Parse cookies
-        cookies = self._parse_cookies(self.config.get('cookies'))
-        if verbose and cookies:
-            console.print(f"[cyan]CONNECTOR[/cyan] [*] Using cookies: {list(cookies.keys())}")
+            # Parse cookies
+            cookies = self._parse_cookies(self.config.get('cookies'))
+            if cookies:
+                console.print(f"[cyan]CONNECTOR[/cyan] [*] Using cookies: {list(cookies.keys())}")
+        else:
+            cookies = self._parse_cookies(self.config.get('cookies'))
 
         self.client = httpx.AsyncClient(
             timeout=self.config.get('timeout', 30),
@@ -401,7 +416,10 @@ class APIConnector(Connector):
             
             # Build URL with endpoint
             endpoint = self.format_config.get('endpoint', '')
-            url = self.url.rstrip('/') + endpoint
+            if self.url.rstrip('/').endswith(endpoint.rstrip('/')):
+                 url = self.url
+            else:
+                 url = self.url.rstrip('/') + endpoint
             
             # Use profile URL if available
             if self.profile and self.profile.endpoint:
@@ -654,17 +672,29 @@ class RequestConnector(Connector):
             proxy = 'http://' + proxy
 
         # Verbose log about proxy
+        # Verbose log about proxy
         try:
-            verbose = bool(self.config.get('verbose'))
+            verbose = int(self.config.get('verbose', 0))
         except Exception:
-            verbose = False
-        if verbose:
-            console.print(f"[cyan]REQUEST-CONN[/cyan] [*] Using proxy: {proxy}")
+            verbose = 0
+        # Parse cookies
+        cookies = self._parse_cookies(self.config.get('cookies'))
+        
+        if verbose >= 1 and proxy:
+             # Level 1 is enough for proxy notice, maybe? Or keep it quiet?
+             # User wants CLEAN logs. Proxy usage info is "meta". Let's put it on Level 2 (debug) or Level 1?
+             # User complaint was about Headers dump.
+             # Let's keep Proxy info at Level 2 to be safe for "clean" Level 1.
+             pass
 
         # Parse cookies
         cookies = self._parse_cookies(self.config.get('cookies'))
-        if verbose and cookies:
-            console.print(f"[cyan]REQUEST-CONN[/cyan] [*] Using cookies: {list(cookies.keys())}")
+
+        if verbose >= 3:    
+            if proxy:
+                console.print(f"[cyan]REQUEST-CONN[/cyan] [*] Using proxy: {proxy}")
+            if cookies:
+                console.print(f"[cyan]REQUEST-CONN[/cyan] [*] Using cookies: {list(cookies.keys())}")
 
         self.client = httpx.AsyncClient(
             timeout=self.config.get('timeout', 30),
@@ -696,11 +726,12 @@ class RequestConnector(Connector):
 
         try:
             # Verbose logging for debugging proxy usage
+            # Verbose logging for debugging proxy usage
             try:
-                verbose = bool(self.config.get('verbose'))
+                verbose = int(self.config.get('verbose', 0))
             except Exception:
-                verbose = False
-            if verbose:
+                verbose = 0
+            if verbose >= 3:
                 console.print(f"[cyan]REQUEST-CONN[/cyan] [*] {injected_request.method} {injected_request.url}")
                 console.print(f"[cyan]REQUEST-CONN[/cyan] [*] Headers: {injected_request.headers}")
                 console.print(f"[cyan]REQUEST-CONN[/cyan] [*] Body present: {bool(injected_request.body)}")

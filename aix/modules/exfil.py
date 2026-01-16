@@ -58,8 +58,9 @@ class ExfilScanner(BaseScanner):
                 try:
                     resp = await connector.send(payload)
 
-                    # Check for indicators
-                    is_vulnerable, matched = self._check_exfil_indicators(resp, p['indicators'])
+                    
+                    # Check for indicators using LLM or keywords
+                    is_vulnerable = await self.check_success(resp, p['indicators'], p['payload'], p['name'])
 
                     # Also check if our webhook URL appears in response
                     urls_in_response = self._extract_urls(resp)
@@ -79,14 +80,15 @@ class ExfilScanner(BaseScanner):
                             technique=p['name'],
                             payload=payload[:200],
                             response=resp[:5000],
-                            target=self.target
+                            target=self.target,
+                            reason=self.last_eval_reason
                         )
                         self.findings.append(finding)
 
                         self.db.add_result(
                             self.target, 'exfil', p['name'],
                             'success', payload[:200],
-                            resp[:5000], p['severity'].value
+                            resp[:5000], p['severity'].value, reason=self.last_eval_reason
                         )
                     else:
                         self.stats['blocked'] += 1
@@ -125,5 +127,6 @@ def run(target: str = None, api_key: str = None, profile: str = None, webhook: s
                            headers=kwargs.get('headers'),
                            injection_param=kwargs.get('injection_param'),
                            body_format=kwargs.get('body_format'),
-                           refresh_config=kwargs.get('refresh_config'))
+                           refresh_config=kwargs.get('refresh_config'),
+                           eval_config=kwargs.get('eval_config'))
     asyncio.run(scanner.run())

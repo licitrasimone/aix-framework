@@ -67,6 +67,8 @@ include = ["aix*"]
 
 [tool.setuptools.package-data]
 "aix.payloads" = ["*.json"]
+"aix.prompts" = ["*.txt"]
+
 
 [tool.black]
 line-length = 100

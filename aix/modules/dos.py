@@ -139,6 +139,7 @@ class DoSScanner(BaseScanner):
                     if len(resp) > 10000:
                         is_vulnerable = True
                         vulnerability_reason = f"Large response: {len(resp)} chars"
+                        self.last_eval_reason = vulnerability_reason
 
                     if is_vulnerable:
                         self.stats['success'] += 1 # Changed 'vulnerable' to 'success'
@@ -151,7 +152,8 @@ class DoSScanner(BaseScanner):
                             technique=p['name'],
                             payload=payload[:200],
                             response=f"{vulnerability_reason}. Response preview: {resp[:5000]}",
-                            target=self.target
+                            target=self.target,
+                            reason=self.last_eval_reason
                         )
                         self.findings.append(finding)
 
@@ -215,7 +217,8 @@ def run(target: str = None, api_key: str = None, profile: str = None,
                          body_format=kwargs.get('body_format'),
                          safe_mode=kwargs.get('safe_mode', True),
                          refresh_config=kwargs.get('refresh_config'),
-                         response_regex=kwargs.get('response_regex'))
+                         response_regex=kwargs.get('response_regex'),
+                         eval_config=kwargs.get('eval_config'))
     # run function didn't have safe_mode before? Checking original file definition... 
     # Original run def: `def run(..., **kwargs):`
     # Original DoSScanner init: `safe_mode: bool = True`.
