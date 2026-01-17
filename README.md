@@ -270,6 +270,30 @@ FUZZ    api.target.com                 [+] json_depth_limit (Vulnerable!)
 | `--refresh-regex` | Regex to extract session ID |
 | `--refresh-param` | Parameter to update (header/cookie) |
 | `--refresh-error` | Trigger string for refresh |
+| `--level` | Scan intensity level (1-5) |
+| `--risk` | Payload risk level (1-3) |
+
+### Scan Intensity & Risk
+
+AIX allows you to granularly control the intensity and risk of the scan using `--level` and `--risk`.
+
+#### Levels (1-5)
+Controls the number of payloads and complexity of tests.
+- **Level 1 (Default)**: Basic checks, minimal payloads. Fast and stealthy.
+- **Level 2**: Expanded payload set, common bypasses.
+- **Level 3**: Standard scan, most known vulnerabilities.
+- **Level 4**: Extensive testing, complex prompt structures.
+- **Level 5**: Exhaustive scan, all available payloads, potentially noisy.
+
+#### Risk (1-3)
+Controls the potential impact on the target.
+- **Risk 1 (Default)**: Safe, non-destructive, read-only. Safe for production.
+- **Risk 2**: Potential for minor side effects or sensitive data retrieval.
+- **Risk 3**: Hazardous, potential for service disruption, data modification, or high-severity triggers. **Use with caution.**
+
+**Feedback:**
+When running a scan, AIX will confirm your selected configuration:
+`[*] Config: Level=5, Risk=3 - Loaded 89/89 payloads`
 
 ### Evasion Levels
 

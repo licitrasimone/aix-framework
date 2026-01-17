@@ -6,11 +6,13 @@ This document outlines the planned improvements, feature requests, and future di
 
 ### 1. Payload Enhancement
 - [x] **Modern Jailbreaks**: Update `jailbreak.json` with newer techniques beyond classic DAN (e.g., "Grandmother", "Developer Mode v2", multi-shot attacks).
+- [x] **Payload Classification**: Implemented Level (1-5) and Risk (1-3) grading for all payloads.
 - [ ] **Polyglot Injections**: Add payloads that simultaneously test for Prompt Injection, SQLi, and XSS.
 - [ ] **Obfuscation**: Implement automatic payload encoding (Base64, Leetspeak, Rot13) that LLMs can decode but WAFs might miss.
 
 ### 2. Core Functionality
 - [x] **AI-Based Evaluation (LLM-as-a-Judge)**: Integrate a secondary LLM (local or API) to autonomously evaluate whether an attack was successful, reducing false positives/negatives.
+- [x] **Granular Control**: Implemented `--level` and `--risk` filters to control scan intensity and safety.
 - [ ] **Non-Determinism Testing**: "Temperature Checks" - option to send the same payload multiple times to analyze variance in responses and catch intermittent vulnerabilities.
 - [ ] **Recursive Scanning**: Ability to spider API endpoints to find undocumented LLM interaction points.
 - [ ] **WAF Evasion**: Add specific evasion techniques for common AI firewalls (e.g., Lakera, Cloudflare for AI).
