@@ -88,6 +88,8 @@ class BaseScanner:
                             p['severity'] = Severity.MEDIUM
                     filtered_payloads.append(p)
             
+            
+            self._print('info', f"Config: Level={self.level}, Risk={self.risk} - Loaded {len(filtered_payloads)}/{len(payloads)} payloads")
             return filtered_payloads
         except Exception as e:
             console.print(f"[yellow][!] Could not load payloads from {payload_path}: {e}[/yellow]")
