@@ -1,23 +1,24 @@
 """AIX Fuzz Module - Fuzzing and edge case testing"""
 import asyncio
+import json
+import os
 import random
 import string
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+
 from rich.console import Console
-from aix.core.reporter import Severity, Finding
+
+from aix.core.reporter import Finding, Severity
 from aix.core.scanner import BaseScanner
-from aix.db.database import AIXDatabase
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
 
 console = Console()
 
-import os
-import json
 
 class FuzzScanner(BaseScanner):
-    def __init__(self, target: str, api_key: Optional[str] = None, verbose: bool = False,
+    def __init__(self, target: str, api_key: str | None = None, verbose: bool = False,
                  parsed_request: Optional['ParsedRequest'] = None, iterations: int = 100, **kwargs):
         super().__init__(target, api_key, verbose, parsed_request, **kwargs)
         self.module_name = "FUZZ"
@@ -28,26 +29,26 @@ class FuzzScanner(BaseScanner):
         # Let's map 'anomalies' -> 'success' in this refactor to standardize.
         self.stats['anomalies'] = 0 # Explicitly keeping it for backward compat in logic if needed, or just remove and use success.
         # I'll use success for anomalies.
-        
+
         # Load config
         config_path = os.path.join(os.path.dirname(__file__), '..', 'payloads', 'fuzz_config.json')
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path) as f:
                 self.config = json.load(f)
         except Exception as e:
             console.print(f"[yellow][!] Could not load config from {config_path}: {e}[/yellow]")
             self.config = {"unicode_fuzz": [], "format_strings": []}
-            
+
         # Re-initialize control chars dynamically (not in config)
         self.control_chars = [chr(i) for i in range(32)] + [chr(127)]
-        
+
         self.default_payloads = self.load_payloads('fuzz.json')
         self.baseline_response = None
 
     def _print(self, status: str, msg: str, tech: str = ''):
         t = self.target[:28] + '...' if len(self.target) > 30 else self.target
         name = self.module_name[:7].upper()
-        
+
         if status == 'success':
             # Custom message for anomaly
             console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [green][+][/green] {tech} [bold green](Anomaly!)[/bold green]")
@@ -56,7 +57,7 @@ class FuzzScanner(BaseScanner):
         else:
             super()._print(status, msg, tech)
 
-    def _generate_random_fuzz(self) -> List[Dict]:
+    def _generate_random_fuzz(self) -> list[dict]:
         """Generate random fuzz payloads"""
         payloads = []
 
@@ -93,7 +94,7 @@ class FuzzScanner(BaseScanner):
 
         return payloads
 
-    def _is_anomaly(self, response: str, payload: Dict) -> tuple:
+    def _is_anomaly(self, response: str, payload: dict) -> tuple:
         """Detect anomalies in response"""
         anomalies = []
 
@@ -125,7 +126,7 @@ class FuzzScanner(BaseScanner):
 
         return len(anomalies) > 0, anomalies
 
-    async def run(self, payloads: List[Dict] = None):
+    async def run(self, payloads: list[dict] = None):
         if payloads is None: payloads = self.default_payloads.copy()
 
         # Add random fuzzing if iterations are high
@@ -145,7 +146,7 @@ class FuzzScanner(BaseScanner):
             # Get baseline response
             try:
                 self.baseline_response = await connector.send("Hello, how are you?")
-            except:
+            except Exception:
                 self.baseline_response = ""
 
             for i, p in enumerate(payloads):
@@ -209,13 +210,13 @@ class FuzzScanner(BaseScanner):
 
 def run(target: str = None, api_key: str = None, profile: str = None, browser: bool = False,
         iterations: int = 100, verbose: bool = False, output: str = None,
-        parsed_request: Optional['ParsedRequest'] = None, cookies: Optional[Dict] = None, **kwargs):
+        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, **kwargs):
     if not target:
         console.print("[red][-][/red] No target specified")
         return
 
     scanner = FuzzScanner(target, api_key=api_key, verbose=verbose,
-                          parsed_request=parsed_request, iterations=iterations, 
+                          parsed_request=parsed_request, iterations=iterations,
                           proxy=kwargs.get('proxy'), cookies=cookies, headers=kwargs.get('headers'), injection_param=kwargs.get('injection_param'),
                           body_format=kwargs.get('body_format'), refresh_config=kwargs.get('refresh_config'),
                           response_regex=kwargs.get('response_regex'),

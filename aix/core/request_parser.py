@@ -8,8 +8,8 @@ for use with the AIX framework.
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
 from pathlib import Path
+from typing import Any
 from urllib.parse import quote_plus
 
 
@@ -18,10 +18,10 @@ class ParsedRequest:
     """Represents a parsed HTTP request"""
     method: str
     url: str
-    headers: Dict[str, str] = field(default_factory=dict)
-    body: Optional[str] = None
-    body_json: Optional[Dict[str, Any]] = None
-    injection_param: Optional[str] = None
+    headers: dict[str, str] = field(default_factory=dict)
+    body: str | None = None
+    body_json: dict[str, Any] | None = None
+    injection_param: str | None = None
 
     @property
     def host(self) -> str:
@@ -34,7 +34,7 @@ class ParsedRequest:
         return parsed.netloc
 
     @property
-    def content_type(self) -> Optional[str]:
+    def content_type(self) -> str | None:
         """Get content type from headers"""
         for key, value in self.headers.items():
             if key.lower() == 'content-type':
@@ -60,13 +60,13 @@ class RequestParser:
         if not self.filepath.exists():
             raise RequestParseError(f"Request file not found: {filepath}")
 
-    def parse(self, injection_param: Optional[str] = None) -> ParsedRequest:
+    def parse(self, injection_param: str | None = None) -> ParsedRequest:
         """Parse the request file and return a ParsedRequest object"""
         content = self.filepath.read_text(encoding='utf-8')
         return self.parse_raw(content, injection_param)
 
     @staticmethod
-    def parse_raw(content: str, injection_param: Optional[str] = None) -> ParsedRequest:
+    def parse_raw(content: str, injection_param: str | None = None) -> ParsedRequest:
         """Parse raw HTTP request content"""
         lines = content.strip().split('\n')
         if not lines:
@@ -184,7 +184,7 @@ def get_nested_value(obj: Any, path: str) -> Any:
     return current
 
 
-def _parse_path(path: str) -> List[Any]:
+def _parse_path(path: str) -> list[Any]:
     """
     Parse a path string into components.
 
@@ -234,27 +234,27 @@ def inject_payload(request: ParsedRequest, payload: str) -> ParsedRequest:
     elif request.body:
         # Handle form-urlencoded body (key=value&key2=value2)
         # We need to replace the value of the specified parameter
-        
+
         # Regex to match: (^|&)param=([^&]*)
         # We want to replace group 2 with the payload
         param = re.escape(request.injection_param)
         pattern = r'(^|&)' + param + r'=([^&]*)'
-        
+
         if re.search(pattern, request.body):
             # Replace logic: keep the delimiter and key, replace value with payload
             # We use lambda to handle the replacement safely since payload might have backslashes
             # URL-encode payload for form-urlencoded bodies
             encoded_payload = quote_plus(payload)
             new_request.body = re.sub(
-                pattern, 
-                lambda m: f"{m.group(1)}{request.injection_param}={encoded_payload}", 
+                pattern,
+                lambda m: f"{m.group(1)}{request.injection_param}={encoded_payload}",
                 request.body
             )
         else:
             # Fallback: if param not found as key=value, try naive replacement (placeholder style)
             # This covers cases where user just put "MARKER" in the body
             if request.injection_param in request.body:
-                 # If it looks like a placeholder, maybe don't encode? 
+                 # If it looks like a placeholder, maybe don't encode?
                  # But if it's in a form body, it probably should be.
                  # Let's check if the body looks like url-encoded (has & or =)
                  if '&' in request.body or '=' in request.body:
@@ -276,7 +276,7 @@ def inject_payload(request: ParsedRequest, payload: str) -> ParsedRequest:
     return new_request
 
 
-def load_request(filepath: str, injection_param: Optional[str] = None) -> ParsedRequest:
+def load_request(filepath: str, injection_param: str | None = None) -> ParsedRequest:
     """
     Convenience function to load and parse a request file.
 

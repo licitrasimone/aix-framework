@@ -1,11 +1,12 @@
 """AIX Agent Module - AI agent and tool exploitation"""
 import asyncio
 import re
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+
 from rich.console import Console
-from aix.core.reporter import Severity, Finding
+
+from aix.core.reporter import Finding, Severity
 from aix.core.scanner import BaseScanner
-from aix.db.database import AIXDatabase
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
 console = Console()
 
 class AgentScanner(BaseScanner):
-    def __init__(self, target: str, api_key: Optional[str] = None, browser: bool = False, verbose: bool = False,
+    def __init__(self, target: str, api_key: str | None = None, browser: bool = False, verbose: bool = False,
                  parsed_request: Optional['ParsedRequest'] = None, **kwargs):
         super().__init__(target, api_key, verbose, parsed_request, **kwargs)
         self.module_name = "AGENT"
@@ -26,7 +27,7 @@ class AgentScanner(BaseScanner):
         self.discovered_tools = []
         self.default_payloads = self.load_payloads('agent.json')
 
-    def _check_indicators(self, response: str, indicators: List[str]) -> tuple:
+    def _check_indicators(self, response: str, indicators: list[str]) -> tuple:
         """Check if response contains vulnerability indicators"""
         response_lower = response.lower()
         matched = []
@@ -36,7 +37,7 @@ class AgentScanner(BaseScanner):
         # For discovery, require only 1 match; for exploits require 2+
         return len(matched) >= 1, matched
 
-    def _extract_tools(self, response: str) -> List[str]:
+    def _extract_tools(self, response: str) -> list[str]:
         """Extract tool/function names from response"""
         tool_patterns = [
             r'`([a-zA-Z_][a-zA-Z0-9_]*)`',  # Backtick quoted
@@ -48,7 +49,7 @@ class AgentScanner(BaseScanner):
             tools.extend(re.findall(pattern, response))
         return list(set(tools))
 
-    async def run(self, payloads: List[Dict] = None):
+    async def run(self, payloads: list[dict] = None):
         if payloads is None: payloads = self.default_payloads
 
         self._print('info', f'Testing {len(payloads)} agent exploitation techniques...')

@@ -14,15 +14,15 @@ __version__ = "1.0.0"
 __author__ = "AIX Team"
 __license__ = "MIT"
 
-from aix.core.scanner import AIXScanner
-from aix.core.connector import Connector, APIConnector, WebSocketConnector
+from aix.core.connector import APIConnector, Connector, WebSocketConnector
 from aix.core.reporter import Reporter
+from aix.core.scanner import AIXScanner
 from aix.db.database import AIXDatabase
 
 __all__ = [
     'AIXScanner',
     'Connector',
-    'APIConnector', 
+    'APIConnector',
     'WebSocketConnector',
     'Reporter',
     'AIXDatabase',

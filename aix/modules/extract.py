@@ -1,10 +1,11 @@
 """AIX Extract Module - System prompt extraction"""
 import asyncio
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+
 from rich.console import Console
-from aix.core.reporter import Severity, Finding
+
+from aix.core.reporter import Finding
 from aix.core.scanner import BaseScanner
-from aix.db.database import AIXDatabase
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
 console = Console()
 
 class ExtractScanner(BaseScanner):
-    def __init__(self, target: str, api_key: Optional[str] = None, browser: bool = False, verbose: bool = False,
+    def __init__(self, target: str, api_key: str | None = None, browser: bool = False, verbose: bool = False,
                  parsed_request: Optional['ParsedRequest'] = None, **kwargs):
         super().__init__(target, api_key, verbose, parsed_request, **kwargs)
         self.module_name = "EXTRACT"
@@ -20,7 +21,7 @@ class ExtractScanner(BaseScanner):
         self.browser = browser # Explicit arg handling if needed, though kwargs handles it too
         self.default_extractions = self.load_payloads('extract.json')
 
-    async def run(self, extractions: List[Dict] = None):
+    async def run(self, extractions: list[dict] = None):
         if extractions is None: extractions = self.default_extractions
         self._print('info', f'Testing {len(extractions)} extraction techniques...')
 
@@ -41,7 +42,8 @@ class ExtractScanner(BaseScanner):
                     else:
                         self.stats['blocked'] += 1
                         self._print('blocked', '', e['name'])
-                except: self.stats['blocked'] += 1
+                except Exception:
+                    self.stats['blocked'] += 1
                 await asyncio.sleep(0.3)
         finally:
             await connector.close()
@@ -52,7 +54,7 @@ class ExtractScanner(BaseScanner):
 
 def run(target: str = None, api_key: str = None, profile: str = None,
         browser: bool = False, verbose: bool = False, output: str = None,
-        parsed_request: Optional['ParsedRequest'] = None, cookies: Optional[Dict] = None, **kwargs):
+        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, **kwargs):
     if not target:
         console.print("[red][-][/red] No target specified")
         return

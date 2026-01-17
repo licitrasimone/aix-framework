@@ -3,24 +3,24 @@ AIX Connectors
 
 Handles communication with AI targets through various methods:
 - Direct API calls (OpenAI, Anthropic, etc.)
-- Direct API calls (OpenAI, Anthropic, etc.)
-- WebSocket connections
-- Proxy/intercept mode
 - WebSocket connections
 - Proxy/intercept mode
 """
 
 import asyncio
 import json
-import re
 import os
+import re
+import urllib.parse
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 import httpx
-import urllib.parse
 from rich.console import Console
+
+if TYPE_CHECKING:
+    from aix.core.request_parser import ParsedRequest
 
 console = Console()
 
@@ -30,31 +30,31 @@ class ConnectorConfig:
     """Configuration for a connector"""
     url: str
     method: str = "POST"
-    headers: Dict[str, str] = None
-    auth_type: Optional[str] = None
-    auth_value: Optional[str] = None
+    headers: dict[str, str] = None
+    auth_type: str | None = None
+    auth_value: str | None = None
     timeout: int = 30
     message_field: str = "message"
     response_field: str = "response"
-    proxy: Optional[str] = None
-    cookies: Optional[str] = None
-    extra_fields: Dict[str, Any] = None
+    proxy: str | None = None
+    cookies: str | None = None
+    extra_fields: dict[str, Any] = None
 
 
 class Connector(ABC):
     """Base class for all connectors"""
-    
+
     def __init__(self, url: str, profile=None, **kwargs):
         self.url = url
         self.profile = profile
         self.config = kwargs
         self.session = None
-    
-    def _parse_cookies(self, cookies: Optional[str]) -> Dict[str, str]:
+
+    def _parse_cookies(self, cookies: str | None) -> dict[str, str]:
         """Parse cookie string into dictionary"""
         if not cookies:
             return {}
-        
+
         cookie_dict = {}
         for item in cookies.split(';'):
             if '=' in item:
@@ -62,11 +62,11 @@ class Connector(ABC):
                 cookie_dict[key] = value
         return cookie_dict
 
-    def _parse_headers(self, headers: Optional[str]) -> Dict[str, str]:
+    def _parse_headers(self, headers: str | None) -> dict[str, str]:
         """Parse header string into dictionary"""
         if not headers:
             return {}
-        
+
         header_dict = {}
         for item in headers.split(';'):
             if ':' in item:
@@ -78,21 +78,21 @@ class Connector(ABC):
     async def connect(self) -> None:
         """Establish connection to target"""
         pass
-    
+
     @abstractmethod
     async def send(self, payload: str) -> str:
         """Send payload and return response"""
         pass
-    
+
     @abstractmethod
     async def close(self) -> None:
         """Close connection"""
         pass
-    
+
     async def __aenter__(self):
         await self.connect()
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
 
@@ -100,7 +100,7 @@ class Connector(ABC):
         """Apply response regex to extracted text"""
         if not hasattr(self, 'response_regex') or not self.response_regex or not text:
             return text
-            
+
         try:
             matches = re.findall(self.response_regex, text, re.DOTALL)
             if matches:
@@ -128,7 +128,7 @@ class APIConnector(Connector):
     - Local models (Ollama, LM Studio)
     - Custom APIs
     """
-    
+
     # Known API formats
     API_FORMATS = {
         'openai': {
@@ -170,13 +170,13 @@ class APIConnector(Connector):
             'headers': {'Content-Type': 'application/json'},
         },
     }
-    
+
     def __init__(
         self,
         url: str,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         api_format: str = 'generic',
-        model: Optional[str] = None,
+        model: str | None = None,
         profile=None,
         **kwargs
     ):
@@ -187,20 +187,20 @@ class APIConnector(Connector):
         self.model = model
         self.injection_param = kwargs.get('injection_param')
         self.body_format = kwargs.get('body_format', 'json')
-        self.client: Optional[httpx.AsyncClient] = None
+        self.client: httpx.AsyncClient | None = None
         self.refresh_config = kwargs.get('refresh_config', {})
         self.response_regex = kwargs.get('response_regex')
-        
+
         # Detect API format from URL if not specified
         if api_format == 'generic':
             self.api_format = self._detect_api_format()
-        
+
         self.format_config = self.API_FORMATS.get(self.api_format, self.API_FORMATS['generic'])
-    
+
     def _detect_api_format(self) -> str:
         """Detect API format from URL"""
         url_lower = self.url.lower()
-        
+
         if 'openai' in url_lower or 'azure' in url_lower:
             return 'openai'
         elif 'anthropic' in url_lower:
@@ -209,17 +209,17 @@ class APIConnector(Connector):
             return 'ollama'
         elif 'generativelanguage.googleapis.com' in url_lower:
              return 'gemini'
-        
+
         return 'generic'
-    
-    def _build_headers(self) -> Dict[str, str]:
+
+    def _build_headers(self) -> dict[str, str]:
         """Build request headers"""
         headers = dict(self.format_config.get('headers', {}))
 
         # Remove default Content-Type if not using JSON format so httpx can set it correctly
         if self.body_format != 'json' and headers.get('Content-Type') == 'application/json':
             del headers['Content-Type']
-        
+
         if self.api_key:
             if self.api_format == 'anthropic':
                 headers['x-api-key'] = self.api_key
@@ -227,27 +227,27 @@ class APIConnector(Connector):
                 headers['x-goog-api-key'] = self.api_key
             else:
                 headers['Authorization'] = f'Bearer {self.api_key}'
-        
+
         # Add custom headers from profile
         if self.profile and hasattr(self.profile, 'headers'):
             headers.update(self.profile.headers or {})
-            
+
         # Add custom headers from CLI
         custom_headers = self._parse_headers(self.config.get('headers'))
         if custom_headers:
             headers.update(custom_headers)
-        
+
         return headers
-    
-    def _build_payload(self, message: str) -> Dict[str, Any]:
+
+    def _build_payload(self, message: str) -> dict[str, Any]:
         """Build request payload"""
         msg_field = self.injection_param or self.format_config['message_field']
         msg_format = self.format_config['message_format']
-        
+
         payload = {
             msg_field: msg_format(message),
         }
-        
+
         # Add model if specified
         if self.model:
             payload['model'] = self.model
@@ -256,19 +256,19 @@ class APIConnector(Connector):
         elif self.api_format == 'anthropic':
             payload['model'] = 'claude-3-sonnet-20240229'
             payload['max_tokens'] = 1024
-        
+
         # Add extra fields from profile
         if self.profile and hasattr(self.profile, 'request_template'):
             template = self.profile.request_template or {}
             for key, value in template.items():
                 if key not in payload:
                     payload[key] = value
-        
+
         return payload
-    
-    def _extract_response(self, data: Dict[str, Any]) -> str:
+
+    def _extract_response(self, data: dict[str, Any]) -> str:
         """Extract response text from API response"""
-        
+
         # Helper to extract from data structure
         def extract_from_path(d, p):
             result = d
@@ -282,21 +282,21 @@ class APIConnector(Connector):
                     result = result.get(key, '')
                 else:
                     return str(result)
-                
+
                 if result is None:
                     return ""
             return str(result) if result is not None else ""
 
         extracted_text = ""
         path = self.format_config['response_path']
-        
+
         # Handle profile-specific response path
         if self.profile and hasattr(self.profile, 'response_path'):
             path = self.profile.response_path
-        
+
         extracted_text = extract_from_path(data, path)
         return self._apply_regex(extracted_text)
-    
+
     async def connect(self) -> None:
         """Initialize HTTP client"""
         # Determine explicit proxy setting (connector config overrides env)
@@ -309,7 +309,7 @@ class APIConnector(Connector):
             verbose = int(self.config.get('verbose', 0))
         except Exception:
             verbose = 0
-            
+
         if verbose >= 3:
             if proxy:
                 console.print(f"[cyan]CONNECTOR[/cyan] [*] Using proxy: {proxy}")
@@ -354,9 +354,9 @@ class APIConnector(Connector):
             # EXPLICITLY disable redirect following to capture Location header
             async with httpx.AsyncClient(proxy=proxy, verify=False, trust_env=False, follow_redirects=False) as client:
                 response = await client.get(refresh_url)
-                
+
                 content_to_search = ""
-                
+
                 # Check for Redirect (3xx)
                 if 300 <= response.status_code < 400:
                     console.print(f"[cyan]CONNECTOR[/cyan] [*] Refresh endpoint returned redirect: {response.status_code}")
@@ -366,30 +366,30 @@ class APIConnector(Connector):
                         # But usually Location is just the URL.
                     else:
                         console.print("[red]CONNECTOR[/red] [-] Redirect caught but no Location header found")
-                
+
                 # Check for Success (2xx)
                 elif 200 <= response.status_code < 300:
                     content_to_search = response.text
-                
+
                 # Errors
                 else:
                     console.print(f"[red]CONNECTOR[/red] [-] Refresh request failed with status: {response.status_code}")
                     return False
-                
+
                 # Extract new ID using regex
                 match = re.search(refresh_regex, content_to_search)
                 if match:
                     new_id = match.group(1)
                     console.print(f"[green]CONNECTOR[/green] [+] Refreshed session ID: {new_id}")
-                    
+
                     # Update the target URL with the new parameter
                     parsed_url = urllib.parse.urlparse(self.url)
                     query_params = urllib.parse.parse_qs(parsed_url.query)
                     query_params[refresh_param] = [new_id]
-                    
+
                     new_query = urllib.parse.urlencode(query_params, doseq=True)
                     self.url = urllib.parse.urlunparse(parsed_url._replace(query=new_query))
-                    
+
                     console.print(f"[green]CONNECTOR[/green] [*] Updated target: {self.url}")
                     return True
                 else:
@@ -406,25 +406,25 @@ class APIConnector(Connector):
         """Send message to API and return response"""
         if not self.client:
             await self.connect()
-        
+
         # Retry loop for session refresh
         max_retries = 1
         attempt = 0
-        
+
         while attempt <= max_retries:
             attempt += 1
-            
+
             # Build URL with endpoint
             endpoint = self.format_config.get('endpoint', '')
             if self.url.rstrip('/').endswith(endpoint.rstrip('/')):
                  url = self.url
             else:
                  url = self.url.rstrip('/') + endpoint
-            
+
             # Use profile URL if available
             if self.profile and self.profile.endpoint:
                 url = self.profile.url.rstrip('/') + self.profile.endpoint
-            
+
             headers = self._build_headers()
             body = self._build_payload(payload)
 
@@ -438,14 +438,14 @@ class APIConnector(Connector):
                     response = await self.client.post(url, files=files, headers=headers)
                 else:
                     response = await self.client.post(url, json=body, headers=headers)
-                
+
                 # Check for triggering conditions for refresh
                 should_refresh = False
-                
+
                 # 1. HTTP Error Status codes
                 if response.status_code in [401, 403, 500]:
                     should_refresh = True
-                
+
                 # 2. Content-based error trigger (for 200 OK errors)
                 refresh_error_sig = self.refresh_config.get('error')
                 if refresh_error_sig:
@@ -462,10 +462,10 @@ class APIConnector(Connector):
                         pass
 
                 response.raise_for_status()
-                
+
                 data = response.json()
                 return self._extract_response(data)
-            
+
             except httpx.HTTPStatusError as e:
                 # If we are here, it means we either didn't refresh or refresh failed
                 status = e.response.status_code
@@ -475,7 +475,7 @@ class APIConnector(Connector):
                     console.print(f"[red][!] Server error (HTTP {status})[/red]")
                 elif status == 429:
                     console.print(f"[yellow][!] Rate limit exceeded (HTTP {status})[/yellow]")
-                    
+
                 raise ConnectionError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
             except json.JSONDecodeError:
                 # Check for content error match on non-JSON response too
@@ -483,7 +483,7 @@ class APIConnector(Connector):
                 if refresh_error_sig and attempt <= max_retries and self.refresh_config.get('url'):
                     # We might have failed JSON decode because of an error page
                     if re.search(refresh_error_sig, response.text):
-                        console.print(f"[yellow]CONNECTOR[/yellow] [!] Response matches error signature (Auto-Refresh Triggered)")
+                        console.print("[yellow]CONNECTOR[/yellow] [!] Response matches error signature (Auto-Refresh Triggered)")
                         if await self._refresh_session():
                             continue # Retry loop
 
@@ -492,7 +492,7 @@ class APIConnector(Connector):
                  raise ConnectionError(f"Failed to connect to {url}. Check your proxy settings.")
             except Exception as e:
                 raise ConnectionError(f"Request failed: {str(e)}")
-    
+
     async def close(self) -> None:
         """Close HTTP client"""
         if self.client:
@@ -507,27 +507,27 @@ class WebSocketConnector(Connector):
     """
     WebSocket connector for real-time chat interfaces.
     """
-    
+
     def __init__(self, url: str, profile=None, **kwargs):
         super().__init__(url, profile, **kwargs)
         self.ws = None
         self.message_format = kwargs.get('message_format', lambda m: json.dumps({"message": m}))
         self.response_parser = kwargs.get('response_parser', lambda r: json.loads(r).get('response', r))
-    
+
     async def connect(self) -> None:
         """Connect to WebSocket"""
         import websockets
         self.ws = await websockets.connect(self.url)
-    
+
     async def send(self, payload: str) -> str:
         """Send message through WebSocket"""
         if not self.ws:
             await self.connect()
-        
+
         await self.ws.send(self.message_format(payload))
         response = await self.ws.recv()
         return self.response_parser(response)
-    
+
     async def close(self) -> None:
         """Close WebSocket"""
         if self.ws:
@@ -545,8 +545,8 @@ class InterceptConnector(Connector):
     def __init__(self, url: str, profile=None, port: int = 8080, **kwargs):
         super().__init__(url, profile, **kwargs)
         self.port = port
-        self.intercepted_requests: List[Dict] = []
-        self.intercepted_responses: List[Dict] = []
+        self.intercepted_requests: list[dict] = []
+        self.intercepted_responses: list[dict] = []
         self.server = None
         # Optional upstream proxy to forward requests to (host, port)
         self.upstream = kwargs.get('upstream')
@@ -554,9 +554,8 @@ class InterceptConnector(Connector):
     async def connect(self) -> None:
         """Start proxy server"""
         console.print(f"[cyan][*][/cyan] Starting TCP proxy on 127.0.0.1:{self.port}")
-        console.print(f"[cyan][*][/cyan] Configure your browser to use this proxy")
+        console.print("[cyan][*][/cyan] Configure your browser to use this proxy")
 
-        loop = asyncio.get_event_loop()
         self.server = await asyncio.start_server(self._handle_client, '127.0.0.1', self.port)
 
     async def send(self, payload: str) -> str:
@@ -570,7 +569,7 @@ class InterceptConnector(Connector):
             await self.server.wait_closed()
             self.server = None
 
-    def get_intercepted(self) -> List[Dict]:
+    def get_intercepted(self) -> list[dict]:
         """Get list of intercepted request/response pairs"""
         return list(zip(self.intercepted_requests, self.intercepted_responses))
 
@@ -655,14 +654,14 @@ class RequestConnector(Connector):
     def __init__(
         self,
         parsed_request: 'ParsedRequest',
-        response_path: Optional[str] = None,
+        response_path: str | None = None,
         **kwargs
     ):
         super().__init__(parsed_request.url, **kwargs)
         self.parsed_request = parsed_request
         self.response_path = response_path
         self.response_regex = kwargs.get('response_regex')
-        self.client: Optional[httpx.AsyncClient] = None
+        self.client: httpx.AsyncClient | None = None
 
     async def connect(self) -> None:
         """Initialize HTTP client"""
@@ -679,7 +678,7 @@ class RequestConnector(Connector):
             verbose = 0
         # Parse cookies
         cookies = self._parse_cookies(self.config.get('cookies'))
-        
+
         if verbose >= 1 and proxy:
              # Level 1 is enough for proxy notice, maybe? Or keep it quiet?
              # User wants CLEAN logs. Proxy usage info is "meta". Let's put it on Level 2 (debug) or Level 1?
@@ -690,7 +689,7 @@ class RequestConnector(Connector):
         # Parse cookies
         cookies = self._parse_cookies(self.config.get('cookies'))
 
-        if verbose >= 3:    
+        if verbose >= 3:
             if proxy:
                 console.print(f"[cyan]REQUEST-CONN[/cyan] [*] Using proxy: {proxy}")
             if cookies:
@@ -788,7 +787,7 @@ class RequestConnector(Connector):
     def _extract_response(self, data: Any) -> str:
         """Extract response text from API response"""
         extracted_text = ""
-        
+
         if not self.response_path:
             # Try common response paths
             common_paths = [
@@ -807,14 +806,14 @@ class RequestConnector(Connector):
                         break
                 except (KeyError, IndexError, TypeError):
                     continue
-            
+
             # If still empty, use full dump
             if not extracted_text:
                 extracted_text = json.dumps(data) if isinstance(data, dict) else str(data)
 
         else:
             extracted_text = str(self._navigate_path(data, self.response_path))
-            
+
         return self._apply_regex(extracted_text)
 
     def _navigate_path(self, data: Any, path: str) -> Any:
@@ -830,7 +829,7 @@ class RequestConnector(Connector):
                 result = result.get(key, '')
             else:
                 return str(result)
-            
+
             if not result:
                 break
         return result
@@ -842,7 +841,3 @@ class RequestConnector(Connector):
             self.client = None
 
 
-# Type hint import for RequestConnector
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from aix.core.request_parser import ParsedRequest

@@ -1,42 +1,42 @@
 """AIX Leak Module - Training data and sensitive information leakage"""
 import asyncio
+import json
+import os
 import re
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+
 from rich.console import Console
-from aix.core.reporter import Severity, Finding
+
+from aix.core.reporter import Finding
 from aix.core.scanner import BaseScanner
-from aix.db.database import AIXDatabase
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
 
 console = Console()
 
-import os
-import json
-
 
 class LeakScanner(BaseScanner):
-    def __init__(self, target: str, api_key: Optional[str] = None, browser: bool = False, verbose: bool = False,
+    def __init__(self, target: str, api_key: str | None = None, browser: bool = False, verbose: bool = False,
                  parsed_request: Optional['ParsedRequest'] = None, **kwargs):
         super().__init__(target, api_key, verbose, parsed_request, **kwargs)
         self.module_name = "LEAK"
         self.console_color = "red" # Leak usually uses cyan? Code used cyan. BaseScanner default white. I'll use cyan to match others or red/yellow for leaks? Original code used cyan in _print.
         self.console_color = "cyan"
         self.browser = browser
-        
+
         # Load config (PII patterns)
         config_path = os.path.join(os.path.dirname(__file__), '..', 'payloads', 'leak_config.json')
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path) as f:
                 self.config = json.load(f)
         except Exception as e:
             console.print(f"[yellow][!] Could not load config from {config_path}: {e}[/yellow]")
             self.config = {"pii_patterns": {}}
-            
+
         self.default_probes = self.load_payloads('leak.json')
 
-    def _check_pii(self, response: str) -> List[Dict]:
+    def _check_pii(self, response: str) -> list[dict]:
         """Check response for PII patterns"""
         found = []
         for pii_type, pattern in self.config.get('pii_patterns', {}).items():
@@ -49,12 +49,12 @@ class LeakScanner(BaseScanner):
                 })
         return found
 
-    def _check_indicators(self, response: str, indicators: List[str]) -> bool:
+    def _check_indicators(self, response: str, indicators: list[str]) -> bool:
         """Check if response contains any indicators"""
         response_lower = response.lower()
         return any(ind.lower() in response_lower for ind in indicators)
 
-    async def run(self, probes: List[Dict] = None):
+    async def run(self, probes: list[dict] = None):
         if probes is None: probes = self.default_probes
 
         self._print('info', f'Testing {len(probes)} leak detection probes...')
@@ -124,7 +124,7 @@ def run(target: str = None, api_key: str = None, profile: str = None,
     if not target:
         console.print("[red][-][/red] No target specified")
         return
-    
+
     scanner = LeakScanner(target, api_key=api_key, browser=browser, verbose=verbose,
                           parsed_request=parsed_request, proxy=kwargs.get('proxy'), cookies=kwargs.get('cookies'),
                           headers=kwargs.get('headers'),

@@ -9,27 +9,26 @@
     "NetExec for AI" - Test any AI endpoint like a pro
 """
 
+import os
+import sys
+
 import click
 from rich.console import Console
-from rich.panel import Panel
-from rich.text import Text
-import sys
-import os
 
 from aix import __version__
-from aix.modules import recon, inject, jailbreak, extract, leak, exfil, agent, dos, fuzz
+from aix.core.request_parser import RequestParseError, load_request
 from aix.db.database import AIXDatabase
-from aix.core.request_parser import load_request, RequestParseError
+from aix.modules import agent, dos, exfil, extract, fuzz, inject, jailbreak, leak, recon
 
 console = Console()
 
-BANNER = """
+BANNER = f"""
 [bold cyan]    ▄▀█ █ ▀▄▀[/bold cyan]
-[bold cyan]    █▀█ █ █ █[/bold cyan]  [dim]v{}[/dim]
+[bold cyan]    █▀█ █ █ █[/bold cyan]  [dim]v{__version__}[/dim]
     
 [dim]    AI Security Testing Framework[/dim]
 [dim]    Maintained as an open source project by @r08t[/dim]
-""".format(__version__)
+"""
 
 
 def print_banner():
@@ -84,13 +83,12 @@ def validate_input(target, request, param):
 def main(ctx, version):
     """
     AIX - AI eXploit Framework
-    
-    The first comprehensive AI/LLM security testing tool.
+
     The first comprehensive AI/LLM security testing tool.
     Test any AI endpoint for vulnerabilities.
-    
+
     Now supports HTTP proxies, Burp Suite request parsing, and externalized payloads.
-    
+
     \b
     Examples:
         aix recon https://company.com/chatbot
@@ -101,7 +99,7 @@ def main(ctx, version):
     if version:
         console.print(f"[bold cyan]AIX[/bold cyan] version [green]{__version__}[/green]")
         sys.exit(0)
-    
+
     if ctx.invoked_subcommand is None:
         print_banner()
         console.print(ctx.get_help())
@@ -666,20 +664,20 @@ def db(export, clear, target, module):
         aix db --clear
     """
     print_banner()
-    
+
     db = AIXDatabase()
-    
+
     if clear:
         if click.confirm('Are you sure you want to clear all results?'):
             db.clear()
             console.print("[green][+][/green] Database cleared")
         return
-    
+
     if export:
         db.export_html(export, target=target, module=module)
         console.print(f"[green][+][/green] Report exported: {export}")
         return
-    
+
     # Show results
     results = db.get_results(target=target, module=module)
     db.display_results(results)
@@ -766,7 +764,7 @@ def scan(target, request, param, key, profile, evasion, output, verbose, proxy, 
         console.print()
 
     console.print("[bold green][+][/bold green] Scan complete!")
-    console.print(f"[dim]Run 'aix db --export report.html' to generate report[/dim]")
+    console.print("[dim]Run 'aix db --export report.html' to generate report[/dim]")
 
 
 if __name__ == '__main__':

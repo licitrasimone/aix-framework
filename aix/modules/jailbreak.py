@@ -1,10 +1,11 @@
 """AIX Jailbreak Module - Bypass AI restrictions"""
 import asyncio
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+
 from rich.console import Console
-from aix.core.reporter import Severity, Finding
+
+from aix.core.reporter import Finding
 from aix.core.scanner import BaseScanner
-from aix.db.database import AIXDatabase
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
 console = Console()
 
 class JailbreakScanner(BaseScanner):
-    def __init__(self, target: str, api_key: Optional[str] = None, verbose: bool = False,
+    def __init__(self, target: str, api_key: str | None = None, verbose: bool = False,
                  parsed_request: Optional['ParsedRequest'] = None, **kwargs):
         super().__init__(target, api_key, verbose, parsed_request, **kwargs)
         self.module_name = "JAILBRK"
@@ -20,7 +21,7 @@ class JailbreakScanner(BaseScanner):
         self.test_harmful = kwargs.get('test_harmful', False)
         self.default_jailbreaks = self.load_payloads('jailbreak.json')
 
-    async def run(self, jailbreaks: List[Dict] = None):
+    async def run(self, jailbreaks: list[dict] = None):
         if jailbreaks is None: jailbreaks = self.default_jailbreaks
         self._print('info', f'Testing {len(jailbreaks)} jailbreak techniques...')
 
@@ -54,7 +55,7 @@ class JailbreakScanner(BaseScanner):
 
 def run(target: str = None, api_key: str = None, profile: str = None, browser: bool = False,
         evasion: str = 'light', test_harmful: bool = False, verbose: bool = False, output: str = None,
-        parsed_request: Optional['ParsedRequest'] = None, cookies: Optional[Dict] = None, **kwargs):
+        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, **kwargs):
     if not target:
         console.print("[red][-][/red] No target specified")
         return

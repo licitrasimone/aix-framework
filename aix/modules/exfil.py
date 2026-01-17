@@ -1,11 +1,12 @@
 """AIX Exfil Module - Data exfiltration channel testing"""
 import asyncio
 import re
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+
 from rich.console import Console
-from aix.core.reporter import Severity, Finding
+
+from aix.core.reporter import Finding
 from aix.core.scanner import BaseScanner
-from aix.db.database import AIXDatabase
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -16,8 +17,8 @@ console = Console()
 DEFAULT_WEBHOOK = "https://example.com/exfil"
 
 class ExfilScanner(BaseScanner):
-    def __init__(self, target: str, api_key: Optional[str] = None, verbose: bool = False,
-                 webhook: Optional[str] = None, parsed_request: Optional['ParsedRequest'] = None, **kwargs):
+    def __init__(self, target: str, api_key: str | None = None, verbose: bool = False,
+                 webhook: str | None = None, parsed_request: Optional['ParsedRequest'] = None, **kwargs):
         super().__init__(target, api_key, verbose, parsed_request, **kwargs)
         self.module_name = "EXFIL"
         self.console_color = "cyan"
@@ -25,7 +26,7 @@ class ExfilScanner(BaseScanner):
         self.browser = kwargs.get('browser') # Passed via kwargs to super
         self.default_payloads = self.load_payloads('exfil.json')
 
-    def _check_exfil_indicators(self, response: str, indicators: List[str]) -> tuple:
+    def _check_exfil_indicators(self, response: str, indicators: list[str]) -> tuple:
         """Check if response contains exfiltration indicators"""
         response_lower = response.lower()
         matched = []
@@ -34,15 +35,15 @@ class ExfilScanner(BaseScanner):
                 matched.append(ind)
         return len(matched) >= 2, matched  # Require at least 2 indicators
 
-    def _extract_urls(self, response: str) -> List[str]:
+    def _extract_urls(self, response: str) -> list[str]:
         """Extract URLs from response"""
         url_pattern = r'https?://[^\s<>"\')\]]+|data:[^\s<>"\')\]]+'
         return re.findall(url_pattern, response, re.IGNORECASE)
 
-    async def run(self, webhook: str = None, payloads: List[Dict] = None):
+    async def run(self, webhook: str = None, payloads: list[dict] = None):
         if webhook: self.webhook = webhook
         if payloads is None: payloads = self.default_payloads
-        
+
         self._print('info', f'Testing {len(payloads)} exfiltration vectors with webhook: {self.webhook}')
 
         connector = self._create_connector()
@@ -58,7 +59,7 @@ class ExfilScanner(BaseScanner):
                 try:
                     resp = await connector.send(payload)
 
-                    
+
                     # Check for indicators using LLM or keywords
                     is_vulnerable = await self.check_success(resp, p['indicators'], p['payload'], p['name'])
 
@@ -121,7 +122,7 @@ def run(target: str = None, api_key: str = None, profile: str = None, webhook: s
     if not target:
         console.print("[red][-][/red] No target specified")
         return
-    
+
     scanner = ExfilScanner(target, api_key=api_key, webhook=webhook, browser=browser, verbose=verbose,
                            parsed_request=parsed_request, proxy=kwargs.get('proxy'), cookies=kwargs.get('cookies'),
                            headers=kwargs.get('headers'),

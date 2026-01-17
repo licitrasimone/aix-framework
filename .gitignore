@@ -57,3 +57,11 @@ targets.txt
 # Output
 results/
 outputs/
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+.ruff_cache/

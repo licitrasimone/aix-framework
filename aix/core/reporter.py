@@ -5,15 +5,15 @@ Handles output formatting and report generation.
 """
 
 import json
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional, Dict, Any
-from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
+from rich.table import Table
 
 console = Console()
 
@@ -39,14 +39,14 @@ class Finding:
     details: str = ""
     reason: str = ""  # New field for exploit motivation/reason
     timestamp: datetime = field(default_factory=datetime.now)
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             'title': self.title,
             'severity': self.severity.value,
             'technique': self.technique,
             'payload': self.payload,
-            'response': self.response, 
+            'response': self.response,
             'target': self.target,
             'details': self.details,
             'reason': self.reason,
@@ -58,24 +58,24 @@ class Reporter:
     """
     Handles output formatting and report generation.
     """
-    
+
     def __init__(self):
-        self.findings: List[Finding] = []
-        self.start_time: Optional[datetime] = None
-        self.end_time: Optional[datetime] = None
-    
+        self.findings: list[Finding] = []
+        self.start_time: datetime | None = None
+        self.end_time: datetime | None = None
+
     def start(self) -> None:
         """Mark scan start time"""
         self.start_time = datetime.now()
-    
+
     def end(self) -> None:
         """Mark scan end time"""
         self.end_time = datetime.now()
-    
+
     def add_finding(self, finding: Finding) -> None:
         """Add a finding"""
         self.findings.append(finding)
-    
+
     def print_finding(self, finding: Finding) -> None:
         """Print a finding to console"""
         severity_colors = {
@@ -85,9 +85,9 @@ class Reporter:
             Severity.LOW: "dim",
             Severity.INFO: "dim",
         }
-        
+
         color = severity_colors.get(finding.severity, "white")
-        
+
         console.print(Panel(
             f"[bold]{finding.title}[/bold]\n\n"
             f"[dim]Technique:[/dim] {finding.technique}\n"
@@ -97,22 +97,22 @@ class Reporter:
             title=f"[{color}]{finding.severity.value.upper()}[/{color}]",
             border_style=color,
         ))
-    
+
     def print_summary(self) -> None:
         """Print findings summary"""
         if not self.findings:
             console.print("[dim]No findings[/dim]")
             return
-        
+
         # Count by severity
-        counts = {s: 0 for s in Severity}
+        counts = dict.fromkeys(Severity, 0)
         for finding in self.findings:
             counts[finding.severity] += 1
-        
+
         table = Table(title="Findings Summary")
         table.add_column("Severity", style="bold")
         table.add_column("Count", justify="right")
-        
+
         for severity in Severity:
             color = {
                 Severity.CRITICAL: "red",
@@ -121,15 +121,15 @@ class Reporter:
                 Severity.LOW: "dim",
                 Severity.INFO: "dim",
             }.get(severity, "white")
-            
+
             if counts[severity] > 0:
                 table.add_row(
                     f"[{color}]{severity.value.upper()}[/{color}]",
                     str(counts[severity])
                 )
-        
+
         console.print(table)
-    
+
     def export_json(self, filepath: str) -> None:
         """Export findings to JSON"""
         data = {
@@ -140,17 +140,17 @@ class Reporter:
             },
             'findings': [f.to_dict() for f in self.findings],
         }
-        
+
         Path(filepath).write_text(json.dumps(data, indent=2))
-    
+
     def export_html(self, filepath: str) -> None:
         """Export findings to HTML report"""
-        
+
         # Count findings by severity
-        counts = {s: 0 for s in Severity}
+        counts = dict.fromkeys(Severity, 0)
         for finding in self.findings:
             counts[finding.severity] += 1
-        
+
         # Generate findings HTML
         findings_html = ""
         for finding in self.findings:
@@ -181,7 +181,7 @@ class Reporter:
                 </div>
             </div>
             """
-        
+
         html = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -394,9 +394,9 @@ class Reporter:
 </body>
 </html>
         """
-        
+
         Path(filepath).write_text(html)
-    
+
     def _escape_html(self, text: str) -> str:
         """Escape HTML special characters"""
         return (text

@@ -1,12 +1,12 @@
 """AIX Core Components"""
 
-from aix.core.scanner import AIXScanner, TargetProfile, AttackResult, AttackResponse
-from aix.core.connector import Connector, APIConnector, WebSocketConnector
-from aix.core.reporter import Reporter, Finding, Severity
+from aix.core.connector import APIConnector, Connector, WebSocketConnector
+from aix.core.reporter import Finding, Reporter, Severity
+from aix.core.scanner import AIXScanner, AttackResponse, AttackResult, TargetProfile
 
 __all__ = [
     'AIXScanner',
-    'TargetProfile', 
+    'TargetProfile',
     'AttackResult',
     'AttackResponse',
     'Connector',

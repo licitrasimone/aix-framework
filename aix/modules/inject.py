@@ -1,11 +1,11 @@
 """AIX Inject Module - Prompt injection attacks"""
 import asyncio
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+
 from rich.console import Console
-from aix.core.reporter import Severity, Finding
+
+from aix.core.reporter import Finding
 from aix.core.scanner import BaseScanner
-from aix.core.connector import APIConnector, RequestConnector
-from aix.db.database import AIXDatabase
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -13,14 +13,14 @@ if TYPE_CHECKING:
 console = Console()
 
 class InjectScanner(BaseScanner):
-    def __init__(self, target: str, api_key: Optional[str] = None, verbose: bool = False,
+    def __init__(self, target: str, api_key: str | None = None, verbose: bool = False,
                  parsed_request: Optional['ParsedRequest'] = None, **kwargs):
         super().__init__(target, api_key, verbose, parsed_request, **kwargs)
         self.module_name = "INJECT"
         self.console_color = "cyan"
         self.default_payloads = self.load_payloads('inject.json')
 
-    async def run(self, payloads: List[Dict] = None):
+    async def run(self, payloads: list[dict] = None):
         if payloads is None: payloads = self.default_payloads
         self._print('info', f'Testing {len(payloads)} injection payloads...')
 
@@ -41,7 +41,8 @@ class InjectScanner(BaseScanner):
                     else:
                         self.stats['blocked'] += 1
                         self._print('blocked', '', p['name'])
-                except: self.stats['blocked'] += 1
+                except Exception:
+                    self.stats['blocked'] += 1
                 await asyncio.sleep(0.3)
         finally:
             await connector.close()
@@ -56,7 +57,7 @@ def run(target: str = None, api_key: str = None, profile: str = None, targets_fi
     if not target:
         console.print("[red][-][/red] No target specified")
         return
-    scanner = InjectScanner(target, api_key=api_key, verbose=verbose, parsed_request=parsed_request, 
+    scanner = InjectScanner(target, api_key=api_key, verbose=verbose, parsed_request=parsed_request,
                             proxy=kwargs.get('proxy'), cookies=kwargs.get('cookies'), headers=kwargs.get('headers'),
                             injection_param=kwargs.get('injection_param'), body_format=kwargs.get('body_format'),
                             refresh_config=kwargs.get('refresh_config'),

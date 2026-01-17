@@ -1,14 +1,16 @@
 """AIX Recon Module - Reconnaissance and fingerprinting"""
 import asyncio
-import re
 import json
 import os
-from typing import Optional, Dict, List, Any, TYPE_CHECKING
+import re
+from typing import TYPE_CHECKING, Any, Optional
 from urllib.parse import urlparse
+
 from rich.console import Console
 from rich.table import Table
+
+from aix.core.reporter import Finding, Severity
 from aix.core.scanner import BaseScanner
-from aix.db.database import AIXDatabase
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -16,15 +18,15 @@ if TYPE_CHECKING:
 console = Console()
 
 class ReconScanner(BaseScanner):
-    def __init__(self, target: str, api_key: Optional[str] = None, verbose: bool = False,
+    def __init__(self, target: str, api_key: str | None = None, verbose: bool = False,
                  parsed_request: Optional['ParsedRequest'] = None, timeout: int = 30, browser: bool = False, **kwargs):
         super().__init__(target, api_key, verbose, parsed_request, timeout=timeout, browser=browser, **kwargs)
         self.module_name = "RECON"
         self.console_color = "cyan"
-        
+
         # Load payloads via loading mechanism (but recon has special structure?)
         # Base scanner load_payloads handles severity format. Recon payloads might differ?
-        # Original: self.payloads = json.load(f). No severity reconstruction logic in original? 
+        # Original: self.payloads = json.load(f). No severity reconstruction logic in original?
         # Wait, original load logic:
         # try: with open... json.load(f) ... except: ... payloads = []
         # No severity reconstruction loop seen in original __init__ logic for recon.json.
@@ -36,12 +38,12 @@ class ReconScanner(BaseScanner):
         # Load config from JSON
         config_path = os.path.join(os.path.dirname(__file__), '..', 'payloads', 'recon_config.json')
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path) as f:
                 self.config = json.load(f)
         except Exception as e:
             console.print(f"[yellow][!] Could not load config from {config_path}: {e}[/yellow]")
             self.config = {
-                "model_signatures": {}, "negative_signatures": {}, 
+                "model_signatures": {}, "negative_signatures": {},
                 "version_patterns": {}, "waf_signatures": {}
             }
 
@@ -63,7 +65,6 @@ class ReconScanner(BaseScanner):
 
     def _print(self, status: str, msg: str, tech: str = ''):
         t = self.target[:28] + '...' if len(self.target) > 30 else self.target
-        name = "RECON"
         if status == 'info':
             console.print(f"[cyan]RECON[/cyan]   {t:30} [cyan][*][/cyan] {msg}")
         elif status == 'success':
@@ -85,13 +86,13 @@ class ReconScanner(BaseScanner):
             for pattern, weight in patterns:
                 if pattern in response_lower:
                     score += weight
-            
+
             # Subtract score for negative matches (exclusions)
             if model in self.config.get('negative_signatures', {}):
                 for neg_pattern in self.config['negative_signatures'][model]:
                     if neg_pattern in response_lower:
                         score -= 5  # Reduced penalty for conflicting identity
-            
+
             if score > 0:
                 model_scores[model] = score
 
@@ -100,18 +101,18 @@ class ReconScanner(BaseScanner):
 
         best_model = max(model_scores, key=model_scores.get)
         raw_score = model_scores[best_model]
-        
+
         # Calculate confidence: 20 points = 100% confidence
         confidence = min(raw_score * 5, 100)
-        
+
         return best_model, confidence
 
-    def _detect_version(self, model: str, response: str) -> Optional[str]:
+    def _detect_version(self, model: str, response: str) -> str | None:
         """Extract specific version string from response"""
         version_patterns = self.config.get('version_patterns', {})
         if not model or model not in version_patterns:
             return None
-            
+
         response_lower = response.lower()
         for pattern in version_patterns[model]:
             match = re.search(pattern, response_lower)
@@ -119,7 +120,7 @@ class ReconScanner(BaseScanner):
                 return match.group(1)
         return None
 
-    def _detect_waf(self, response: str, headers: Dict = None) -> Optional[str]:
+    def _detect_waf(self, response: str, headers: dict = None) -> str | None:
         """Detect WAF from response"""
         response_lower = response.lower()
         headers_str = str(headers).lower() if headers else ""
@@ -151,7 +152,7 @@ class ReconScanner(BaseScanner):
         """Probe for rate limiting"""
         count = 0
         limit_hit = False
-        
+
         # Try burst of 5 fast requests
         for i in range(5):
             try:
@@ -161,10 +162,10 @@ class ReconScanner(BaseScanner):
                 if '429' in str(e) or 'rate' in str(e).lower():
                     limit_hit = True
                     break
-        
+
         return count, limit_hit
 
-    async def run(self) -> Dict[str, Any]:
+    async def run(self) -> dict[str, Any]:
         """Run reconnaissance scan"""
         self._print('info', 'Starting reconnaissance scan...')
 
@@ -194,16 +195,16 @@ class ReconScanner(BaseScanner):
                     elapsed = time.time() - start
                     self.results['response_times'].append(elapsed)
 
-                    
+
                     # Validate if probe was successful (answered vs refused)
                     # We pass empty indicators because recon.json doesn't have them, relying on LLM or simple pass
                     is_valid = await self.check_success(resp, [], probe['payload'], 'recon')
-                    
+
                     if is_valid:
                         self.findings.append(Finding(title=f"Recon - {probe['name']}", severity=probe.get('severity', Severity.INFO),
                                 technique=probe['name'], payload=probe['payload'], response=resp[:2000], target=self.target, reason=self.last_eval_reason))
                         self.db.add_result(self.target, 'recon', probe['name'], 'success', probe['payload'], resp[:2000], probe.get('severity', Severity.INFO).value, reason=self.last_eval_reason)
-                    
+
                     responses.append({
                         'probe': probe['name'],
                         'response': resp,
@@ -231,7 +232,7 @@ class ReconScanner(BaseScanner):
             all_responses = " ".join(r['response'] for r in responses if r.get('response'))
             model, confidence = self._detect_model(all_responses)
             version = self._detect_version(model, all_responses)
-            
+
             self.results['model'] = model
             self.results['version'] = version
             self.results['model_confidence'] = confidence
@@ -313,16 +314,16 @@ class ReconScanner(BaseScanner):
         if self.results['response_times']:
             avg = sum(self.results['response_times']) / len(self.results['response_times'])
             table.add_row("Avg Response", f"{avg:.2f}s")
-            
+
         if self.results['tech_stack']:
              table.add_row("Tech Stack", ", ".join(self.results['tech_stack']))
 
         console.print(table)
 
 
-def run(target: str = None, browser: bool = False, output: Optional[str] = None,
+def run(target: str = None, browser: bool = False, output: str | None = None,
         timeout: int = 30, verbose: bool = False,
-        parsed_request: Optional['ParsedRequest'] = None, cookies: Optional[Dict] = None, **kwargs) -> None:
+        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, **kwargs) -> None:
     if not target:
         console.print("[red][-][/red] No target specified")
         return

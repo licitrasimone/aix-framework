@@ -1,11 +1,12 @@
 """AIX DoS Module - Denial of Service and resource exhaustion testing"""
 import asyncio
 import time
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+
 from rich.console import Console
-from aix.core.reporter import Severity, Finding
+
+from aix.core.reporter import Finding, Severity
 from aix.core.scanner import BaseScanner
-from aix.db.database import AIXDatabase
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
 console = Console()
 
 class DoSScanner(BaseScanner):
-    def __init__(self, target: str, api_key: Optional[str] = None, verbose: bool = False,
+    def __init__(self, target: str, api_key: str | None = None, verbose: bool = False,
                  parsed_request: Optional['ParsedRequest'] = None, safe_mode: bool = True, **kwargs):
         super().__init__(target, api_key, verbose, parsed_request, **kwargs)
         self.module_name = "DOS"
@@ -42,11 +43,11 @@ class DoSScanner(BaseScanner):
                 elapsed = time.time() - start
                 times.append(elapsed)
                 await asyncio.sleep(0.2)
-            except:
+            except Exception:
                 pass
         return sum(times) / len(times) if times else 2.0
 
-    async def _test_rate_limit(self, connector, count: int = 20) -> Dict:
+    async def _test_rate_limit(self, connector, count: int = 20) -> dict:
         """Test rate limiting"""
         self._print('info', f'Testing rate limit ({count} requests)...')
         results = {'success': 0, 'blocked': 0, 'rate_limit_hit': False}
@@ -67,7 +68,7 @@ class DoSScanner(BaseScanner):
 
         return results
 
-    async def run(self, payloads: List[Dict] = None):
+    async def run(self, payloads: list[dict] = None):
         if payloads is None:
             payloads = self.default_payloads
 
@@ -209,7 +210,7 @@ def run(target: str = None, api_key: str = None, profile: str = None,
     if not target:
         console.print("[red][-][/red] No target specified")
         return
-    
+
     scanner = DoSScanner(target, api_key=api_key, browser=browser, verbose=verbose,
                          parsed_request=parsed_request, proxy=kwargs.get('proxy'), cookies=kwargs.get('cookies'),
                          headers=kwargs.get('headers'),
@@ -221,7 +222,7 @@ def run(target: str = None, api_key: str = None, profile: str = None,
                          eval_config=kwargs.get('eval_config'),
                          level=kwargs.get('level', 1),
                          risk=kwargs.get('risk', 1))
-    # run function didn't have safe_mode before? Checking original file definition... 
+    # run function didn't have safe_mode before? Checking original file definition...
     # Original run def: `def run(..., **kwargs):`
     # Original DoSScanner init: `safe_mode: bool = True`.
     # Original run call: `scanner = DoSScanner(..., **kwargs)`. It didn't pass safe_mode explicitly unless in kwargs.
