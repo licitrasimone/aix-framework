@@ -34,7 +34,7 @@ class InjectScanner(BaseScanner):
                     resp = await connector.send(p['payload'])
                     if await self.check_success(resp, p['indicators'], p['payload'], p['name']):
                         self.stats['success'] += 1
-                        self._print('success', p['payload'], p['name'])
+                        self._print('success', '', p['name'])
                         self.findings.append(Finding(title=f"Injection - {p['name']}", severity=p['severity'],
                             technique=p['name'], payload=p['payload'], response=resp[:2000], target=self.target, reason=self.last_eval_reason))
                         self.db.add_result(self.target, 'inject', p['name'], 'success', p['payload'], resp[:2000], p['severity'].value, reason=self.last_eval_reason)
@@ -61,5 +61,7 @@ def run(target: str = None, api_key: str = None, profile: str = None, targets_fi
                             injection_param=kwargs.get('injection_param'), body_format=kwargs.get('body_format'),
                             refresh_config=kwargs.get('refresh_config'),
                             response_regex=kwargs.get('response_regex'),
-                            eval_config=kwargs.get('eval_config'))
+                            eval_config=kwargs.get('eval_config'),
+                            level=kwargs.get('level', 1),
+                            risk=kwargs.get('risk', 1))
     asyncio.run(scanner.run())

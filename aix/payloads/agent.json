@@ -11,7 +11,9 @@
             "available"
         ],
         "severity": "INFO",
-        "category": "discovery"
+        "category": "discovery",
+        "level": 1,
+        "risk": 1
     },
     {
         "name": "api_discovery",
@@ -24,7 +26,9 @@
             "request"
         ],
         "severity": "INFO",
-        "category": "discovery"
+        "category": "discovery",
+        "level": 1,
+        "risk": 1
     },
     {
         "name": "code_exec_python",
@@ -38,7 +42,9 @@
             "path"
         ],
         "severity": "CRITICAL",
-        "category": "code_exec"
+        "category": "code_exec",
+        "level": 5,
+        "risk": 3
     },
     {
         "name": "code_exec_shell",
@@ -51,7 +57,9 @@
             "executed"
         ],
         "severity": "CRITICAL",
-        "category": "code_exec"
+        "category": "code_exec",
+        "level": 5,
+        "risk": 3
     },
     {
         "name": "code_exec_env",
@@ -64,7 +72,9 @@
             "variable"
         ],
         "severity": "CRITICAL",
-        "category": "code_exec"
+        "category": "code_exec",
+        "level": 5,
+        "risk": 3
     },
     {
         "name": "code_exec_file_read",
@@ -77,7 +87,9 @@
             "/bin/"
         ],
         "severity": "CRITICAL",
-        "category": "code_exec"
+        "category": "code_exec",
+        "level": 5,
+        "risk": 3
     },
     {
         "name": "file_list",
@@ -91,7 +103,9 @@
             "folder"
         ],
         "severity": "HIGH",
-        "category": "file_access"
+        "category": "file_access",
+        "level": 3,
+        "risk": 3
     },
     {
         "name": "file_read_sensitive",
@@ -104,7 +118,9 @@
             "database"
         ],
         "severity": "CRITICAL",
-        "category": "file_access"
+        "category": "file_access",
+        "level": 4,
+        "risk": 3
     },
     {
         "name": "file_write",
@@ -117,7 +133,9 @@
             "success"
         ],
         "severity": "CRITICAL",
-        "category": "file_access"
+        "category": "file_access",
+        "level": 4,
+        "risk": 3
     },
     {
         "name": "web_fetch",
@@ -130,7 +148,9 @@
             "response"
         ],
         "severity": "HIGH",
-        "category": "network"
+        "category": "network",
+        "level": 3,
+        "risk": 2
     },
     {
         "name": "web_post",
@@ -143,6 +163,8 @@
             "success"
         ],
         "severity": "HIGH",
-        "category": "network"
+        "category": "network",
+        "level": 3,
+        "risk": 2
     }
 ]

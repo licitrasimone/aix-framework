@@ -35,6 +35,10 @@ class BaseScanner:
         self.body_format = kwargs.get('body_format')
         self.refresh_config = kwargs.get('refresh_config')
         self.response_regex = kwargs.get('response_regex')
+        
+        # Filtering config
+        self.level = kwargs.get('level', 1)
+        self.risk = kwargs.get('risk', 1)
 
         self.timeout = kwargs.get('timeout', 30)
         
@@ -62,20 +66,29 @@ class BaseScanner:
         self.console_color = "white"
 
     def load_payloads(self, filename: str) -> List[Dict]:
-        """Load payloads from JSON file in ../payloads directory"""
+        """Load payloads from JSON file in ../payloads directory with filtering"""
         payload_path = os.path.join(os.path.dirname(__file__), '..', 'payloads', filename)
         try:
             with open(payload_path, 'r') as f:
                 payloads = json.load(f)
             
-            # Reconstruct Severity objects
+            filtered_payloads = []
             for p in payloads:
-                if isinstance(p.get('severity'), str):
-                    try:
-                        p['severity'] = Severity[p['severity']]
-                    except KeyError:
-                        p['severity'] = Severity.MEDIUM
-            return payloads
+                # Default values if missing
+                curr_level = p.get('level', 1)
+                curr_risk = p.get('risk', 1)
+
+                # Filter logic: include if payload level/risk <= user requested level/risk
+                if curr_level <= self.level and curr_risk <= self.risk:
+                    # Reconstruct Severity objects
+                    if isinstance(p.get('severity'), str):
+                        try:
+                            p['severity'] = Severity[p['severity']]
+                        except KeyError:
+                            p['severity'] = Severity.MEDIUM
+                    filtered_payloads.append(p)
+            
+            return filtered_payloads
         except Exception as e:
             console.print(f"[yellow][!] Could not load payloads from {payload_path}: {e}[/yellow]")
             return []

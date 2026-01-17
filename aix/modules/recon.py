@@ -341,7 +341,9 @@ def run(target: str = None, browser: bool = False, output: Optional[str] = None,
         injection_param=kwargs.get('injection_param'),
         refresh_config=kwargs.get('refresh_config'),
         response_regex=kwargs.get('response_regex'),
-        eval_config=kwargs.get('eval_config')
+        eval_config=kwargs.get('eval_config'),
+        level=kwargs.get('level', 1),
+        risk=kwargs.get('risk', 1)
     )
     results = asyncio.run(scanner.run())
 

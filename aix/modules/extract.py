@@ -34,7 +34,7 @@ class ExtractScanner(BaseScanner):
                     resp = await connector.send(e['payload'])
                     if await self.check_success(resp, e['indicators'], e['payload'], e['name']):
                         self.stats['success'] += 1
-                        self._print('success', e['payload'], e['name'])
+                        self._print('success', '', e['name'])
                         self.findings.append(Finding(title=f"Extraction - {e['name']}", severity=e['severity'],
                             technique=e['name'], payload=e['payload'], response=resp[:5000], target=self.target, reason=self.last_eval_reason))
                         self.db.add_result(self.target, 'extract', e['name'], 'success', e['payload'], resp[:5000], e['severity'].value, reason=self.last_eval_reason)
@@ -64,5 +64,7 @@ def run(target: str = None, api_key: str = None, profile: str = None,
                              body_format=kwargs.get('body_format'),
                              refresh_config=kwargs.get('refresh_config'),
                              response_regex=kwargs.get('response_regex'),
-                             eval_config=kwargs.get('eval_config'))
+                            eval_config=kwargs.get('eval_config'),
+                            level=kwargs.get('level', 1),
+                            risk=kwargs.get('risk', 1))
     asyncio.run(scanner.run())

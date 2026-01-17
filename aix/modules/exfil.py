@@ -128,5 +128,7 @@ def run(target: str = None, api_key: str = None, profile: str = None, webhook: s
                            injection_param=kwargs.get('injection_param'),
                            body_format=kwargs.get('body_format'),
                            refresh_config=kwargs.get('refresh_config'),
-                           eval_config=kwargs.get('eval_config'))
+                           eval_config=kwargs.get('eval_config'),
+                           level=kwargs.get('level', 1),
+                           risk=kwargs.get('risk', 1))
     asyncio.run(scanner.run())

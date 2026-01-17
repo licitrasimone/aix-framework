@@ -193,7 +193,9 @@ main.add_command(recon_cmd, name='recon')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
-def inject_cmd(target, request, param, key, profile, targets, evasion, payloads, threads, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
+@click.option('--level', default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+def inject_cmd(target, request, param, key, profile, targets, evasion, payloads, threads, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk):
     """
     Inject - Prompt injection attacks
 
@@ -221,7 +223,8 @@ def inject_cmd(target, request, param, key, profile, targets, evasion, payloads,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
         response_regex=response_regex,
-        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider},
+        level=level, risk=risk
     )
 
 
@@ -254,7 +257,9 @@ main.add_command(inject_cmd, name='inject')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
-def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
+@click.option('--level', default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk):
     """
     Jailbreak - Bypass AI restrictions
 
@@ -279,7 +284,8 @@ def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, v
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
         response_regex=response_regex,
-        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider},
+        level=level, risk=risk
     )
 
 
@@ -310,7 +316,9 @@ main.add_command(jailbreak_cmd, name='jailbreak')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
-def extract_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
+@click.option('--level', default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+def extract_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk):
     """
     Extract - System prompt extraction
 
@@ -336,7 +344,8 @@ def extract_cmd(target, request, param, key, profile, verbose, output, proxy, co
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
         response_regex=response_regex,
-        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider},
+        level=level, risk=risk
     )
 
 
@@ -367,7 +376,9 @@ main.add_command(extract_cmd, name='extract')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
-def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
+@click.option('--level', default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk):
     """
     Leak - Training data extraction
 
@@ -393,7 +404,8 @@ def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cooki
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
         response_regex=response_regex,
-        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider},
+        level=level, risk=risk
     )
 
 
@@ -420,7 +432,9 @@ main.add_command(leak_cmd, name='leak')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
-def exfil_cmd(target, request, param, key, profile, webhook, verbose, output, proxy, cookie, headers, format, eval_url, eval_key, eval_model, eval_provider):
+@click.option('--level', default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+def exfil_cmd(target, request, param, key, profile, webhook, verbose, output, proxy, cookie, headers, format, eval_url, eval_key, eval_model, eval_provider, level, risk):
     """
     Exfil - Data exfiltration testing
 
@@ -444,7 +458,8 @@ def exfil_cmd(target, request, param, key, profile, webhook, verbose, output, pr
         verbose=verbose, output=output,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
-        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider},
+        level=level, risk=risk
     )
 
 
@@ -475,7 +490,9 @@ main.add_command(exfil_cmd, name='exfil')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
-def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
+@click.option('--level', default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk):
     """
     Agent - AI agent exploitation
 
@@ -501,7 +518,8 @@ def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cook
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
         response_regex=response_regex,
-        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider},
+        level=level, risk=risk
     )
 
 
@@ -527,11 +545,14 @@ main.add_command(agent_cmd, name='agent')
 @click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
+@click.option('--response-regex', help='Regex to extract response from JSON')
 @click.option('--eval-url', help='URL for secondary LLM evaluation')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
-def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
+@click.option('--level', default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk):
     """
     DoS - Denial of Service testing
 
@@ -556,7 +577,8 @@ def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider},
+        level=level, risk=risk
     )
 
 
@@ -588,7 +610,9 @@ main.add_command(dos_cmd, name='dos')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
-def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
+@click.option('--level', default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk):
     """
     Fuzz - Fuzzing and edge cases
 
@@ -614,7 +638,8 @@ def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, 
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
         response_regex=response_regex,
-        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider},
+        level=level, risk=risk
     )
 
 
@@ -685,7 +710,9 @@ def db(export, clear, target, module):
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
-def scan(target, request, param, key, profile, evasion, output, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
+@click.option('--level', default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+def scan(target, request, param, key, profile, evasion, output, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk):
     """
     Scan - Run all modules against target
 
@@ -731,7 +758,8 @@ def scan(target, request, param, key, profile, evasion, output, verbose, proxy, 
                 injection_param=param, body_format=format,
                 refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
                 response_regex=response_regex,
-                eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider}
+                eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider},
+                level=level, risk=risk
             )
         except Exception as e:
             console.print(f"[red][-][/red] {name} failed: {e}")
