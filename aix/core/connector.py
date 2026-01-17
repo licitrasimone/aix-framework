@@ -469,14 +469,18 @@ class APIConnector(Connector):
             except httpx.HTTPStatusError as e:
                 # If we are here, it means we either didn't refresh or refresh failed
                 status = e.response.status_code
+                # We raise the error but do not print here to avoid spamming the console
+                # The caller (scanner) should handle the display of errors.
+                
+                error_msg = f"HTTP {status}"
                 if status in [401, 403]:
-                    console.print(f"[red][!] Authentication failed (HTTP {status})[/red]")
-                elif status >= 500:
-                    console.print(f"[red][!] Server error (HTTP {status})[/red]")
+                    error_msg += " (Authentication Failed)"
                 elif status == 429:
-                    console.print(f"[yellow][!] Rate limit exceeded (HTTP {status})[/yellow]")
-
-                raise ConnectionError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
+                    error_msg += " (Rate Limit Exceeded)"
+                elif status >= 500:
+                    error_msg += " (Server Error)"
+                
+                raise ConnectionError(f"{error_msg}: {e.response.text[:200]}")
             except json.JSONDecodeError:
                 # Check for content error match on non-JSON response too
                 refresh_error_sig = self.refresh_config.get('error')
@@ -771,14 +775,16 @@ class RequestConnector(Connector):
 
         except httpx.HTTPStatusError as e:
             status = e.response.status_code
+            
+            error_msg = f"HTTP {status}"
             if status in [401, 403]:
-                console.print(f"[red][!] Authentication failed (HTTP {status})[/red]")
-            elif status >= 500:
-                console.print(f"[red][!] Server error (HTTP {status})[/red]")
+                error_msg += " (Authentication Failed)"
             elif status == 429:
-                console.print(f"[yellow][!] Rate limit exceeded (HTTP {status})[/yellow]")
-
-            raise ConnectionError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
+                error_msg += " (Rate Limit Exceeded)"
+            elif status >= 500:
+                error_msg += " (Server Error)"
+                
+            raise ConnectionError(f"{error_msg}: {e.response.text[:200]}")
         except httpx.ConnectError:
              raise ConnectionError(f"Failed to connect to {injected_request.url}. Check your proxy settings.")
         except Exception as e:

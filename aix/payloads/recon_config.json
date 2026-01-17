@@ -1,5 +1,19 @@
 {
     "model_signatures": {
+        "gpt-4o": [
+            [
+                "gpt-4o",
+                15
+            ],
+            [
+                "openai",
+                5
+            ],
+            [
+                "as an ai language model",
+                1
+            ]
+        ],
         "gpt-4": [
             [
                 "gpt-4",
@@ -36,6 +50,34 @@
                 3
             ]
         ],
+        "claude-3-opus": [
+            [
+                "claude 3 opus",
+                15
+            ],
+            [
+                "claude",
+                10
+            ],
+            [
+                "anthropic",
+                10
+            ]
+        ],
+        "claude-3.5-sonnet": [
+            [
+                "claude 3.5 sonnet",
+                15
+            ],
+            [
+                "claude",
+                10
+            ],
+            [
+                "anthropic",
+                10
+            ]
+        ],
         "claude": [
             [
                 "claude",
@@ -54,6 +96,42 @@
                 8
             ]
         ],
+        "llama-3": [
+            [
+                "llama 3",
+                15
+            ],
+            [
+                "meta ai",
+                10
+            ],
+            [
+                "trained by meta",
+                10
+            ],
+            [
+                "llama",
+                5
+            ]
+        ],
+        "llama-2": [
+            [
+                "llama 2",
+                15
+            ],
+            [
+                "meta ai",
+                10
+            ],
+            [
+                "trained by meta",
+                10
+            ],
+            [
+                "llama",
+                5
+            ]
+        ],
         "llama": [
             [
                 "llama",
@@ -64,15 +142,25 @@
                 8
             ],
             [
-                "llama 2",
-                8
-            ],
-            [
-                "llama 3",
-                8
-            ],
-            [
                 "facebook",
+                5
+            ],
+            [
+                "beginning of the conversation",
+                3
+            ]
+        ],
+        "gemini-1.5": [
+            [
+                "gemini 1.5",
+                15
+            ],
+            [
+                "gemini",
+                10
+            ],
+            [
+                "google",
                 5
             ]
         ],
@@ -98,6 +186,16 @@
                 5
             ]
         ],
+        "mistral-large": [
+            [
+                "mistral large",
+                15
+            ],
+            [
+                "mistral",
+                10
+            ]
+        ],
         "mistral": [
             [
                 "mistral",
@@ -110,6 +208,10 @@
             [
                 "le chat",
                 5
+            ],
+            [
+                "mistral ai",
+                8
             ]
         ],
         "cohere": [
@@ -125,6 +227,50 @@
                 "command-r",
                 8
             ]
+        ],
+        "deepseek": [
+            [
+                "deepseek",
+                15
+            ],
+            [
+                "deep seek",
+                10
+            ]
+        ],
+        "qwen": [
+            [
+                "qwen",
+                15
+            ],
+            [
+                "alibaba",
+                10
+            ],
+            [
+                "tongyi qianwen",
+                10
+            ]
+        ],
+        "gemma": [
+            [
+                "gemma",
+                15
+            ],
+            [
+                "google",
+                5
+            ]
+        ],
+        "phi-3": [
+            [
+                "phi-3",
+                15
+            ],
+            [
+                "microsoft",
+                5
+            ]
         ]
     },
     "negative_signatures": {
@@ -136,17 +282,8 @@
             "gemini",
             "llama",
             "meta",
-            "mistral"
-        ],
-        "gpt-3.5": [
-            "anthropic",
-            "claude",
-            "google",
-            "bard",
-            "gemini",
-            "llama",
-            "meta",
-            "mistral"
+            "mistral",
+            "deepseek"
         ],
         "claude": [
             "openai",
@@ -156,7 +293,8 @@
             "bard",
             "gemini",
             "llama",
-            "meta"
+            "meta",
+            "deepseek"
         ],
         "llama": [
             "openai",
@@ -165,7 +303,8 @@
             "anthropic",
             "claude",
             "google",
-            "gemini"
+            "gemini",
+            "mistral"
         ],
         "gemini": [
             "openai",
@@ -174,27 +313,35 @@
             "anthropic",
             "claude",
             "llama",
-            "meta"
+            "meta",
+            "mistral"
         ],
         "mistral": [
             "openai",
             "gpt",
             "google",
             "anthropic",
-            "meta"
+            "meta",
+            "gemini"
         ],
-        "cohere": [
+        "deepseek": [
             "openai",
             "gpt",
-            "google",
             "anthropic",
+            "google",
+            "meta"
+        ],
+        "qwen": [
+            "openai",
             "meta",
-            "llama"
+            "google",
+            "anthropic"
         ]
     },
     "version_patterns": {
         "gpt-4": [
-            "(gpt-4-[a-z0-9]+)",
+            "(gpt-4o)",
+            "(gpt-4-turbo)",
             "(gpt-4)"
         ],
         "gpt-3.5": [
@@ -202,29 +349,44 @@
             "(gpt-3\\.5)"
         ],
         "claude": [
-            "(claude[\\s-]?3[\\s-]?[a-z]+)",
-            "(claude[\\s-]?2\\.[0-9])",
-            "(claude[\\s-]?instant)"
+            "(claude[\\s-]?3\\.5[\\s-]?sonnet)",
+            "(claude[\\s-]?3[\\s-]?opus)",
+            "(claude[\\s-]?3[\\s-]?haiku)",
+            "(claude[\\s-]?2)"
         ],
         "llama": [
-            "(llama[\\s-]?3\\.?[0-9]?)",
-            "(llama[\\s-]?3)",
-            "(llama[\\s-]?2)",
-            "(llama[\\s-]?1)",
+            "(70b|405b|8b)",
             "([0-9]+b)",
-            "(meta[\\s-]?llama)",
-            "(llama)"
+            "(llama[\\s-]?3\\.1)",
+            "(llama[\\s-]?3)",
+            "(llama[\\s-]?2)"
         ],
         "mistral": [
+            "(mixtral[\\s-]?8x22b)",
             "(mixtral[\\s-]?8x7b)",
-            "(mistral[\\s-]?7b)",
             "(mistral[\\s-]?large)",
             "(mistral[\\s-]?medium)"
         ],
         "gemini": [
-            "(gemini[\\s-]?1\\.5)",
-            "(gemini[\\s-]?pro)",
-            "(gemini[\\s-]?ultra)"
+            "(gemini[\\s-]?1\\.5[\\s-]?pro)",
+            "(gemini[\\s-]?1\\.5[\\s-]?flash)",
+            "(gemini[\\s-]?pro)"
+        ],
+        "deepseek": [
+            "(deepseek[\\s-]?v2)",
+            "(deepseek[\\s-]?coder)"
+        ],
+        "qwen": [
+            "(qwen[\\s-]?2)",
+            "(qwen[\\s-]?1\\.5)"
+        ],
+        "gemma": [
+            "(gemma[\\s-]?2)",
+            "(gemma[\\s-]?7b)"
+        ],
+        "phi-3": [
+            "(phi[\\s-]?3[\\s-]?mini)",
+            "(phi[\\s-]?3)"
         ]
     },
     "waf_signatures": {
@@ -251,19 +413,5 @@
             "rate limit",
             "too many requests"
         ]
-    },
-    "discovery_params": [
-        "temperature",
-        "top_p",
-        "top_k",
-        "stream",
-        "max_tokens",
-        "stop",
-        "frequency_penalty",
-        "presence_penalty",
-        "seed",
-        "tools",
-        "functions",
-        "response_format"
-    ]
+    }
 }

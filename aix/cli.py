@@ -128,7 +128,9 @@ def main(ctx, version):
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
-def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider):
+@click.option('--level', default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk):
     """
     Reconnaissance - Discover AI endpoint details
 
@@ -153,7 +155,8 @@ def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, h
               injection_param=param, body_format=format,
               refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
               response_regex=response_regex,
-              eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider})
+              eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider},
+              level=level, risk=risk)
 
 
 # Alias for recon
