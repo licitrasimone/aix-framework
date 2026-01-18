@@ -77,6 +77,7 @@ class ReconScanner(BaseScanner):
 
     def _print(self, status: str, msg: str, tech: str = ''):
         t = self.target[:28] + '...' if len(self.target) > 30 else self.target
+        name = self.module_name[:7].upper()
         if status == 'info':
             self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [cyan][*][/cyan] {msg}")
         elif status == 'success':
