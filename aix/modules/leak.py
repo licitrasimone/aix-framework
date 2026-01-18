@@ -6,6 +6,7 @@ import re
 from typing import TYPE_CHECKING, Optional
 
 from rich.console import Console
+from rich.progress import track
 
 from aix.core.reporter import Finding
 from aix.core.scanner import BaseScanner
@@ -13,7 +14,7 @@ from aix.core.scanner import BaseScanner
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
 
-console = Console()
+
 
 
 class LeakScanner(BaseScanner):
@@ -63,7 +64,7 @@ class LeakScanner(BaseScanner):
         await connector.connect()
 
         try:
-            for probe in probes:
+            for probe in track(probes, description="[bold yellow]💧 Draining Secrets...[/]", console=self.console):
                 self.stats['total'] += 1
                 try:
                     resp = await connector.send(probe['payload'])
@@ -122,7 +123,7 @@ def run(target: str = None, api_key: str = None, profile: str = None,
         browser: bool = False, verbose: bool = False, output: str = None,
         parsed_request: Optional['ParsedRequest'] = None, **kwargs):
     if not target:
-        console.print("[red][-][/red] No target specified")
+        print("[red][-][/red] No target specified")
         return
 
     scanner = LeakScanner(target, api_key=api_key, browser=browser, verbose=verbose,

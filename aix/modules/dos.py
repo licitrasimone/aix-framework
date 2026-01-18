@@ -4,6 +4,7 @@ import time
 from typing import TYPE_CHECKING, Optional
 
 from rich.console import Console
+from rich.progress import track
 
 from aix.core.reporter import Finding, Severity
 from aix.core.scanner import BaseScanner
@@ -11,7 +12,7 @@ from aix.core.scanner import BaseScanner
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
 
-console = Console()
+
 
 class DoSScanner(BaseScanner):
     def __init__(self, target: str, api_key: str | None = None, verbose: bool = False,
@@ -29,7 +30,7 @@ class DoSScanner(BaseScanner):
         if status == 'timeout':
             t = self.target[:28] + '...' if len(self.target) > 30 else self.target
             name = self.module_name[:7].upper()
-            console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [yellow][!][/yellow] {tech} [yellow](Timeout - potential DoS)[/yellow]")
+            self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [yellow][!][/yellow] {tech} [yellow](Timeout - potential DoS)[/yellow]")
         else:
             super()._print(status, msg, tech)
 
@@ -85,7 +86,9 @@ class DoSScanner(BaseScanner):
             self.baseline_time = await self._establish_baseline(connector)
             self._print('info', f'Baseline: {self.baseline_time:.2f}s')
 
-            for p in payloads:
+
+
+            for p in track(payloads, description="[bold red]💥 Overloading Synapses[/]", console=self.console):
                 self.stats['total'] += 1
 
                 # Handle rate limit testing separately
@@ -208,7 +211,7 @@ def run(target: str = None, api_key: str = None, profile: str = None,
         browser: bool = False, verbose: bool = False, output: str = None,
         parsed_request: Optional['ParsedRequest'] = None, **kwargs):
     if not target:
-        console.print("[red][-][/red] No target specified")
+        print("[red][-][/red] No target specified")
         return
 
     scanner = DoSScanner(target, api_key=api_key, browser=browser, verbose=verbose,

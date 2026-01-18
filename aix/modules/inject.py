@@ -3,6 +3,7 @@ import asyncio
 from typing import TYPE_CHECKING, Optional
 
 from rich.console import Console
+from rich.progress import track
 
 from aix.core.reporter import Finding
 from aix.core.scanner import BaseScanner
@@ -10,7 +11,7 @@ from aix.core.scanner import BaseScanner
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
 
-console = Console()
+
 
 class InjectScanner(BaseScanner):
     def __init__(self, target: str, api_key: str | None = None, verbose: bool = False,
@@ -28,7 +29,7 @@ class InjectScanner(BaseScanner):
         await connector.connect()
 
         try:
-            for p in payloads:
+            for p in track(payloads, description="[bold cyan]💉 Injecting Vectors...[/]", console=self.console):
                 self.stats['total'] += 1
                 try:
                     resp = await connector.send(p['payload'])
@@ -55,7 +56,7 @@ def run(target: str = None, api_key: str = None, profile: str = None, targets_fi
         threads: int = 5, verbose: bool = False, output: str = None,
         parsed_request: Optional['ParsedRequest'] = None, **kwargs):
     if not target:
-        console.print("[red][-][/red] No target specified")
+        print("[red][-][/red] No target specified")
         return
     scanner = InjectScanner(target, api_key=api_key, verbose=verbose, parsed_request=parsed_request,
                             proxy=kwargs.get('proxy'), cookies=kwargs.get('cookies'), headers=kwargs.get('headers'),

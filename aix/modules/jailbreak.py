@@ -3,6 +3,7 @@ import asyncio
 from typing import TYPE_CHECKING, Optional
 
 from rich.console import Console
+from rich.progress import track
 
 from aix.core.reporter import Finding
 from aix.core.scanner import BaseScanner
@@ -10,7 +11,7 @@ from aix.core.scanner import BaseScanner
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
 
-console = Console()
+
 
 class JailbreakScanner(BaseScanner):
     def __init__(self, target: str, api_key: str | None = None, verbose: bool = False,
@@ -29,7 +30,7 @@ class JailbreakScanner(BaseScanner):
         await connector.connect()
 
         try:
-            for j in jailbreaks:
+            for j in track(jailbreaks, description="[bold red]🔓 Breaking Rails...   [/]", console=self.console):
                 self.stats['total'] += 1
                 try:
                     resp = await connector.send(j['payload'])
@@ -45,7 +46,7 @@ class JailbreakScanner(BaseScanner):
                 except Exception as e:
                     self.stats['blocked'] += 1
                     if self.verbose:
-                        console.print(f"[red]Error in {j['name']}: {e}[/red]")
+                        self._print('blocked', f"Error in {j['name']}: {e}", j['name'])
                 await asyncio.sleep(0.5)
         finally:
             await connector.close()
@@ -57,7 +58,7 @@ def run(target: str = None, api_key: str = None, profile: str = None, browser: b
         evasion: str = 'light', test_harmful: bool = False, verbose: bool = False, output: str = None,
         parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, **kwargs):
     if not target:
-        console.print("[red][-][/red] No target specified")
+        print("[red][-][/red] No target specified")
         return
     scanner = JailbreakScanner(
         target, api_key=api_key, browser=browser,

@@ -4,6 +4,7 @@ import re
 from typing import TYPE_CHECKING, Optional
 
 from rich.console import Console
+from rich.progress import track
 
 from aix.core.reporter import Finding
 from aix.core.scanner import BaseScanner
@@ -11,7 +12,7 @@ from aix.core.scanner import BaseScanner
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
 
-console = Console()
+
 
 # Default webhook for testing (user should provide their own)
 DEFAULT_WEBHOOK = "https://example.com/exfil"
@@ -50,7 +51,7 @@ class ExfilScanner(BaseScanner):
         await connector.connect()
 
         try:
-            for p in payloads:
+            for p in track(payloads, description="[bold magenta]📤 Exfiltrating Data...[/]", console=self.console):
                 self.stats['total'] += 1
 
                 # Replace webhook placeholder
@@ -120,7 +121,7 @@ def run(target: str = None, api_key: str = None, profile: str = None, webhook: s
         browser: bool = False, verbose: bool = False, output: str = None,
         parsed_request: Optional['ParsedRequest'] = None, **kwargs):
     if not target:
-        console.print("[red][-][/red] No target specified")
+        print("[red][-][/red] No target specified")
         return
 
     scanner = ExfilScanner(target, api_key=api_key, webhook=webhook, browser=browser, verbose=verbose,

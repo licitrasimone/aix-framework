@@ -7,6 +7,7 @@ import string
 from typing import TYPE_CHECKING, Optional
 
 from rich.console import Console
+from rich.progress import track
 
 from aix.core.reporter import Finding, Severity
 from aix.core.scanner import BaseScanner
@@ -14,7 +15,7 @@ from aix.core.scanner import BaseScanner
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
 
-console = Console()
+
 
 
 class FuzzScanner(BaseScanner):
@@ -36,7 +37,7 @@ class FuzzScanner(BaseScanner):
             with open(config_path) as f:
                 self.config = json.load(f)
         except Exception as e:
-            console.print(f"[yellow][!] Could not load config from {config_path}: {e}[/yellow]")
+            self.console.print(f"[yellow][!] Could not load config from {config_path}: {e}[/yellow]")
             self.config = {"unicode_fuzz": [], "format_strings": []}
 
         # Re-initialize control chars dynamically (not in config)
@@ -51,9 +52,9 @@ class FuzzScanner(BaseScanner):
 
         if status == 'success':
             # Custom message for anomaly
-            console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [green][+][/green] {tech} [bold green](Anomaly!)[/bold green]")
+            self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [green][+][/green] {tech} [bold green](Anomaly!)[/bold green]")
         elif status == 'progress':
-            console.print(f"[dim]Fuzz iteration {msg}[/dim]")
+            self.console.print(f"[dim]Fuzz iteration {msg}[/dim]")
         else:
             super()._print(status, msg, tech)
 
@@ -149,7 +150,9 @@ class FuzzScanner(BaseScanner):
             except Exception:
                 self.baseline_response = ""
 
-            for i, p in enumerate(payloads):
+
+
+            for i, p in enumerate(track(payloads, description="[bold orange1]🎲 Mutating Inputs...  [/]", console=self.console)):
                 self.stats['total'] += 1
 
                 # Progress indicator
@@ -212,7 +215,7 @@ def run(target: str = None, api_key: str = None, profile: str = None, browser: b
         iterations: int = 100, verbose: bool = False, output: str = None,
         parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, **kwargs):
     if not target:
-        console.print("[red][-][/red] No target specified")
+        print("[red][-][/red] No target specified")
         return
 
     scanner = FuzzScanner(target, api_key=api_key, verbose=verbose,

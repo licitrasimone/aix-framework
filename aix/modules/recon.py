@@ -17,7 +17,7 @@ from aix.modules.fingerprint import FingerprintScanner
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
 
-console = Console()
+
 
 class ReconScanner(BaseScanner):
     def __init__(self, target: str, api_key: str | None = None, verbose: bool = False,
@@ -43,7 +43,7 @@ class ReconScanner(BaseScanner):
             with open(config_path) as f:
                 self.config = json.load(f)
         except Exception as e:
-            console.print(f"[yellow][!] Could not load config from {config_path}: {e}[/yellow]")
+            self.console.print(f"[yellow][!] Could not load config from {config_path}: {e}[/yellow]")
             self.config = {
                 "model_signatures": {}, "negative_signatures": {},
                 "version_patterns": {}, "waf_signatures": {}
@@ -78,13 +78,13 @@ class ReconScanner(BaseScanner):
     def _print(self, status: str, msg: str, tech: str = ''):
         t = self.target[:28] + '...' if len(self.target) > 30 else self.target
         if status == 'info':
-            console.print(f"[cyan]RECON[/cyan]   {t:30} [cyan][*][/cyan] {msg}")
+            self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [cyan][*][/cyan] {msg}")
         elif status == 'success':
-            console.print(f"[cyan]RECON[/cyan]   {t:30} [green][+][/green] {msg}") # Different format than base
+            self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [green][+][/green] {msg}") # Different format than base
         elif status == 'warning':
-            console.print(f"[cyan]RECON[/cyan]   {t:30} [yellow][!][/yellow] {msg}")
+            self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [yellow][!][/yellow] {msg}")
         elif status == 'error':
-            console.print(f"[cyan]RECON[/cyan]   {t:30} [red][-][/red] {msg}")
+            self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [red][-][/red] {msg}")
         # Note: BaseScanner has generic _print but Recon likes its own format slightly (no 'tech' usually in msg for success).
 
     def _detect_model(self, response: str) -> tuple:
@@ -482,7 +482,7 @@ class ReconScanner(BaseScanner):
             self._print('info', f'Running {len(self.payloads)} probe tests...')
 
             responses = []
-            for probe in track(self.payloads, description="Recon Probing..."):
+            for probe in track(self.payloads, description="[bold white]🔍 Mapping Surface...  [/]", console=self.console):
                 try:
                     import time
                     start = time.time()
@@ -522,8 +522,8 @@ class ReconScanner(BaseScanner):
                              self._print('error', f"Authentication failed: Target requires valid credentials (401/403)")
                     elif self.verbose:
                         import traceback
-                        console.print(f"[red]Error probing {probe['name']}: {e}[/red]")
-                        console.print(traceback.format_exc())
+                        self.console.print(f"[red]Error probing {probe['name']}: {e}[/red]")
+                        self.console.print(traceback.format_exc())
                     else:
                         # Print generic error concisely if not Auth (which is handled above)
                         if "Authentication Failed" not in error_str and "Rate Limit" not in error_str:
@@ -600,7 +600,7 @@ class ReconScanner(BaseScanner):
 
         # Run probabilistic fingerprinting if confidence is low
         if self.results['model_confidence'] < 80:
-            console.print()
+            self.console.print()
             self._print('info', f"Standard confidence <80%. Initiating Advanced Fingerprinting...")
             await self._run_advanced_fingerprint()
             
@@ -614,7 +614,7 @@ class ReconScanner(BaseScanner):
 
     def _print_summary(self):
         """Print reconnaissance summary"""
-        console.print()
+        self.console.print()
         from rich.box import ROUNDED
         from rich.panel import Panel
         from rich.table import Table
@@ -651,12 +651,12 @@ class ReconScanner(BaseScanner):
             color = "green" if avg < 1.0 else "yellow" if avg < 3.0 else "red"
             table.add_row("Avg Latency", f"[{color}]{avg:.2f}s[/]")
             
-        console.print(table)
+        self.console.print(table)
         
         # Discovered Endpoints Panel
         if self.results.get('discovered_endpoints'):
             eps = "\n".join([f"[green]✓[/] {ep}" for ep in self.results['discovered_endpoints']])
-            console.print(Panel(eps, title="🔍 Discovered API Endpoints", border_style="cyan"))
+            self.console.print(Panel(eps, title="🔍 Discovered API Endpoints", border_style="cyan"))
 
     async def _run_advanced_fingerprint(self):
         """Run advanced probability-based fingerprinting"""
@@ -694,7 +694,7 @@ class ReconScanner(BaseScanner):
                 self.results['fingerprint_winner'] = winner
 
         except Exception as e:
-            console.print(f"[yellow][!] Advanced fingerprinting failed: {e}[/yellow]")
+            self.console.print(f"[yellow][!] Advanced fingerprinting failed: {e}[/yellow]")
 
 
 
@@ -702,7 +702,7 @@ def run(target: str = None, browser: bool = False, output: str | None = None,
         timeout: int = 30, verbose: bool = False,
         parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, **kwargs) -> None:
     if not target:
-        console.print("[red][-][/red] No target specified")
+        print("[red][-][/red] No target specified")
         return
 
     scanner = ReconScanner(
@@ -728,4 +728,4 @@ def run(target: str = None, browser: bool = False, output: str | None = None,
     if output:
         with open(output, 'w') as f:
             json.dump(results, f, indent=2)
-        console.print(f"[green][+][/green] Results saved to {output}")
+        print(f"[green][+][/green] Results saved to {output}")

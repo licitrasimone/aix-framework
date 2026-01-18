@@ -13,7 +13,7 @@ from aix.core.reporter import Severity
 from aix.core.request_parser import ParsedRequest
 from aix.db.database import AIXDatabase
 
-console = Console()
+
 
 class BaseScanner:
     """Base class for all AIX scanners to reduce code duplication"""
@@ -24,6 +24,7 @@ class BaseScanner:
         self.api_key = api_key
         self.verbose = verbose
         self.parsed_request = parsed_request
+        self.console = Console()
 
         # Common optional arguments
         self.proxy = kwargs.get('proxy')
@@ -56,13 +57,14 @@ class BaseScanner:
                  self.eval_config['proxy'] = self.proxy
 
              self.evaluator = LLMEvaluator(**self.eval_config)
-             console.print(f"[bold green][*] LLM-as-a-Judge ENABLED: {self.eval_config.get('provider') or 'custom'} ({self.eval_config.get('model') or 'default'})[/bold green]")
+             self.console.print(f"[bold green][*] LLM-as-a-Judge ENABLED: {self.eval_config.get('provider') or 'custom'} ({self.eval_config.get('model') or 'default'})[/bold green]")
 
         self.last_eval_reason = None
 
         # Module specific config (override in subclass)
         self.module_name = "BASE"
         self.console_color = "white"
+
 
     def load_payloads(self, filename: str) -> list[dict]:
         """Load payloads from JSON file in ../payloads directory with filtering"""
@@ -91,7 +93,7 @@ class BaseScanner:
             self._print('info', f"Config: Level={self.level}, Risk={self.risk} - Loaded {len(filtered_payloads)}/{len(payloads)} payloads")
             return filtered_payloads
         except Exception as e:
-            console.print(f"[yellow][!] Could not load payloads from {payload_path}: {e}[/yellow]")
+            self.console.print(f"[yellow][!] Could not load payloads from {payload_path}: {e}[/yellow]")
             return []
 
     def _init_stats(self, **kwargs):
@@ -147,11 +149,11 @@ class BaseScanner:
                 msg = f"Evaluator: {self.last_eval_reason}"
 
         if status == 'info':
-            console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [{self.console_color}][*][/{self.console_color}] {msg}")
+            self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [{self.console_color}][*][/{self.console_color}] {msg}")
         elif status == 'success':
             # Fixed: Include msg/reason in success output
             reason_str = f" [dim]({msg})[/dim]" if msg else ""
-            console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [green][+][/green] {tech} [bold green](Vulnerable!)[/bold green]{reason_str}")
+            self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [green][+][/green] {tech} [bold green](Vulnerable!)[/bold green]{reason_str}")
         elif status == 'detail':
             # Details are shown if verbose >= 1 ? Usually details are useful.
             # But "only vulnerable" implies hiding details too?
@@ -160,16 +162,16 @@ class BaseScanner:
             # The 'detail' status is used for things like "Category: ..." in agent.py.
             # Let's show details only if verbose >= 1.
             if self.verbose >= 1:
-                console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30}        [dim]└─→ {msg}[/dim]")
+                self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30}        [dim]└─→ {msg}[/dim]")
         elif status == 'warning':
-            console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [yellow][!][/yellow] {msg}")
+            self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [yellow][!][/yellow] {msg}")
         elif status == 'blocked':
              # Show blocked only if verbose >= 2
              if self.verbose >= 2:
                  reason_str = f" [dim]({msg})[/dim]" if msg else ""
-                 console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [red][-][/red] {tech} [red](Blocked)[/red]{reason_str}")
+                 self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [red][-][/red] {tech} [red](Blocked)[/red]{reason_str}")
         elif status == 'error':
-            console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [red][!][/red] {msg}")
+            self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [red][!][/red] {msg}")
 
     async def check_success(self, response: str, indicators: list[str], payload: str, technique: str) -> bool:
         """

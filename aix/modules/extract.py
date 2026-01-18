@@ -3,6 +3,7 @@ import asyncio
 from typing import TYPE_CHECKING, Optional
 
 from rich.console import Console
+from rich.progress import track
 
 from aix.core.reporter import Finding
 from aix.core.scanner import BaseScanner
@@ -10,7 +11,7 @@ from aix.core.scanner import BaseScanner
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
 
-console = Console()
+
 
 class ExtractScanner(BaseScanner):
     def __init__(self, target: str, api_key: str | None = None, browser: bool = False, verbose: bool = False,
@@ -29,7 +30,7 @@ class ExtractScanner(BaseScanner):
         await connector.connect()
 
         try:
-            for e in extractions:
+            for e in track(extractions, description="[bold green]📥 Siphoning Data...  [/]", console=self.console):
                 self.stats['total'] += 1
                 try:
                     resp = await connector.send(e['payload'])
@@ -56,7 +57,7 @@ def run(target: str = None, api_key: str = None, profile: str = None,
         browser: bool = False, verbose: bool = False, output: str = None,
         parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, **kwargs):
     if not target:
-        console.print("[red][-][/red] No target specified")
+        print("[red][-][/red] No target specified")
         return
 
     scanner = ExtractScanner(target, api_key=api_key, browser=browser, verbose=verbose,
