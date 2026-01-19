@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Optional
 from rich.console import Console
 from rich.progress import track
 
-from aix.core.reporter import Finding
-from aix.core.scanner import BaseScanner
+from aix.core.reporter import Finding, Severity
+from aix.core.scanner import BaseScanner, CircuitBreakerError
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -83,13 +83,18 @@ class LeakScanner(BaseScanner):
 
                     # Check for indicators if specified
                     if 'indicators' in probe:
-                        if await self.check_success(resp, probe['indicators'], probe['payload'], probe['name']):
+                        # Scan payload
+                        is_vulnerable, best_resp = await self.scan_payload(connector, probe['payload'], probe['indicators'], probe['name'])
+                        
+                        if is_vulnerable:
                             leak_detected = True
                             leak_details['indicators_matched'] = True
+                            # Update resp to best_resp for later use
+                            resp = best_resp
 
                     if leak_detected:
                         self.stats['success'] += 1
-                        self._print('success', '', probe['name'])
+                        self._print('success', '', probe['name'], response=resp)
 
                         self.findings.append(Finding(title=f"Leak - {probe['name']}", severity=probe['severity'],
                             technique=probe['name'], payload=probe['payload'], response=resp[:5000], target=self.target, reason=self.last_eval_reason))
@@ -98,8 +103,11 @@ class LeakScanner(BaseScanner):
                         self.stats['blocked'] += 1
                         self._print('blocked', '', probe['name'])
 
+                except CircuitBreakerError:
+                    break
                 except Exception as e:
                     self.stats['blocked'] += 1
+                    self._print('error', f"Leak probe failed: {e}")
                     if self.verbose:
                         self._print('blocked', str(e), probe['name'])
 
@@ -119,9 +127,9 @@ class LeakScanner(BaseScanner):
         return self.findings
 
 
-def run(target: str = None, api_key: str = None, profile: str = None,
-        browser: bool = False, verbose: bool = False, output: str = None,
-        parsed_request: Optional['ParsedRequest'] = None, **kwargs):
+def run(target: str = None, api_key: str = None, profile: str = None, browser: bool = False,
+        verbose: bool = False, output: str = None,
+        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, show_response: bool = False, **kwargs):
     if not target:
         print("[red][-][/red] No target specified")
         return
@@ -135,5 +143,7 @@ def run(target: str = None, api_key: str = None, profile: str = None,
                           response_regex=kwargs.get('response_regex'),
                           eval_config=kwargs.get('eval_config'),
                           level=kwargs.get('level', 1),
-                          risk=kwargs.get('risk', 1))
+                         risk=kwargs.get('risk', 1),
+                         show_response=show_response,
+                         verify_attempts=kwargs.get('verify_attempts', 1))
     asyncio.run(scanner.run())

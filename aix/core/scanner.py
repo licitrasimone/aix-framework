@@ -4,6 +4,7 @@ Base Scanner Module - Common logic for all AIX scanners
 import json
 import os
 from typing import Any, Optional
+from abc import ABC
 
 from rich.console import Console
 
@@ -14,16 +15,22 @@ from aix.core.request_parser import ParsedRequest
 from aix.db.database import AIXDatabase
 
 
+class CircuitBreakerError(Exception):
+    """Raised when scan should be aborted due to excessive errors"""
+    pass
 
-class BaseScanner:
+class BaseScanner(ABC):
     """Base class for all AIX scanners to reduce code duplication"""
 
-    def __init__(self, target: str, api_key: str | None = None, verbose: int = 0,
-                 parsed_request: Optional['ParsedRequest'] = None, **kwargs):
+    def __init__(self, target: str, api_key: str | None = None, verbose: bool = False,
+                 parsed_request: Optional['ParsedRequest'] = None, timeout: int = 30, browser: bool = False, **kwargs):
         self.target = target
         self.api_key = api_key
         self.verbose = verbose
         self.parsed_request = parsed_request
+        self.timeout = timeout # Set from parameter
+        self.browser = browser
+        self.show_response = kwargs.get('show_response', False)
         self.console = Console()
 
         # Common optional arguments
@@ -39,6 +46,7 @@ class BaseScanner:
         # Filtering config
         self.level = kwargs.get('level', 1)
         self.risk = kwargs.get('risk', 1)
+        self.verify_attempts = kwargs.get('verify_attempts', 1)
 
         self.timeout = kwargs.get('timeout', 30)
 
@@ -47,6 +55,10 @@ class BaseScanner:
         self.stats = {'total': 0, 'success': 0, 'blocked': 0}
         self.db = AIXDatabase()
         self.payloads = []
+        
+        # Circuit Breaker State
+        self.consecutive_errors = 0
+        self.circuit_breaker_limit = 10 
 
         # Evaluator
         self.eval_config = kwargs.get('eval_config')
@@ -59,22 +71,44 @@ class BaseScanner:
              self.evaluator = LLMEvaluator(**self.eval_config)
              self.console.print(f"[bold green][*] LLM-as-a-Judge ENABLED: {self.eval_config.get('provider') or 'custom'} ({self.eval_config.get('model') or 'default'})[/bold green]")
 
-        self.last_eval_reason = None
-
-        # Module specific config (override in subclass)
+        # Module specific config (default, can be overridden)
         self.module_name = "BASE"
         self.console_color = "white"
 
+        self.last_eval_reason = None
+        # Load refusals but disable them if LLM judge is active (user preference: LLM > refusals)
+        self.refusals = self.load_payloads('refusals.json', quiet=True) if not self.evaluator else []
 
-    def load_payloads(self, filename: str) -> list[dict]:
+    def _update_error_state(self, error_str: str | None = None):
+        """Update consecutive error count and check circuit breaker"""
+        if error_str and ("403" in error_str or "500" in error_str):
+            self.consecutive_errors += 1
+        else:
+            self.consecutive_errors = 0 # Reset on success or non-critical error
+            
+        if self.consecutive_errors >= self.circuit_breaker_limit:
+            msg = f"Scan aborted: Exceeded {self.circuit_breaker_limit} consecutive critical errors (WAF block prevented?)"
+            self._print('error', msg)
+            raise CircuitBreakerError(msg)
+
+    def load_payloads(self, filename: str, quiet: bool = False) -> list[dict]:
         """Load payloads from JSON file in ../payloads directory with filtering"""
         payload_path = os.path.join(os.path.dirname(__file__), '..', 'payloads', filename)
+        # self.console.print(f"[debug] Loading {filename} from {payload_path}")
         try:
             with open(payload_path) as f:
                 payloads = json.load(f)
+                # self.console.print(f"[debug] Parsed JSON for {filename}: {len(payloads)} items")
 
             filtered_payloads = []
             for p in payloads:
+                # Default values if missing
+
+                if isinstance(p, str):
+                   # Handle simple string lists (like refusals.json)
+                   filtered_payloads.append(p)
+                   continue
+
                 # Default values if missing
                 curr_level = p.get('level', 1)
                 curr_risk = p.get('risk', 1)
@@ -90,7 +124,8 @@ class BaseScanner:
                     filtered_payloads.append(p)
 
 
-            self._print('info', f"Config: Level={self.level}, Risk={self.risk} - Loaded {len(filtered_payloads)}/{len(payloads)} payloads")
+            if not quiet:
+                self._print('info', f"Config: Level={self.level}, Risk={self.risk} - Loaded {len(filtered_payloads)}/{len(payloads)} payloads")
             return filtered_payloads
         except Exception as e:
             self.console.print(f"[yellow][!] Could not load payloads from {payload_path}: {e}[/yellow]")
@@ -111,7 +146,8 @@ class BaseScanner:
                 headers=self.headers,
                 timeout=self.timeout,
                 refresh_config=self.refresh_config,
-                response_regex=self.response_regex
+                response_regex=self.response_regex,
+                console=self.console
             )
         else:
             return APIConnector(
@@ -125,10 +161,11 @@ class BaseScanner:
                 body_format=self.body_format,
                 timeout=self.timeout,
                 refresh_config=self.refresh_config,
-                response_regex=self.response_regex
+                response_regex=self.response_regex,
+                console=self.console
             )
 
-    def _print(self, status: str, msg: str, tech: str = ''):
+    def _print(self, status: str, msg: str, tech: str = '', response: str = None):
         """Standardized formatted printing"""
         t = self.target[:28] + '...' if len(self.target) > 30 else self.target
         name = self.module_name[:7].upper() # Limit length
@@ -154,6 +191,8 @@ class BaseScanner:
             # Fixed: Include msg/reason in success output
             reason_str = f" [dim]({msg})[/dim]" if msg else ""
             self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [green][+][/green] {tech} [bold green](Vulnerable!)[/bold green]{reason_str}")
+            if self.show_response and response:
+                self.console.print(f"        [dim]Response: {response[:500].replace('[', r'\[')}[/dim]")
         elif status == 'detail':
             # Details are shown if verbose >= 1 ? Usually details are useful.
             # But "only vulnerable" implies hiding details too?
@@ -172,6 +211,18 @@ class BaseScanner:
                  self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [red][-][/red] {tech} [red](Blocked)[/red]{reason_str}")
         elif status == 'error':
             self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [red][!][/red] {msg}")
+
+    async def _check_refusal(self, response: str) -> bool:
+        """Check if response contains refusal patterns"""
+        response_lower = response.lower()
+        # self.console.print(f"[debug] Checking refusal for: {response_lower[:50]}...")
+        # self.console.print(f"[debug] Against {len(self.refusals)} patterns: {self.refusals}")
+        for r in self.refusals:
+            # refusals.json is a list of strings
+            if isinstance(r, str) and r.lower() in response_lower: 
+                # self.console.print(f"[debug] MATCHED REFUSAL: {r}")
+                return True
+        return False
 
     async def check_success(self, response: str, indicators: list[str], payload: str, technique: str) -> bool:
         """
@@ -192,9 +243,106 @@ class BaseScanner:
 
         # 2. Fallback to keywords
         success = any(i.lower() in response.lower() for i in indicators)
+        
+        # Check for refusals if no evaluator is used
+        if success and await self._check_refusal(response):
+             self.last_eval_reason = "Blocked by refusal check (False Positive)"
+             # Treat as blocked/safe if it's a known refusal, unless indicators are very specific?
+             # User requested to avoid opening vuln for 'i cannot provide'.
+             # So we flip success to False.
+             return False
+
         if success:
              self.last_eval_reason = "Matched indicator found in response."
         return success
+
+    async def verify_result(self, response: str, connector, payload: str, indicators: list[str], technique: str) -> bool:
+        """
+        [DEPRECATED] Use scan_payload instead.
+        Keep for backward compatibility during refactor.
+        """
+        return await self.check_success(response, indicators, payload, technique)
+
+    async def scan_payload(self, connector, payload: str, indicators: list[str], technique: str) -> tuple[bool, str]:
+        """
+        Robust payload scanning.
+        Sends payload `verify_attempts` times.
+        Returns: (is_vulnerable, best_response)
+        
+        Logic:
+        - If verify_attempts > 1:
+            - Try N times.
+            - If ANY attempt succeeds -> Vulnerable.
+            - If ALL fail -> Blocked.
+            - Calculate success rate.
+        - If verify_attempts == 1:
+            - Try once.
+        """
+        attempts = self.verify_attempts
+        successes = 0
+        failures = 0
+        best_response = None
+        
+        # If default 1 attempt, use fast path
+        if attempts <= 1:
+            resp = await connector.send(payload)
+            success = await self.check_success(resp, indicators, payload, technique)
+            return success, resp
+
+        # Robust loop
+        if self.verbose >= 2:
+            self._print('info', f"Probing {technique} ({attempts} attempts)...")
+        
+        for i in range(attempts):
+            try:
+                resp = await connector.send(payload)
+                if not resp:
+                    resp = "" # Handle empty
+                
+                success = await self.check_success(resp, indicators, payload, technique)
+                
+                if success:
+                    successes += 1
+                    best_response = resp # Prefer successful response
+                    # Optimization: If user didn't ask for full rigorous stats, maybe stop?
+                    # User said "sent always n attempts". So we continue.
+                else:
+                    failures += 1
+                    if not best_response:
+                        best_response = resp # Keep at least one response (even failure)
+            
+            except Exception as e:
+                failures += 1
+                if not best_response:
+                     best_response = f"Error: {str(e)}"
+                
+                # Check for critical errors (403, etc.)
+                error_str = str(e)
+                if "403" in error_str:
+                     self._print('error', f"Target returned 403 Forbidden ({technique})")
+                     self._update_error_state(error_str)
+                elif "500" in error_str:
+                     self._print('error', f"Target returned 500 Server Error ({technique})")
+                     self._update_error_state(error_str)
+                elif self.verbose >= 1: # Print other errors if verbose
+                     self.console.print(f"[yellow][!] Error probing {technique}: {e}[/yellow]")
+                     self._update_error_state(None) # Reset if generic error? Or ignore? 
+                     # Let's reset for generic errors to be safe, or only pure successes?
+                     # Ideally 403 is the blocker. If we get a connection error, maybe we shouldn't reset.
+                     # But for now, let's only increment on 403/500 as per logic.
+                     # Calling with None resets.
+                     pass
+
+        # Decision Logic
+        if successes > 0:
+            self._update_error_state(None) # Reset count on any success
+            if successes < attempts:
+                 self._print('warning', f"{technique}: Unstable exploit ({successes}/{attempts} successes)")
+            else:
+                 self._print('info', f"{technique}: robust ({successes}/{attempts} successes)")
+            return True, best_response
+        else:
+            return False, best_response
 
     async def run(self):
         """Main execution method - usually overridden by subclasses but can provide skeleton"""

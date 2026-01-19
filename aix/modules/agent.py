@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.progress import track
 
 from aix.core.reporter import Finding, Severity
-from aix.core.scanner import BaseScanner
+from aix.core.scanner import BaseScanner, CircuitBreakerError
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -65,9 +65,11 @@ class AgentScanner(BaseScanner):
                 self.stats['total'] += 1
 
                 try:
-                    resp = await connector.send(p['payload'])
-
-                    is_vulnerable = await self.check_success(resp, p['indicators'], p['payload'], p['name'])
+                    # Scan payload (handles N attempts)
+                    is_vulnerable, best_resp = await self.scan_payload(connector, p['payload'], p['indicators'], p['name'])
+                    
+                    if is_vulnerable:
+                         resp = best_resp # Update resp for tool extraction
 
                     # For discovery payloads, also extract tool names
                     if p['category'] == 'discovery':
@@ -78,7 +80,7 @@ class AgentScanner(BaseScanner):
 
                     if is_vulnerable:
                         self.stats['success'] += 1 # Standardized from 'vulnerable'
-                        self._print('success', '', p['name'])
+                        self._print('success', '', p['name'], response=resp)
 
                         if p['category'] == 'discovery' and self.discovered_tools:
                             self._print('detail', f'Tools found: {", ".join(self.discovered_tools[:5])}')
@@ -99,8 +101,11 @@ class AgentScanner(BaseScanner):
                         self.stats['blocked'] += 1
                         self._print('blocked', '', p['name'])
 
+                except CircuitBreakerError:
+                    break
                 except Exception as e:
                     self.stats['blocked'] += 1
+                    self._print('error', f"Agent probe failed: {e}")
                     if self.verbose:
                         self._print('blocked', str(e), p['name'])
 
@@ -130,7 +135,7 @@ class AgentScanner(BaseScanner):
 
 def run(target: str = None, api_key: str = None, profile: str = None,
         browser: bool = False, verbose: bool = False, output: str = None,
-        parsed_request: Optional['ParsedRequest'] = None, **kwargs):
+        parsed_request: Optional['ParsedRequest'] = None, show_response: bool = False, **kwargs):
     if not target:
         print("[red][-][/red] No target specified")
         return
@@ -144,5 +149,7 @@ def run(target: str = None, api_key: str = None, profile: str = None,
                            response_regex=kwargs.get('response_regex'),
                            eval_config=kwargs.get('eval_config'),
                            level=kwargs.get('level', 1),
-                           risk=kwargs.get('risk', 1))
+                           risk=kwargs.get('risk', 1),
+                           show_response=show_response,
+                           verify_attempts=kwargs.get('verify_attempts', 1))
     asyncio.run(scanner.run())

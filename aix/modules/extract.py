@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Optional
 from rich.console import Console
 from rich.progress import track
 
-from aix.core.reporter import Finding
-from aix.core.scanner import BaseScanner
+from aix.core.reporter import Finding, Severity
+from aix.core.scanner import BaseScanner, CircuitBreakerError
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -33,17 +33,23 @@ class ExtractScanner(BaseScanner):
             for e in track(extractions, description="[bold green]📥 Siphoning Data...  [/]", console=self.console):
                 self.stats['total'] += 1
                 try:
-                    resp = await connector.send(e['payload'])
-                    if await self.check_success(resp, e['indicators'], e['payload'], e['name']):
+                    # Scan payload (handles N attempts internally)
+                    is_vulnerable, best_resp = await self.scan_payload(connector, e['payload'], e['indicators'], e['name'])
+
+                    if is_vulnerable:
                         self.stats['success'] += 1
-                        self._print('success', '', e['name'])
+                        self._print('success', '', e['name'], response=best_resp)
                         self.findings.append(Finding(title=f"Extraction - {e['name']}", severity=e['severity'],
-                            technique=e['name'], payload=e['payload'], response=resp[:5000], target=self.target, reason=self.last_eval_reason))
-                        self.db.add_result(self.target, 'extract', e['name'], 'success', e['payload'], resp[:5000], e['severity'].value, reason=self.last_eval_reason)
+                            technique=e['name'], payload=e['payload'], response=best_resp[:2000], target=self.target, reason=self.last_eval_reason))
+                        self.db.add_result(self.target, 'extract', e['name'], 'success', e['payload'], best_resp[:2000], e['severity'].value, reason=self.last_eval_reason)
                     else:
                         self.stats['blocked'] += 1
                         self._print('blocked', '', e['name'])
-                except Exception:
+
+                except CircuitBreakerError:
+                    break
+                except Exception as ex:
+                    self._print('error', f"Error extracting {e['name']}: {ex}")
                     self.stats['blocked'] += 1
                 await asyncio.sleep(0.3)
         finally:
@@ -55,7 +61,7 @@ class ExtractScanner(BaseScanner):
 
 def run(target: str = None, api_key: str = None, profile: str = None,
         browser: bool = False, verbose: bool = False, output: str = None,
-        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, **kwargs):
+        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, show_response: bool = False, **kwargs):
     if not target:
         print("[red][-][/red] No target specified")
         return
@@ -69,5 +75,7 @@ def run(target: str = None, api_key: str = None, profile: str = None,
                              response_regex=kwargs.get('response_regex'),
                             eval_config=kwargs.get('eval_config'),
                             level=kwargs.get('level', 1),
-                            risk=kwargs.get('risk', 1))
+                            risk=kwargs.get('risk', 1),
+                            show_response=show_response,
+                            verify_attempts=kwargs.get('verify_attempts', 1))
     asyncio.run(scanner.run())

@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.progress import track
 
 from aix.core.reporter import Finding
-from aix.core.scanner import BaseScanner
+from aix.core.scanner import BaseScanner, CircuitBreakerError
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -62,7 +62,10 @@ class ExfilScanner(BaseScanner):
 
 
                     # Check for indicators using LLM or keywords
-                    is_vulnerable = await self.check_success(resp, p['indicators'], p['payload'], p['name'])
+                    # Scan payload (handles N attempts)
+                    is_vulnerable, best_resp = await self.scan_payload(connector, p['payload'], p['indicators'], p['name'])
+                    if is_vulnerable:
+                        resp = best_resp # Update resp reference for URLs check
 
                     # Also check if our webhook URL appears in response
                     urls_in_response = self._extract_urls(resp)
@@ -70,7 +73,7 @@ class ExfilScanner(BaseScanner):
 
                     if is_vulnerable or has_external_url:
                         self.stats['success'] += 1
-                        self._print('success', '', p['name'])
+                        self._print('success', '', p['name'], response=resp)
                         self._print('detail', p['description'])
 
                         if urls_in_response:
@@ -96,8 +99,11 @@ class ExfilScanner(BaseScanner):
                         self.stats['blocked'] += 1
                         self._print('blocked', '', p['name'])
 
+                except CircuitBreakerError:
+                    break
                 except Exception as e:
                     self.stats['blocked'] += 1
+                    self._print('error', f"Exfil probe failed: {e}")
                     if self.verbose:
                         self._print('blocked', str(e), p['name'])
 
@@ -119,7 +125,7 @@ class ExfilScanner(BaseScanner):
 
 def run(target: str = None, api_key: str = None, profile: str = None, webhook: str = None,
         browser: bool = False, verbose: bool = False, output: str = None,
-        parsed_request: Optional['ParsedRequest'] = None, **kwargs):
+        parsed_request: Optional['ParsedRequest'] = None, show_response: bool = False, **kwargs):
     if not target:
         print("[red][-][/red] No target specified")
         return
@@ -132,5 +138,7 @@ def run(target: str = None, api_key: str = None, profile: str = None, webhook: s
                            refresh_config=kwargs.get('refresh_config'),
                            eval_config=kwargs.get('eval_config'),
                            level=kwargs.get('level', 1),
-                           risk=kwargs.get('risk', 1))
+                           risk=kwargs.get('risk', 1),
+                           show_response=show_response,
+                           verify_attempts=kwargs.get('verify_attempts', 1))
     asyncio.run(scanner.run())

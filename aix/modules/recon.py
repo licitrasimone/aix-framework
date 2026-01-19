@@ -11,7 +11,7 @@ from rich.table import Table
 from rich.progress import track
 
 from aix.core.reporter import Finding, Severity
-from aix.core.scanner import BaseScanner
+from aix.core.scanner import BaseScanner, CircuitBreakerError
 from aix.modules.fingerprint import FingerprintScanner
 
 if TYPE_CHECKING:
@@ -75,13 +75,16 @@ class ReconScanner(BaseScanner):
             self.discovery_paths = ["/v1/chat/completions", "/api/chat", "/api/generate"]
 
 
-    def _print(self, status: str, msg: str, tech: str = ''):
+    def _print(self, status: str, msg: str, tech: str = '', response: str = None):
         t = self.target[:28] + '...' if len(self.target) > 30 else self.target
         name = self.module_name[:7].upper()
         if status == 'info':
             self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [cyan][*][/cyan] {msg}")
         elif status == 'success':
             self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [green][+][/green] {msg}") # Different format than base
+            if self.show_response and response:
+                clean_response = response[:500].replace('[', r'\[')
+                self.console.print(f"    [dim]Response: {clean_response}[/dim]")
         elif status == 'warning':
             self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [yellow][!][/yellow] {msg}")
         elif status == 'error':
@@ -500,6 +503,9 @@ class ReconScanner(BaseScanner):
                         self.findings.append(Finding(title=f"Recon - {probe['name']}", severity=probe.get('severity', Severity.INFO),
                                 technique=probe['name'], payload=probe['payload'], response=resp[:2000], target=self.target, reason=self.last_eval_reason))
                         self.db.add_result(self.target, 'recon', probe['name'], 'success', probe['payload'], resp[:2000], probe.get('severity', Severity.INFO).value, reason=self.last_eval_reason)
+                        
+                        if self.show_response:
+                            self._print('success', f"Probe {probe['name']}", response=resp)
 
                     responses.append({
                         'probe': probe['name'],
@@ -521,18 +527,30 @@ class ReconScanner(BaseScanner):
                          # Only print auth failure once to avoid spam
                          if not any("Authentication Failed" in err for err in self.results['errors'][:-1]):
                              self._print('error', f"Authentication failed: Target requires valid credentials (401/403)")
+                             self._update_error_state(error_str)
+                    elif "403" in error_str:
+                         self._print('error', f"Target returned 403 Forbidden ({probe['name']})")
+                         self._update_error_state(error_str)
+                    elif "500" in error_str:
+                         self._print('error', f"Target returned 500 Server Error ({probe['name']})")
+                         self._update_error_state(error_str)
                     elif self.verbose:
                         import traceback
                         self.console.print(f"[red]Error probing {probe['name']}: {e}[/red]")
                         self.console.print(traceback.format_exc())
+                        self._update_error_state(None)
                     else:
                         # Print generic error concisely if not Auth (which is handled above)
                         if "Authentication Failed" not in error_str and "Rate Limit" not in error_str:
                              self._print('error', f"Probe {probe['name']} failed: {error_str.split(':')[0]}")
+                             self._update_error_state(None)
 
                     waf = self._detect_waf(str(e))
                     if waf:
                         self.results['waf_detected'] = waf
+
+                except CircuitBreakerError:
+                    break # Stop scan
 
                 await asyncio.sleep(0.3)
 
@@ -679,7 +697,8 @@ class ReconScanner(BaseScanner):
                 cookies=self.cookies,
                 timeout=self.timeout,
                 parsed_request=self.parsed_request,  # Critical fix for -r request mode
-                verbose=self.verbose
+                verbose=self.verbose,
+                console=self.console
             )
             
             # Using the same connector session would be ideal but for now we let it manage its own
@@ -701,7 +720,7 @@ class ReconScanner(BaseScanner):
 
 def run(target: str = None, browser: bool = False, output: str | None = None,
         timeout: int = 30, verbose: bool = False,
-        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, **kwargs) -> None:
+        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, show_response: bool = False, **kwargs) -> None:
     if not target:
         print("[red][-][/red] No target specified")
         return
@@ -722,7 +741,8 @@ def run(target: str = None, browser: bool = False, output: str | None = None,
         response_regex=kwargs.get('response_regex'),
         eval_config=kwargs.get('eval_config'),
         level=kwargs.get('level', 1),
-        risk=kwargs.get('risk', 1)
+        risk=kwargs.get('risk', 1),
+        show_response=show_response
     )
     results = asyncio.run(scanner.run())
 

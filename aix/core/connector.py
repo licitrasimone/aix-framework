@@ -44,11 +44,16 @@ class ConnectorConfig:
 class Connector(ABC):
     """Base class for all connectors"""
 
-    def __init__(self, url: str, profile=None, **kwargs):
+    def __init__(self, url: str, profile=None, console=None, **kwargs):
         self.url = url
         self.profile = profile
         self.config = kwargs
         self.session = None
+        # Use provided console or fallback to global
+        global _global_console
+        if '_global_console' not in globals():
+            _global_console = Console()
+        self.console = console or _global_console
 
     def _parse_cookies(self, cookies: str | None) -> dict[str, str]:
         """Parse cookie string into dictionary"""
@@ -110,10 +115,11 @@ class Connector(ABC):
                     return last_match[0] # Return content of first capture group
                 return last_match
             else:
-                console.print(f"[yellow]CONNECTOR[/yellow] [!] Regex '{self.response_regex}' found no matches in response.")
+                # Use shared console to avoid breaking progress bars
+                self.console.print(f"[yellow]CONNECTOR[/yellow] [!] Regex '{self.response_regex}' found no matches in response.")
                 return text
         except re.error as e:
-            console.print(f"[red]CONNECTOR[/red] [!] Invalid regex: {e}")
+            self.console.print(f"[red]CONNECTOR[/red] [!] Invalid regex: {e}")
             return text
 
 

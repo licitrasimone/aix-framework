@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Optional
 from rich.console import Console
 from rich.progress import track
 
-from aix.core.reporter import Finding
-from aix.core.scanner import BaseScanner
+from aix.core.reporter import Finding, Severity
+from aix.core.scanner import BaseScanner, CircuitBreakerError
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -33,17 +33,23 @@ class JailbreakScanner(BaseScanner):
             for j in track(jailbreaks, description="[bold red]🔓 Breaking Rails...   [/]", console=self.console):
                 self.stats['total'] += 1
                 try:
-                    resp = await connector.send(j['payload'])
-                    if await self.check_success(resp, j['indicators'], j['payload'], j['name']):
+                    # Scan payload (handles N attempts internally)
+                    is_vulnerable, best_resp = await self.scan_payload(connector, j['payload'], j['indicators'], j['name'])
+
+                    if is_vulnerable:
                         self.stats['success'] += 1
-                        self._print('success', '', j['name'])
+                        self._print('success', '', j['name'], response=best_resp)
                         self.findings.append(Finding(title=f"Jailbreak - {j['name']}", severity=j['severity'],
-                            technique=j['name'], payload=j['payload'][:200], response=resp[:5000], target=self.target, reason=self.last_eval_reason))
-                        self.db.add_result(self.target, 'jailbreak', j['name'], 'success', j['payload'][:200], resp[:5000], j['severity'].value, reason=self.last_eval_reason)
+                            technique=j['name'], payload=j['payload'], response=best_resp[:2000], target=self.target, reason=self.last_eval_reason))
+                        self.db.add_result(self.target, 'jailbreak', j['name'], 'success', j['payload'], best_resp[:2000], j['severity'].value, reason=self.last_eval_reason)
                     else:
                         self.stats['blocked'] += 1
                         self._print('blocked', '', j['name'])
+
+                except CircuitBreakerError:
+                    break
                 except Exception as e:
+                    self._print('error', f"Error with {j['name']}: {e}")
                     self.stats['blocked'] += 1
                     if self.verbose:
                         self._print('blocked', f"Error in {j['name']}: {e}", j['name'])
@@ -56,7 +62,7 @@ class JailbreakScanner(BaseScanner):
 
 def run(target: str = None, api_key: str = None, profile: str = None, browser: bool = False,
         evasion: str = 'light', test_harmful: bool = False, verbose: bool = False, output: str = None,
-        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, **kwargs):
+        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, show_response: bool = False, **kwargs):
     if not target:
         print("[red][-][/red] No target specified")
         return
@@ -71,6 +77,8 @@ def run(target: str = None, api_key: str = None, profile: str = None, browser: b
         response_regex=kwargs.get('response_regex'),
         eval_config=kwargs.get('eval_config'),
         level=kwargs.get('level', 1),
-        risk=kwargs.get('risk', 1)
+        risk=kwargs.get('risk', 1),
+        show_response=show_response,
+        verify_attempts=kwargs.get('verify_attempts', 1)
     )
     asyncio.run(scanner.run())

@@ -147,7 +147,7 @@ class DoSScanner(BaseScanner):
 
                     if is_vulnerable:
                         self.stats['success'] += 1 # Changed 'vulnerable' to 'success'
-                        self._print('success', '', p['name'])
+                        self._print('success', '', p['name'], response=resp)
                         self._print('detail', vulnerability_reason)
 
                         finding = Finding(
@@ -208,13 +208,13 @@ class DoSScanner(BaseScanner):
 
 
 def run(target: str = None, api_key: str = None, profile: str = None,
-        browser: bool = False, verbose: bool = False, output: str = None,
-        parsed_request: Optional['ParsedRequest'] = None, **kwargs):
+        verbose: bool = False, output: str = None,
+        parsed_request: Optional['ParsedRequest'] = None, show_response: bool = False, **kwargs):
     if not target:
         print("[red][-][/red] No target specified")
         return
 
-    scanner = DoSScanner(target, api_key=api_key, browser=browser, verbose=verbose,
+    scanner = DoSScanner(target, api_key=api_key, browser=kwargs.get('browser'), verbose=verbose,
                          parsed_request=parsed_request, proxy=kwargs.get('proxy'), cookies=kwargs.get('cookies'),
                          headers=kwargs.get('headers'),
                          injection_param=kwargs.get('injection_param'),
@@ -224,7 +224,8 @@ def run(target: str = None, api_key: str = None, profile: str = None,
                          response_regex=kwargs.get('response_regex'),
                          eval_config=kwargs.get('eval_config'),
                          level=kwargs.get('level', 1),
-                         risk=kwargs.get('risk', 1))
+                         risk=kwargs.get('risk', 1),
+                         show_response=show_response)
     # run function didn't have safe_mode before? Checking original file definition...
     # Original run def: `def run(..., **kwargs):`
     # Original DoSScanner init: `safe_mode: bool = True`.

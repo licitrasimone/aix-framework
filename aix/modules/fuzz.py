@@ -46,17 +46,20 @@ class FuzzScanner(BaseScanner):
         self.default_payloads = self.load_payloads('fuzz.json')
         self.baseline_response = None
 
-    def _print(self, status: str, msg: str, tech: str = ''):
+    def _print(self, status: str, msg: str, tech: str = '', response: str = None):
         t = self.target[:28] + '...' if len(self.target) > 30 else self.target
         name = self.module_name[:7].upper()
 
         if status == 'success':
             # Custom message for anomaly
             self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [green][+][/green] {tech} [bold green](Anomaly!)[/bold green]")
+            if self.show_response and response:
+                clean_response = response[:500].replace('[', '\[')
+                self.console.print(f"    [dim]Response: {clean_response}[/dim]")
         elif status == 'progress':
             self.console.print(f"[dim]Fuzz iteration {msg}[/dim]")
         else:
-            super()._print(status, msg, tech)
+            super()._print(status, msg, tech, response=response)
 
     def _generate_random_fuzz(self) -> list[dict]:
         """Generate random fuzz payloads"""
@@ -167,7 +170,7 @@ class FuzzScanner(BaseScanner):
 
                     if is_anomaly:
                         self.stats['success'] += 1 # Anomalies -> Success
-                        self._print('success', '', p['name'])
+                        self._print('success', '', p['name'], response=resp)
                         for detail in anomaly_details[:3]:
                             self._print('detail', detail)
 
@@ -213,7 +216,7 @@ class FuzzScanner(BaseScanner):
 
 def run(target: str = None, api_key: str = None, profile: str = None, browser: bool = False,
         iterations: int = 100, verbose: bool = False, output: str = None,
-        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, **kwargs):
+        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, show_response: bool = False, **kwargs):
     if not target:
         print("[red][-][/red] No target specified")
         return
@@ -225,7 +228,8 @@ def run(target: str = None, api_key: str = None, profile: str = None, browser: b
                           response_regex=kwargs.get('response_regex'),
                           eval_config=kwargs.get('eval_config'),
                           level=kwargs.get('level', 1),
-                          risk=kwargs.get('risk', 1))
+                          risk=kwargs.get('risk', 1),
+                          show_response=show_response)
     asyncio.run(scanner.run())
 
 __all__ = ["run"]

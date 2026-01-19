@@ -28,11 +28,16 @@ class FingerprintScanner:
     determine the most likely model family and version.
     """
     
-    def __init__(self, target: str, connector=None, parsed_request=None, verbose=False, **kwargs):
+    def __init__(self, target: str, connector=None, parsed_request=None, verbose=False, console=None, **kwargs):
         self.target = target
         self.connector = connector
         self.parsed_request = parsed_request
         self.verbose = verbose
+        # Use shared console or fallback
+        global _global_console
+        if '_global_console' not in globals():
+            _global_console = Console()
+        self.console = console or _global_console
         self.config = kwargs
         self.db = self._load_db()
         self.results = {}
@@ -51,7 +56,8 @@ class FingerprintScanner:
             with open(path) as f:
                 return json.load(f)
         except Exception as e:
-            console.print(f"[red][-] Failed to load fingerprint DB: {e}[/red]")
+            if hasattr(self, 'console'):
+                self.console.print(f"[red][-] Failed to load fingerprint DB: {e}[/red]")
             return {"questions": [], "signatures": {}}
 
     async def _send_probe(self, question: dict) -> str:
@@ -65,7 +71,8 @@ class FingerprintScanner:
                     proxy=self.config.get('proxy'),
                     cookies=self.config.get('cookies'), # Ensure cookies flow
                     headers=self.config.get('headers'),
-                    timeout=15
+                    timeout=15,
+                    console=self.console
                 )
             else:
                 # Default to APIConnector
@@ -75,7 +82,8 @@ class FingerprintScanner:
                     proxy=self.config.get('proxy'),
                     cookies=self.config.get('cookies'), # Ensure cookies flow
                     headers=self.config.get('headers'),
-                    timeout=15
+                    timeout=15,
+                    console=self.console
                 )
             
         try:
@@ -191,13 +199,13 @@ class FingerprintScanner:
                 evidence
             )
 
-        console.print()
-        console.print(table)
+        self.console.print()
+        self.console.print(table)
         
         # Identify winner
         if top_models and top_models[0][1] > 0.4:
             winner = top_models[0][0]
-            console.print(f"[bold green][+] Primary ID: {winner} ({self.db['signatures'][winner]['family']})[/]")
+            self.console.print(f"[bold green][+] Primary ID: {winner} ({self.db['signatures'][winner]['family']})[/]")
             return winner
         return None
 
@@ -209,11 +217,11 @@ class FingerprintScanner:
         questions = self.db['questions']
         
         # We can run these in parallel or serial. Serial is safer for rate limits.
-        for q in track(questions, description="Fingerprinting..."):
+        for q in track(questions, description="[bold cyan]Fingerprinting...[/]", console=self.console):
             response = await self._send_probe(q)
             
             if self.verbose and response and response != "AUTH_FAILED":
-                console.print(f"[dim]Probe ({q['id']}) Response: {response[:100]}...[/dim]")
+                self.console.print(f"[dim]Probe ({q['id']}) Response: {response[:100]}...[/dim]")
             
             # Check for critical auth failure
             if response == "AUTH_FAILED":
@@ -231,7 +239,7 @@ class FingerprintScanner:
                 await asyncio.sleep(0.5)
         
         if hasattr(self, 'auth_failed') and self.auth_failed:
-             console.print("[red][!] Fingerprinting aborted due to Authentication Failure (401). Session likely expired.[/red]")
+             self.console.print("[red][!] Fingerprinting aborted due to Authentication Failure (401). Session likely expired.[/red]")
              return None
         
         self._calculate_probabilities()
