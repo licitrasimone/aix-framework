@@ -217,7 +217,7 @@ class FingerprintScanner:
         questions = self.db['questions']
         
         # We can run these in parallel or serial. Serial is safer for rate limits.
-        for q in track(questions, description="[bold cyan]Fingerprinting...[/]", console=self.console):
+        for q in track(questions, description="[bold cyan]🔍 Fingerprinting...  [/]", console=self.console):
             response = await self._send_probe(q)
             
             if self.verbose and response and response != "AUTH_FAILED":

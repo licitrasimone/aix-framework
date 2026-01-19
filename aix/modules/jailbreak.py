@@ -79,6 +79,7 @@ def run(target: str = None, api_key: str = None, profile: str = None, browser: b
         level=kwargs.get('level', 1),
         risk=kwargs.get('risk', 1),
         show_response=show_response,
-        verify_attempts=kwargs.get('verify_attempts', 1)
+        verify_attempts=kwargs.get('verify_attempts', 1),
+        evasion=evasion
     )
     asyncio.run(scanner.run())

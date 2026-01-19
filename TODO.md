@@ -8,14 +8,14 @@ This document outlines the planned improvements, feature requests, and future di
 - [x] **Modern Jailbreaks**: Update `jailbreak.json` with newer techniques beyond classic DAN (e.g., "Grandmother", "Developer Mode v2", multi-shot attacks).
 - [x] **Payload Classification**: Implemented Level (1-5) and Risk (1-3) grading for all payloads.
 - [ ] **Polyglot Injections**: Add payloads that simultaneously test for Prompt Injection, SQLi, and XSS.
-- [ ] **Obfuscation**: Implement automatic payload encoding (Base64, Leetspeak, Rot13) that LLMs can decode but WAFs might miss.
+- [x] **Obfuscation**: Implement automatic payload encoding (Base64, Leetspeak, Rot13) that LLMs can decode but WAFs might miss.
 
 ### 2. Core Functionality
 - [x] **AI-Based Evaluation (LLM-as-a-Judge)**: Integrate a secondary LLM (local or API) to autonomously evaluate whether an attack was successful, reducing false positives/negatives.
 - [x] **Granular Control**: Implemented `--level` and `--risk` filters to control scan intensity and safety.
 - [ ] **Non-Determinism Testing**: "Temperature Checks" - option to send the same payload multiple times to analyze variance in responses and catch intermittent vulnerabilities.
 - [ ] **Recursive Scanning**: Ability to spider API endpoints to find undocumented LLM interaction points.
-- [ ] **WAF Evasion**: Add specific evasion techniques for common AI firewalls (e.g., Lakera, Cloudflare for AI).
+- [x] **WAF Evasion**: Add specific evasion techniques for common AI firewalls (e.g., Lakera, Cloudflare for AI).
 - [ ] **Token Management**: Better handling of context windows and token limits during fuzzing.
 
 ## 🛠 Features & Usability
@@ -38,5 +38,5 @@ This document outlines the planned improvements, feature requests, and future di
 ## 🔬 Advanced Research
 
 - [x] **Model Fingerprinting 2.0**: More accurate detection of backend models (GPT-4 vs Claude vs Llama) based on refusal nuances.
-- [ ] **RAG Exploitation**: Specialized modules for Retrieval Augmented Generation attacks (poisoning the knowledge base).
+- [x] **RAG Exploitation**: Specialized modules for Retrieval Augmented Generation attacks (poisoning the knowledge base).
 - [ ] **Multi-Modal Testing**: Support for image/audio input injection (if API supports it).

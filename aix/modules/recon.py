@@ -742,7 +742,8 @@ def run(target: str = None, browser: bool = False, output: str | None = None,
         eval_config=kwargs.get('eval_config'),
         level=kwargs.get('level', 1),
         risk=kwargs.get('risk', 1),
-        show_response=show_response
+        show_response=show_response,
+        evasion=kwargs.get('evasion', 'none')
     )
     results = asyncio.run(scanner.run())
 

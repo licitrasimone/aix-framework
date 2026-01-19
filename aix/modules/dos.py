@@ -225,7 +225,8 @@ def run(target: str = None, api_key: str = None, profile: str = None,
                          eval_config=kwargs.get('eval_config'),
                          level=kwargs.get('level', 1),
                          risk=kwargs.get('risk', 1),
-                         show_response=show_response)
+                         show_response=show_response,
+                         evasion=kwargs.get('evasion', 'none'))
     # run function didn't have safe_mode before? Checking original file definition...
     # Original run def: `def run(..., **kwargs):`
     # Original DoSScanner init: `safe_mode: bool = True`.

@@ -54,7 +54,7 @@ class FuzzScanner(BaseScanner):
             # Custom message for anomaly
             self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [green][+][/green] {tech} [bold green](Anomaly!)[/bold green]")
             if self.show_response and response:
-                clean_response = response[:500].replace('[', '\[')
+                clean_response = response[:500].replace('[', r'\[')
                 self.console.print(f"    [dim]Response: {clean_response}[/dim]")
         elif status == 'progress':
             self.console.print(f"[dim]Fuzz iteration {msg}[/dim]")
@@ -229,7 +229,8 @@ def run(target: str = None, api_key: str = None, profile: str = None, browser: b
                           eval_config=kwargs.get('eval_config'),
                           level=kwargs.get('level', 1),
                           risk=kwargs.get('risk', 1),
-                          show_response=show_response)
+                          show_response=show_response,
+                          evasion=kwargs.get('evasion', 'none'))
     asyncio.run(scanner.run())
 
 __all__ = ["run"]

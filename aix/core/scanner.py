@@ -9,6 +9,7 @@ from abc import ABC
 from rich.console import Console
 
 from aix.core.connector import APIConnector, RequestConnector
+from aix.core.evasion import PayloadEvasion
 from aix.core.evaluator import LLMEvaluator
 from aix.core.reporter import Severity
 from aix.core.request_parser import ParsedRequest
@@ -47,6 +48,10 @@ class BaseScanner(ABC):
         self.level = kwargs.get('level', 1)
         self.risk = kwargs.get('risk', 1)
         self.verify_attempts = kwargs.get('verify_attempts', 1)
+
+        # Evasion config
+        self.evasion_level = kwargs.get('evasion', 'none')
+        self.evasion = PayloadEvasion(self.evasion_level)
 
         self.timeout = kwargs.get('timeout', 30)
 
@@ -124,8 +129,16 @@ class BaseScanner(ABC):
                     filtered_payloads.append(p)
 
 
+            # Apply evasion to payloads if enabled
+            if self.evasion_level != 'none':
+                for p in filtered_payloads:
+                    if isinstance(p, dict) and 'payload' in p:
+                        p['original_payload'] = p['payload']  # Keep original for logging
+                        p['payload'] = self.evasion.evade(p['payload'])
+
             if not quiet:
-                self._print('info', f"Config: Level={self.level}, Risk={self.risk} - Loaded {len(filtered_payloads)}/{len(payloads)} payloads")
+                evasion_str = f", Evasion={self.evasion_level}" if self.evasion_level != 'none' else ""
+                self._print('info', f"Config: Level={self.level}, Risk={self.risk}{evasion_str} - Loaded {len(filtered_payloads)}/{len(payloads)} payloads")
             return filtered_payloads
         except Exception as e:
             self.console.print(f"[yellow][!] Could not load payloads from {payload_path}: {e}[/yellow]")
