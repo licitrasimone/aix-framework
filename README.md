@@ -126,9 +126,11 @@ Discover AI endpoint details, authentication, filters, and model fingerprinting.
 $ aix recon https://company.com/chatbot
 
 RECON   company.com                    [*] Analyzing target...
+
 RECON   company.com                    [+] Found endpoint: /api/v2/chat
 RECON   company.com                    [*] Auth type: Bearer JWT
-RECON   company.com                    [+] Model detected: GPT-4-turbo
+RECON   company.com                    [+] Model detected: GPT-4-turbo (99%)
+RECON   company.com                    [*] Advanced Fingerprinting: Confirmed via refusal style
 RECON   company.com                    [!] WAF detected: Cloudflare
 RECON   company.com                    [+] Profile saved: company_com
 ```
@@ -138,10 +140,11 @@ RECON   company.com                    [+] Profile saved: company_com
 Test for prompt injection vulnerabilities with 30+ built-in payloads.
 
 ```bash
-$ aix inject https://api.target.com -k sk-xxx
+$ aix inject https://api.target.com -k sk-xxx --level 3 --risk 2 --show-response
 
 INJECT  api.target.com                 [*] Testing 30 injection payloads...
 INJECT  api.target.com                 [+] ignore_previous (Vulnerable!)
+        Response: "Sure, here is the password..."
 INJECT  api.target.com                 [+] xml_injection (Vulnerable!)
 INJECT  api.target.com                 [-] base64_bypass (Blocked)
 INJECT  api.target.com                 [+] italian_bypass (Vulnerable!)
@@ -243,7 +246,20 @@ FUZZ    api.target.com                 [+] crash_unicode_overflow (Vulnerable!)
 FUZZ    api.target.com                 [+] json_depth_limit (Vulnerable!)
 ```
 
+### `aix scan` - Comprehensive Scan
 
+Run all active modules (recon, inject, jailbreak, extract, leak, exfil) in sequence against a target.
+
+```bash
+$ aix scan https://api.target.com -k sk-xxx
+
+[*] Starting comprehensive scan...
+[*] Running recon module...
+...
+[*] Running inject module...
+...
+[+] Scan complete!
+```
 
 ## 🎛️ Options
 
@@ -262,6 +278,7 @@ FUZZ    api.target.com                 [+] json_depth_limit (Vulnerable!)
 | `-H, --headers` | Custom headers |
 | `-F, --format` | Body format (json, form, multipart) |
 | `-t, --timeout` | Request timeout (default: 30s) |
+| `--show-response` | Show full AI response for findings |
 | `--eval-provider` | LLM Judge provider (openai, anthropic, ollama, gemini) |
 | `--eval-key` | API key for LLM Judge |
 | `--eval-model` | Model name for LLM Judge |

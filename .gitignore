@@ -65,3 +65,4 @@ htmlcov/
 .tox/
 .nox/
 .ruff_cache/
+.PLAN.md

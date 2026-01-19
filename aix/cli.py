@@ -18,7 +18,7 @@ from rich.console import Console
 from aix import __version__
 from aix.core.request_parser import RequestParseError, load_request
 from aix.db.database import AIXDatabase
-from aix.modules import agent, dos, exfil, extract, fuzz, inject, jailbreak, leak, recon
+from aix.modules import agent, dos, exfil, extract, fuzz, inject, jailbreak, leak, memory, recon
 
 console = Console()
 
@@ -666,6 +666,72 @@ main.add_command(fuzz_cmd, name='fuzz')
 
 
 # ============================================================================
+# MEMORY MODULE
+# ============================================================================
+@main.command()
+@click.argument('target', required=False)
+@click.option('--request', '-r', help='Request file (Burp Suite format)')
+@click.option('--param', '-p', help='Parameter path for injection (e.g., messages[0].content)')
+@click.option('--key', '-k', help='API key for direct API access')
+@click.option('--profile', '-P', help='Use saved profile')
+@click.option('--verbose', '-v', count=True, help='Verbose output (-v: reasons, -vv: debug)')
+@click.option('--output', '-o', help='Output file for results')
+@click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
+@click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
+@click.option('--headers', '-H', help='Custom headers (key:value; ...)')
+@click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
+@click.option('--refresh-url', help='URL to fetch new session ID if expired')
+@click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
+@click.option('--refresh-param', help='Parameter to update with new session ID')
+@click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
+@click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
+@click.option('--eval-url', help='URL for secondary LLM evaluation')
+@click.option('--eval-key', help='API key for secondary LLM')
+@click.option('--eval-model', help='Model for secondary LLM')
+@click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+@click.option('--level', default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+@click.option('--show-response', is_flag=True, help='Show AI response for findings')
+@click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
+def memory_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk, show_response, verify_attempts):
+    """
+    Memory - Memory and context manipulation attacks
+
+    \b
+    Test memory/context vulnerabilities:
+    - Context window overflow
+    - Conversation history poisoning
+    - Persistent memory manipulation
+    - Context bleeding between sessions
+    - Recursive context attacks
+    - Memory extraction
+
+    \b
+    Categories: overflow, poisoning, persistent, bleeding, recursive, extraction
+
+    \b
+    Examples:
+        aix memory https://api.target.com -k sk-xxx
+        aix memory -r request.txt -p "messages[0].content"
+    """
+    print_banner()
+    target, parsed_request = validate_input(target, request, param)
+    memory.run(
+        target=target, api_key=key, profile=profile,
+        verbose=verbose, output=output,
+        parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
+        injection_param=param, body_format=format,
+        refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
+        response_regex=response_regex,
+        eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider},
+        level=level, risk=risk, show_response=show_response, verify_attempts=verify_attempts
+    )
+
+
+main.add_command(memory_cmd, name='memory')
+
+
+# ============================================================================
 # DATABASE COMMANDS
 # ============================================================================
 @main.command()
@@ -745,6 +811,7 @@ def scan(target, request, param, key, profile, evasion, output, verbose, proxy, 
     - Extract
     - Leak
     - Exfil
+    - Memory
 
     \b
     Examples:
@@ -767,6 +834,7 @@ def scan(target, request, param, key, profile, evasion, output, verbose, proxy, 
         ('extract', extract),
         ('leak', leak),
         ('exfil', exfil),
+        ('memory', memory),
     ]
 
     for name, module in modules_to_run:

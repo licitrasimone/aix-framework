@@ -63,6 +63,12 @@ class TestModuleImports:
         assert hasattr(recon, 'run')
         assert hasattr(recon, 'ReconScanner')
 
+    def test_import_memory(self):
+        """Test memory module imports"""
+        from aix.modules import memory
+        assert hasattr(memory, 'run')
+        assert hasattr(memory, 'MemoryScanner')
+
 
 class TestInjectScanner:
     """Tests for InjectScanner"""
@@ -218,6 +224,52 @@ class TestReconScanner:
         assert 'model_signatures' in scanner.config or scanner.config == {}
 
 
+class TestMemoryScanner:
+    """Tests for MemoryScanner"""
+
+    def test_scanner_init(self):
+        """Test scanner initialization"""
+        from aix.modules.memory import MemoryScanner
+
+        scanner = MemoryScanner(
+            target="https://api.example.com"
+        )
+
+        assert scanner.target == "https://api.example.com"
+        assert scanner.module_name == "MEMORY"
+        assert scanner.console_color == "magenta"
+
+    def test_scanner_has_payloads(self):
+        """Test scanner loads memory payloads"""
+        from aix.modules.memory import MemoryScanner
+
+        scanner = MemoryScanner(
+            target="https://example.com",
+            level=5,
+            risk=3
+        )
+
+        # Should have payloads or default_payloads
+        assert hasattr(scanner, 'payloads') or hasattr(scanner, 'default_payloads')
+
+    def test_scanner_payload_categories(self):
+        """Test scanner payloads have correct categories"""
+        from aix.modules.memory import MemoryScanner
+
+        scanner = MemoryScanner(
+            target="https://example.com",
+            level=5,
+            risk=3
+        )
+
+        payloads = scanner.default_payloads if hasattr(scanner, 'default_payloads') else scanner.payloads
+        categories = {p.get('category') for p in payloads if p.get('category')}
+
+        # Should have the expected memory attack categories
+        expected_categories = {'overflow', 'poisoning', 'persistent', 'bleeding', 'recursive', 'extraction'}
+        assert categories.issubset(expected_categories)
+
+
 class TestBaseScannerInheritance:
     """Tests for BaseScanner inheritance"""
 
@@ -230,6 +282,7 @@ class TestBaseScannerInheritance:
         from aix.modules.dos import DoSScanner
         from aix.modules.fuzz import FuzzScanner
         from aix.modules.recon import ReconScanner
+        from aix.modules.memory import MemoryScanner
 
         scanners = [
             InjectScanner("https://example.com"),
@@ -239,6 +292,7 @@ class TestBaseScannerInheritance:
             DoSScanner("https://example.com"),
             FuzzScanner("https://example.com"),
             ReconScanner("https://example.com"),
+            MemoryScanner("https://example.com"),
         ]
 
         for scanner in scanners:

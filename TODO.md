@@ -37,6 +37,6 @@ This document outlines the planned improvements, feature requests, and future di
 
 ## 🔬 Advanced Research
 
-- [ ] **Model Fingerprinting 2.0**: More accurate detection of backend models (GPT-4 vs Claude vs Llama) based on refusal nuances.
+- [x] **Model Fingerprinting 2.0**: More accurate detection of backend models (GPT-4 vs Claude vs Llama) based on refusal nuances.
 - [ ] **RAG Exploitation**: Specialized modules for Retrieval Augmented Generation attacks (poisoning the knowledge base).
 - [ ] **Multi-Modal Testing**: Support for image/audio input injection (if API supports it).
