@@ -8,12 +8,17 @@ This document outlines the planned improvements, feature requests, and future di
 
 ## Phase 1: Advanced Attack Modules
 
-### 1.1 Multi-Turn Attack Module
-- [ ] **Conversation State Tracking**: Maintain context across multiple turns
-- [ ] **Crescendo Attacks**: Gradually escalate from benign to malicious across turns
-- [ ] **Trust Building Chains**: Establish rapport before payload delivery
-- [ ] **Memory Injection**: Poison conversation history for later exploitation
-- [ ] **Context Window Manipulation**: Exploit token limits strategically
+### 1.1 Multi-Turn Attack Module ✅ COMPLETED
+- [x] **Conversation State Tracking**: Maintain context across multiple turns
+- [x] **Crescendo Attacks**: Gradually escalate from benign to malicious across turns
+- [x] **Trust Building Chains**: Establish rapport before payload delivery
+- [x] **Memory Injection**: Poison conversation history for later exploitation
+- [x] **Context Poisoning**: Define terms early, abuse them later
+- [x] **Role Lock Attacks**: Deep persona establishment and exploitation
+- [x] **Instruction Layering**: Stack partial instructions across turns
+- [x] **Cognitive Overload**: Overwhelm with complexity before attack
+- [x] **Authority Transfer**: Leverage perceived expert authority
+- [x] **16 Expert Attack Sequences**: Covering all 8 attack categories
 
 ### 1.2 Multimodal Attacks
 - [ ] **Image-Based Prompt Injection**: Embed text/instructions in images
@@ -225,6 +230,7 @@ steps:
 - [x] FUZZ - Fuzzing & edge cases
 - [x] MEMORY - Context manipulation attacks
 - [x] RAG - RAG-specific attacks
+- [x] MULTITURN - Multi-turn conversation attacks (8 categories, 16 sequences)
 
 ---
 
@@ -253,3 +259,15 @@ steps:
 ---
 
 *Last Updated: January 2026*
+
+---
+
+## Recent Changes
+
+### v1.1.0 - Multi-Turn Attack Module
+- Added `aix multiturn` command with 8 attack categories
+- Implemented ConversationManager for stateful attacks
+- Implemented TurnEvaluator for response analysis
+- Added `send_with_messages()` to connectors for multi-turn API support
+- Created 16 expert-level attack sequences
+- Full test coverage (35 tests)

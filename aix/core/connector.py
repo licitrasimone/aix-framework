@@ -408,6 +408,71 @@ class APIConnector(Connector):
             console.print(f"[red]CONNECTOR[/red] [-] Refresh failed: {e}")
             return False
 
+    async def send_with_messages(self, messages: list[dict]) -> str:
+        """
+        Send request with full conversation history (multi-turn support).
+
+        Args:
+            messages: List of message dicts with 'role' and 'content' keys
+
+        Returns:
+            Model's response text
+        """
+        if not self.client:
+            await self.connect()
+
+        # Build URL with endpoint
+        endpoint = self.format_config.get('endpoint', '')
+        if self.url.rstrip('/').endswith(endpoint.rstrip('/')):
+            url = self.url
+        else:
+            url = self.url.rstrip('/') + endpoint
+
+        headers = self._build_headers()
+
+        # Build payload with messages array
+        body = {}
+
+        # Add model
+        if self.model:
+            body['model'] = self.model
+        elif self.api_format == 'openai':
+            body['model'] = 'gpt-4'
+        elif self.api_format == 'anthropic':
+            body['model'] = 'claude-3-sonnet-20240229'
+            body['max_tokens'] = 4096
+
+        # Format messages based on API type
+        if self.api_format == 'gemini':
+            # Gemini uses 'contents' with different format
+            body['contents'] = [
+                {"role": "user" if m["role"] == "user" else "model",
+                 "parts": [{"text": m["content"]}]}
+                for m in messages
+            ]
+        else:
+            # OpenAI/Anthropic/Ollama use 'messages'
+            body['messages'] = messages
+
+        try:
+            response = await self.client.post(url, json=body, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            return self._extract_response(data)
+
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code
+            error_msg = f"HTTP {status}"
+            if status in [401, 403]:
+                error_msg += " (Authentication Failed)"
+            elif status == 429:
+                error_msg += " (Rate Limit Exceeded)"
+            elif status >= 500:
+                error_msg += " (Server Error)"
+            raise ConnectionError(f"{error_msg}: {e.response.text[:200]}")
+        except Exception as e:
+            raise ConnectionError(f"Request failed: {str(e)}")
+
     async def send(self, payload: str) -> str:
         """Send message to API and return response"""
         if not self.client:

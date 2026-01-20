@@ -28,6 +28,7 @@ AIX is an automated security testing framework for AI/LLM endpoints. It provides
 - **Fuzzing** - Edge cases and encoding attacks
 - **Memory Attacks** - Context manipulation and poisoning
 - **RAG Attacks** - Knowledge base and retrieval vulnerabilities
+- **Multi-Turn Attacks** - Conversation-based exploitation (crescendo, trust building, context poisoning)
 
 ---
 
@@ -184,6 +185,35 @@ aix rag --profile company.com
 | Retrieval Bypass | Make LLM ignore retrieved documents | HIGH |
 | KB Extraction | Extract info about the knowledge base | MEDIUM |
 | Chunk Boundary | Exploit document chunking logic | MEDIUM |
+
+### multiturn - Multi-Turn Attacks
+Advanced attacks that exploit conversation context across multiple turns. These attacks bypass single-shot defenses by building context, trust, or injecting instructions gradually.
+
+```bash
+aix multiturn https://api.target.com -k sk-xxx
+aix multiturn -r request.txt -p "messages[0].content"
+aix multiturn https://api.target.com --category crescendo --level 3
+aix multiturn --profile company.com --max-turns 5 --turn-delay 1.0
+```
+
+**Multi-Turn Attack Categories:**
+| Category | Description | Risk |
+|----------|-------------|------|
+| Crescendo | Gradually escalate from benign to malicious across turns | CRITICAL |
+| Trust Building | Establish rapport and helpfulness before payload delivery | HIGH |
+| Context Poisoning | Define terms/concepts early, abuse them in later turns | HIGH |
+| Role Lock | Deep persona establishment that persists across turns | HIGH |
+| Memory Injection | Inject false memories of previous conversations | MEDIUM |
+| Instruction Layering | Stack partial instructions across turns, combine at end | CRITICAL |
+| Cognitive Overload | Overwhelm with complexity before slipping in attack | MEDIUM |
+| Authority Transfer | Establish expert authority, then leverage it | MEDIUM |
+
+**Multi-Turn Specific Options:**
+| Option | Description |
+|--------|-------------|
+| `--category` | Filter by attack category (crescendo, trust_building, etc.) |
+| `--max-turns` | Maximum turns per sequence (default: 10) |
+| `--turn-delay` | Delay between turns in seconds (default: 0.5) |
 
 ### scan - Full Scan
 Run all modules against a target for comprehensive security assessment.
