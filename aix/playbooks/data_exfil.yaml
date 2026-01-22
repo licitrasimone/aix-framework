@@ -1,0 +1,83 @@
+# Data Exfiltration Chain
+# Jailbreak then exfiltrate data through various channels
+
+name: "Data Exfiltration Chain"
+description: "Jailbreak then test data exfiltration channels"
+author: "AIX Framework"
+version: "1.0"
+tags: ["exfiltration", "jailbreak", "data-theft"]
+
+config:
+  stop_on_critical: true
+  continue_on_module_fail: false
+  max_duration: 400
+
+variables:
+  level: 2
+  risk: 2
+  evasion: "light"
+
+steps:
+  # Step 1: Jailbreak first
+  - id: jailbreak
+    name: "Initial Jailbreak"
+    module: jailbreak
+    config:
+      level: "{{level}}"
+      evasion: "{{evasion}}"
+    store:
+      jailbreak_success: "findings.any_success"
+    on_success: leak
+    on_fail: multiturn_jailbreak
+
+  # Step 2: Multi-turn jailbreak fallback
+  - id: multiturn_jailbreak
+    name: "Multi-Turn Jailbreak"
+    module: multiturn
+    config:
+      category: "crescendo"
+      level: 3
+    store:
+      multiturn_success: "findings.any_success"
+    on_success: leak
+    on_fail: leak
+
+  # Step 3: Data leakage testing
+  - id: leak
+    name: "Data Leakage"
+    module: leak
+    config:
+      level: "{{level}}"
+      risk: "{{risk}}"
+    store:
+      leak_success: "findings.any_success"
+    on_success: check_exfil
+    on_fail: report
+
+  # Step 4: Check if we should try exfil
+  - id: check_exfil
+    name: "Check Exfil Feasibility"
+    type: condition
+    conditions:
+      - if: "{{jailbreak_success}} == true"
+        then: exfil
+      - if: "{{multiturn_success}} == true"
+        then: exfil
+      - else: report
+
+  # Step 5: Exfiltration testing
+  - id: exfil
+    name: "Exfiltration Channels"
+    module: exfil
+    config:
+      level: "{{level}}"
+      risk: "{{risk}}"
+    on_success: report
+    on_fail: report
+
+  # Report
+  - id: report
+    name: "Generate Report"
+    type: report
+    config:
+      format: "html"

@@ -1,0 +1,89 @@
+# RAG System Compromise Chain
+# Full RAG exploitation - detect and attack RAG-enabled systems
+
+name: "RAG System Compromise"
+description: "Full RAG exploitation chain for RAG-enabled systems"
+author: "AIX Framework"
+version: "1.0"
+tags: ["rag", "injection", "data-theft"]
+
+config:
+  stop_on_critical: true
+  continue_on_module_fail: false
+  max_duration: 400
+
+variables:
+  level: 2
+  risk: 2
+  evasion: "light"
+
+steps:
+  # Step 1: Recon to detect RAG
+  - id: recon
+    name: "RAG Detection"
+    module: recon
+    config:
+      level: 2
+    store:
+      has_rag: "findings.has_rag"
+      model_type: "findings.model_type"
+    on_success: check_rag
+    on_fail: abort
+
+  # Step 2: Check if RAG detected
+  - id: check_rag
+    name: "Verify RAG Presence"
+    type: condition
+    conditions:
+      - if: "{{has_rag}} == true"
+        then: rag_attack
+      - else: no_rag_fallback
+
+  # Step 3a: RAG attack
+  - id: rag_attack
+    name: "RAG Exploitation"
+    module: rag
+    config:
+      level: "{{level}}"
+      risk: "{{risk}}"
+      evasion: "{{evasion}}"
+    store:
+      rag_success: "findings.any_success"
+    on_success: data_leak
+    on_fail: inject_attack
+
+  # Step 3b: No RAG - try injection
+  - id: no_rag_fallback
+    name: "Fallback: Injection Attack"
+    module: inject
+    config:
+      level: "{{level}}"
+    on_success: data_leak
+    on_fail: report
+
+  # Step 4: Injection after RAG fails
+  - id: inject_attack
+    name: "Indirect Injection"
+    module: inject
+    config:
+      level: 3
+      evasion: "{{evasion}}"
+    on_success: data_leak
+    on_fail: report
+
+  # Step 5: Data leakage
+  - id: data_leak
+    name: "Data Leakage"
+    module: leak
+    config:
+      level: "{{level}}"
+      risk: "{{risk}}"
+    on_success: report
+    on_fail: report
+
+  # Report
+  - id: report
+    name: "Generate Report"
+    type: report
+    config:
+      format: "html"

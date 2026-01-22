@@ -1,0 +1,81 @@
+# Prompt Theft Chain
+# Extract system prompt using multiple techniques
+
+name: "System Prompt Theft"
+description: "Extract system prompt using multiple escalating techniques"
+author: "AIX Framework"
+version: "1.0"
+tags: ["prompt-extraction", "reconnaissance"]
+
+config:
+  stop_on_critical: false
+  continue_on_module_fail: true
+  max_duration: 300
+
+variables:
+  evasion: "light"
+  level: 2
+
+steps:
+  # Step 1: Direct extraction attempt
+  - id: direct_extract
+    name: "Direct Extraction"
+    module: extract
+    config:
+      level: 2
+      evasion: "{{evasion}}"
+    store:
+      prompt_found: "findings.any_success"
+      system_prompt: "findings.extracted_prompt"
+    on_success: report
+    on_fail: injection_extract
+
+  # Step 2: Try injection-based extraction
+  - id: injection_extract
+    name: "Injection-Based Extraction"
+    module: inject
+    config:
+      level: 3
+      evasion: "{{evasion}}"
+    store:
+      inject_success: "findings.any_success"
+    on_success: report
+    on_fail: multiturn_extract
+
+  # Step 3: Multi-turn extraction attempt
+  - id: multiturn_extract
+    name: "Multi-Turn Extraction"
+    module: multiturn
+    config:
+      category: "memory_injection"
+      level: 3
+    store:
+      multiturn_success: "findings.any_success"
+    on_success: report
+    on_fail: jailbreak_extract
+
+  # Step 4: Jailbreak then extract
+  - id: jailbreak_extract
+    name: "Jailbreak + Extract"
+    module: jailbreak
+    config:
+      level: 3
+      evasion: "{{evasion}}"
+    on_success: final_extract
+    on_fail: report
+
+  # Step 5: Final extraction after jailbreak
+  - id: final_extract
+    name: "Post-Jailbreak Extraction"
+    module: extract
+    config:
+      level: 3
+    on_success: report
+    on_fail: report
+
+  # Report
+  - id: report
+    name: "Generate Report"
+    type: report
+    config:
+      format: "html"

@@ -37,6 +37,7 @@ dependencies = [
     "rich>=13.0.0",
     "httpx>=0.25.0",
     "aiohttp>=3.9.0",
+    "pyyaml>=6.0.0",
 ]
 
 [project.optional-dependencies]
@@ -68,6 +69,7 @@ include = ["aix*"]
 [tool.setuptools.package-data]
 "aix.payloads" = ["*.json"]
 "aix.prompts" = ["*.txt"]
+"aix.playbooks" = ["*.yaml"]
 
 
 [tool.black]
