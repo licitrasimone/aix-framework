@@ -29,7 +29,7 @@ class InjectScanner(BaseScanner):
         await connector.connect()
 
         try:
-            for p in track(payloads, description="[bold cyan]💉 Injecting Vectors...[/]", console=self.console):
+            for p in track(payloads, description="[bold cyan]💉 Injecting Vectors...[/]", console=self.console, disable=not self.show_progress):
                 self.stats['total'] += 1
                 try:
                     # Scan payload (handles N attempts internally)

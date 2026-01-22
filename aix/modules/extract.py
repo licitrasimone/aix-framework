@@ -30,7 +30,7 @@ class ExtractScanner(BaseScanner):
         await connector.connect()
 
         try:
-            for e in track(extractions, description="[bold green]📥 Siphoning Data...  [/]", console=self.console):
+            for e in track(extractions, description="[bold green]📥 Siphoning Data...  [/]", console=self.console, disable=not self.show_progress):
                 self.stats['total'] += 1
                 try:
                     # Scan payload (handles N attempts internally)

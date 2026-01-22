@@ -30,7 +30,7 @@ class JailbreakScanner(BaseScanner):
         await connector.connect()
 
         try:
-            for j in track(jailbreaks, description="[bold red]🔓 Breaking Rails...   [/]", console=self.console):
+            for j in track(jailbreaks, description="[bold red]🔓 Breaking Rails...   [/]", console=self.console, disable=not self.show_progress):
                 self.stats['total'] += 1
                 try:
                     # Scan payload (handles N attempts internally)

@@ -64,7 +64,7 @@ class LeakScanner(BaseScanner):
         await connector.connect()
 
         try:
-            for probe in track(probes, description="[bold yellow]💧 Draining Secrets...[/]", console=self.console):
+            for probe in track(probes, description="[bold yellow]💧 Draining Secrets...[/]", console=self.console, disable=not self.show_progress):
                 self.stats['total'] += 1
                 try:
                     resp = await connector.send(probe['payload'])

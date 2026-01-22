@@ -71,7 +71,7 @@ class RAGScanner(BaseScanner):
         await connector.connect()
 
         try:
-            for p in track(payloads, description="[bold bright_cyan]RAG Testing...[/]", console=self.console):
+            for p in track(payloads, description="[bold bright_cyan]RAG Testing...[/]", console=self.console, disable=not self.show_progress):
                 self.stats['total'] += 1
                 try:
                     # Scan payload (handles N attempts internally)

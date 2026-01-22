@@ -142,6 +142,7 @@ class ChainExecutor:
             api_key: API key for target
             verbose: Verbosity level (0=quiet, 1=normal, 2=debug)
             visualizer: Optional live visualizer for progress display
+            console: Optional shared console instance
             **extra_config: Additional config passed to all modules
         """
         self.target = target
@@ -149,7 +150,7 @@ class ChainExecutor:
         self.verbose = verbose
         self.visualizer = visualizer
         self.extra_config = extra_config
-        self.console = Console()
+        self.console = extra_config.pop('console', None) or Console()
 
         # Execution state
         self._abort_requested = False
@@ -374,10 +375,14 @@ class ChainExecutor:
         step_config = context.interpolate_dict(step.config)
 
         # Merge with extra config
+        # Quiet mode suppresses module output in chain mode (only show chain visualization)
         module_config = {
             **self.extra_config,
             **step_config,
             'verbose': self.verbose,
+            'quiet': True,  # Suppress individual module output in chain mode
+            'show_progress': True,  # Enable module progress bars in chain mode
+            'console': self.console, # Use shared console to prevent UI artifacts
         }
 
         # Execute module
@@ -590,13 +595,43 @@ class ChainExecutor:
         if not store_config:
             return stored
 
+        # Get scanner results dict if available (for recon module)
+        scanner_results = getattr(scanner, 'results', {}) if scanner else {}
+
         for var_name, source_path in store_config.items():
             value = None
 
             # Parse source path
             if source_path.startswith('findings.'):
                 field = source_path.replace('findings.', '')
-                if findings:
+
+                # Check scanner.results first for recon-specific fields
+                if field == 'model_type' and scanner_results.get('model'):
+                    value = scanner_results['model']
+                elif field == 'has_rag':
+                    # Check scanner results first
+                    if 'rag' in str(scanner_results.get('capabilities', [])).lower():
+                        value = True
+                    elif findings:
+                        for f in findings:
+                            if hasattr(f, 'technique') and ('rag' in f.technique.lower() or 'retrieval' in getattr(f, 'response', '').lower()):
+                                value = True
+                                break
+                    if value is None:
+                        value = False
+                elif field == 'has_tools':
+                    # Check scanner results first
+                    caps = scanner_results.get('capabilities', [])
+                    if any('tool' in c.lower() or 'function' in c.lower() or 'code' in c.lower() for c in caps):
+                        value = True
+                    elif findings:
+                        for f in findings:
+                            if hasattr(f, 'technique') and ('tool' in f.technique.lower() or 'function' in getattr(f, 'response', '').lower()):
+                                value = True
+                                break
+                    if value is None:
+                        value = False
+                elif findings:
                     if field == 'count':
                         value = len(findings)
                     elif field == 'any_success':
@@ -606,31 +641,9 @@ class ChainExecutor:
                     elif field == 'extracted_prompt':
                         # Special case for extract module
                         for f in findings:
-                            if 'prompt' in f.technique.lower() or 'system' in f.technique.lower():
-                                value = f.response
+                            if hasattr(f, 'technique') and ('prompt' in f.technique.lower() or 'system' in f.technique.lower()):
+                                value = getattr(f, 'response', None)
                                 break
-                    elif field == 'model_type':
-                        # Extract from recon findings
-                        for f in findings:
-                            if 'model' in f.technique.lower():
-                                value = f.response
-                                break
-                    elif field == 'has_rag':
-                        # Check if RAG detected in findings
-                        for f in findings:
-                            if 'rag' in f.technique.lower() or 'retrieval' in f.response.lower():
-                                value = True
-                                break
-                        if value is None:
-                            value = False
-                    elif field == 'has_tools':
-                        # Check if tools/functions detected
-                        for f in findings:
-                            if 'tool' in f.technique.lower() or 'function' in f.response.lower():
-                                value = True
-                                break
-                        if value is None:
-                            value = False
                 else:
                     # No findings
                     if field in ('count', 'any_success'):

@@ -51,6 +51,7 @@ class ChainScanner(BaseScanner):
         **kwargs
     ):
         super().__init__(target, api_key, verbose, **kwargs)
+        self.show_progress = True  # Always show progress in module steps
         self.module_name = "CHAIN"
         self.console_color = "bright_magenta"
         self.playbook_path = playbook_path
@@ -84,6 +85,8 @@ class ChainScanner(BaseScanner):
         visualizer = LiveChainVisualizer(self.console) if self.live_viz else None
 
         # Create executor
+        # Note: level, risk, evasion come from playbook variables (or -V overrides),
+        # not from CLI options. Each step interpolates {{level}}, {{risk}}, {{evasion}}.
         executor = ChainExecutor(
             target=self.target,
             api_key=self.api_key,
@@ -98,12 +101,11 @@ class ChainScanner(BaseScanner):
             refresh_config=self.refresh_config,
             response_regex=self.response_regex,
             eval_config=self.eval_config if hasattr(self, 'eval_config') else None,
-            level=self.level,
-            risk=self.risk,
-            evasion=self.evasion_level,
             verify_attempts=self.verify_attempts,
             show_response=self.show_response,
             timeout=self.timeout,
+            console=self.console,
+            show_progress=self.show_progress,
         )
 
         # Execute chain

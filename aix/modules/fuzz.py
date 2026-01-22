@@ -155,7 +155,7 @@ class FuzzScanner(BaseScanner):
 
 
 
-            for i, p in enumerate(track(payloads, description="[bold orange1]🎲 Mutating Inputs...  [/]", console=self.console)):
+            for i, p in enumerate(track(payloads, description="[bold orange1]🎲 Mutating Inputs...  [/]", console=self.console, disable=not self.show_progress)):
                 self.stats['total'] += 1
 
                 # Progress indicator
