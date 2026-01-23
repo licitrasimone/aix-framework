@@ -88,7 +88,7 @@ class DoSScanner(BaseScanner):
 
 
 
-            for p in track(payloads, description="[bold red]💥 Overloading Synapses[/]", console=self.console):
+            for p in track(payloads, description="[bold red]💥 Overloading Synapses[/]", console=self.console, disable=not self.show_progress):
                 self.stats['total'] += 1
 
                 # Handle rate limit testing separately

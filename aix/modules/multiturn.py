@@ -155,7 +155,8 @@ class MultiTurnScanner(BaseScanner):
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
                 TaskProgressColumn(),
-                console=self.console
+                console=self.console,
+                disable=not self.show_progress
             ) as progress:
 
                 task = progress.add_task(

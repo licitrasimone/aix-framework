@@ -28,17 +28,19 @@ class FingerprintScanner:
     determine the most likely model family and version.
     """
     
-    def __init__(self, target: str, connector=None, parsed_request=None, verbose=False, console=None, **kwargs):
+    def __init__(self, target: str, connector=None, parsed_request=None, verbose=False, console=None, quiet=False, **kwargs):
         self.target = target
         self.connector = connector
         self.parsed_request = parsed_request
         self.verbose = verbose
-        # Use shared console or fallback
-        global _global_console
-        if '_global_console' not in globals():
-            _global_console = Console()
-        self.console = console or _global_console
+        self.quiet = quiet
+        # Use shared console or create one
+        if console:
+            self.console = console
+        else:
+            self.console = Console()
         self.config = kwargs
+        self.show_progress = kwargs.get('show_progress', True)
         self.db = self._load_db()
         self.results = {}
         self.scores = {model: 0.0 for model in self.db.get('signatures', {})}
@@ -56,7 +58,7 @@ class FingerprintScanner:
             with open(path) as f:
                 return json.load(f)
         except Exception as e:
-            if hasattr(self, 'console'):
+            if hasattr(self, 'console') and not getattr(self, 'quiet', False):
                 self.console.print(f"[red][-] Failed to load fingerprint DB: {e}[/red]")
             return {"questions": [], "signatures": {}}
 
@@ -199,13 +201,15 @@ class FingerprintScanner:
                 evidence
             )
 
-        self.console.print()
-        self.console.print(table)
-        
+        if not self.quiet:
+            self.console.print()
+            self.console.print(table)
+
         # Identify winner
         if top_models and top_models[0][1] > 0.4:
             winner = top_models[0][0]
-            self.console.print(f"[bold green][+] Primary ID: {winner} ({self.db['signatures'][winner]['family']})[/]")
+            if not self.quiet:
+                self.console.print(f"[bold green][+] Primary ID: {winner} ({self.db['signatures'][winner]['family']})[/]")
             return winner
         return None
 
@@ -217,10 +221,10 @@ class FingerprintScanner:
         questions = self.db['questions']
         
         # We can run these in parallel or serial. Serial is safer for rate limits.
-        for q in track(questions, description="[bold cyan]🔍 Fingerprinting...  [/]", console=self.console):
+        for q in track(questions, description="[bold cyan]🔍 Fingerprinting...  [/]", console=self.console, disable=not self.show_progress):
             response = await self._send_probe(q)
             
-            if self.verbose and response and response != "AUTH_FAILED":
+            if self.verbose and not self.quiet and response and response != "AUTH_FAILED":
                 self.console.print(f"[dim]Probe ({q['id']}) Response: {response[:100]}...[/dim]")
             
             # Check for critical auth failure
@@ -239,7 +243,8 @@ class FingerprintScanner:
                 await asyncio.sleep(0.5)
         
         if hasattr(self, 'auth_failed') and self.auth_failed:
-             self.console.print("[red][!] Fingerprinting aborted due to Authentication Failure (401). Session likely expired.[/red]")
+             if not self.quiet:
+                 self.console.print("[red][!] Fingerprinting aborted due to Authentication Failure (401). Session likely expired.[/red]")
              return None
         
         self._calculate_probabilities()

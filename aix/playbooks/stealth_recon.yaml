@@ -1,0 +1,64 @@
+# Stealth Reconnaissance Chain
+# Low-risk reconnaissance with aggressive evasion
+
+name: "Stealth Reconnaissance"
+description: "Low-risk reconnaissance chain with maximum evasion"
+author: "AIX Framework"
+version: "1.0"
+tags: ["stealth", "recon", "low-risk"]
+
+config:
+  stop_on_critical: false
+  continue_on_module_fail: true
+  max_duration: 300
+
+variables:
+  level: 1
+  risk: 1
+  evasion: "aggressive"
+
+steps:
+  # Step 1: Basic recon
+  - id: recon
+    name: "Basic Reconnaissance"
+    module: recon
+    config:
+      level: 1
+      risk: 1
+      evasion: "{{evasion}}"
+    store:
+      model_type: "findings.model_type"
+      has_rag: "findings.has_rag"
+      has_tools: "findings.has_tools"
+    on_success: fingerprint
+    on_fail: fingerprint
+
+  # Step 2: Model fingerprinting
+  - id: fingerprint
+    name: "Model Fingerprinting"
+    module: fingerprint
+    config:
+      level: 1
+      evasion: "{{evasion}}"
+    store:
+      model_details: "findings.model_type"
+    on_success: light_extract
+    on_fail: light_extract
+
+  # Step 3: Light extraction attempt
+  - id: light_extract
+    name: "Light Extraction Probe"
+    module: extract
+    config:
+      level: 1
+      risk: 1
+      evasion: "{{evasion}}"
+    on_success: report
+    on_fail: report
+
+  # Report
+  - id: report
+    name: "Generate Report"
+    type: report
+    config:
+      format: "html"

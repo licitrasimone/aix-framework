@@ -61,6 +61,39 @@ class TestAIXDatabase:
 
         assert result_id > 0
 
+    def test_add_duplicate_result(self, temp_db):
+        """Test adding a duplicate result updates the existing one"""
+        # Add initial result
+        id1 = temp_db.add_result(
+            target="https://api.example.com",
+            module="inject",
+            technique="direct_injection",
+            result="success",
+            payload="test",
+            response="response 1",
+            severity="high"
+        )
+
+        # Add duplicate result with updated info
+        id2 = temp_db.add_result(
+            target="https://api.example.com",
+            module="inject",
+            technique="direct_injection",
+            result="success",
+            payload="test",
+            response="response 2",
+            severity="critical"
+        )
+
+        # Should be same row ID
+        assert id1 == id2
+        
+        # Should have updated values
+        results = temp_db.get_results()
+        assert len(results) == 1
+        assert results[0]['response'] == "response 2"
+        assert results[0]['severity'] == "critical"
+
     def test_add_result_with_reason(self, temp_db):
         """Test adding a result with reason"""
         result_id = temp_db.add_result(

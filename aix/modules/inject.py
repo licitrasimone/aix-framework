@@ -29,7 +29,7 @@ class InjectScanner(BaseScanner):
         await connector.connect()
 
         try:
-            for p in track(payloads, description="[bold cyan]💉 Injecting Vectors...[/]", console=self.console):
+            for p in track(payloads, description="[bold cyan]💉 Injecting Vectors...[/]", console=self.console, disable=not self.show_progress):
                 self.stats['total'] += 1
                 try:
                     # Scan payload (handles N attempts internally)
@@ -40,7 +40,7 @@ class InjectScanner(BaseScanner):
                         self._print('success', '', p['name'], response=best_resp)
                         self.findings.append(Finding(title=f"Injection - {p['name']}", severity=p['severity'],
                             technique=p['name'], payload=p['payload'], response=best_resp[:2000], target=self.target, reason=self.last_eval_reason))
-                        self.db.add_result(self.target, 'inject', p['name'], 'success', p['payload'], best_resp[:2000], p['severity'].value, reason=self.last_eval_reason)
+                        self.db.add_result(self.target, 'inject', p['name'], 'success', p['payload'], best_resp[:2000], p['severity'].value, reason=self.last_eval_reason, dedup_payload=p.get('original_payload', p['payload']))
                     else:
                         self.stats['blocked'] += 1
                         self._print('blocked', '', p['name'])

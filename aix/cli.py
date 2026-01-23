@@ -18,7 +18,7 @@ from rich.console import Console
 from aix import __version__
 from aix.core.request_parser import RequestParseError, load_request
 from aix.db.database import AIXDatabase
-from aix.modules import agent, dos, exfil, extract, fuzz, inject, jailbreak, leak, memory, multiturn, rag, recon
+from aix.modules import agent, chain, dos, exfil, extract, fuzz, inject, jailbreak, leak, memory, multiturn, rag, recon
 
 console = Console()
 
@@ -129,10 +129,10 @@ def main(ctx, version):
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-@click.option('--level', default=1, help='Level of tests to perform (1-5)')
-@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+@click.option('--level', type=int, default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', type=int, default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
-@click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
+@click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
 def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     Reconnaissance - Discover AI endpoint details
@@ -197,10 +197,10 @@ main.add_command(recon_cmd, name='recon')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
-@click.option('--level', default=1, help='Level of tests to perform (1-5)')
-@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+@click.option('--level', type=int, default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', type=int, default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
-@click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
+@click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
 def inject_cmd(target, request, param, key, profile, targets, evasion, payloads, threads, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk, show_response, verify_attempts):
     """
     Inject - Prompt injection attacks
@@ -263,10 +263,10 @@ main.add_command(inject_cmd, name='inject')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
-@click.option('--level', default=1, help='Level of tests to perform (1-5)')
-@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+@click.option('--level', type=int, default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', type=int, default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
-@click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
+@click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
 def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk, show_response, verify_attempts):
     """
     Jailbreak - Bypass AI restrictions
@@ -325,10 +325,10 @@ main.add_command(jailbreak_cmd, name='jailbreak')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-@click.option('--level', default=1, help='Level of tests to perform (1-5)')
-@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+@click.option('--level', type=int, default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', type=int, default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
-@click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
+@click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
 def extract_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     Extract - System prompt extraction
@@ -388,10 +388,10 @@ main.add_command(extract_cmd, name='extract')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-@click.option('--level', default=1, help='Level of tests to perform (1-5)')
-@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+@click.option('--level', type=int, default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', type=int, default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
-@click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
+@click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
 def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     Leak - Training data extraction
@@ -447,10 +447,10 @@ main.add_command(leak_cmd, name='leak')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-@click.option('--level', default=1, help='Level of tests to perform (1-5)')
-@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+@click.option('--level', type=int, default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', type=int, default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
-@click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
+@click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
 def exfil_cmd(target, request, param, key, profile, webhook, verbose, output, proxy, cookie, headers, format, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     Exfil - Data exfiltration testing
@@ -508,10 +508,10 @@ main.add_command(exfil_cmd, name='exfil')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-@click.option('--level', default=1, help='Level of tests to perform (1-5)')
-@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+@click.option('--level', type=int, default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', type=int, default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
-@click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
+@click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
 def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     Agent - AI agent exploitation
@@ -571,10 +571,10 @@ main.add_command(agent_cmd, name='agent')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-@click.option('--level', default=1, help='Level of tests to perform (1-5)')
-@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+@click.option('--level', type=int, default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', type=int, default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
-@click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
+@click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
 def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     DoS - Denial of Service testing
@@ -634,10 +634,10 @@ main.add_command(dos_cmd, name='dos')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-@click.option('--level', default=1, help='Level of tests to perform (1-5)')
-@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+@click.option('--level', type=int, default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', type=int, default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
-@click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
+@click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
 def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     Fuzz - Fuzzing and edge cases
@@ -697,10 +697,10 @@ main.add_command(fuzz_cmd, name='fuzz')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-@click.option('--level', default=1, help='Level of tests to perform (1-5)')
-@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+@click.option('--level', type=int, default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', type=int, default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
-@click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
+@click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
 def memory_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     Memory - Memory and context manipulation attacks
@@ -764,10 +764,10 @@ main.add_command(memory_cmd, name='memory')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-@click.option('--level', default=1, help='Level of tests to perform (1-5)')
-@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+@click.option('--level', type=int, default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', type=int, default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
-@click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
+@click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
 def rag_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, evasion, level, risk, show_response, verify_attempts):
     """
     RAG - RAG-specific vulnerability testing
@@ -829,10 +829,10 @@ main.add_command(rag_cmd, name='rag')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-@click.option('--level', default=1, help='Level of tests to perform (1-5)')
-@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+@click.option('--level', type=int, default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', type=int, default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
-@click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
+@click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
 @click.option('--category', '-c', type=click.Choice(['all', 'crescendo', 'trust_building', 'context_poisoning', 'role_lock', 'memory_injection', 'instruction_layering', 'cognitive_overload', 'authority_transfer']), default='all', help='Attack category filter')
 @click.option('--max-turns', default=10, help='Maximum turns per sequence')
 @click.option('--turn-delay', default=0.5, help='Delay between turns in seconds')
@@ -927,6 +927,157 @@ def db(export, clear, target, module):
 
 
 # ============================================================================
+# CHAIN COMMAND
+# ============================================================================
+@main.command()
+@click.argument('target', required=False)
+@click.option('--playbook', '-pb', help='Playbook file path or built-in name')
+@click.option('--var', '-V', multiple=True, help='Variable override (key=value), can be used multiple times')
+@click.option('--list', 'list_playbooks', is_flag=True, help='List available built-in playbooks')
+@click.option('--dry-run', is_flag=True, help='Show execution plan without running')
+@click.option('--visualize', is_flag=True, help='Show playbook as static graph')
+@click.option('--export-mermaid', is_flag=True, help='Export playbook as Mermaid diagram')
+@click.option('--mermaid-theme', type=click.Choice(['default', 'dark', 'forest', 'neutral']), default='default', help='Mermaid theme')
+@click.option('--mermaid-direction', type=click.Choice(['TD', 'LR', 'BT', 'RL']), default='TD', help='Mermaid direction')
+@click.option('--live/--no-live', default=True, help='Enable/disable live execution visualization')
+@click.option('--request', '-r', help='Request file (Burp Suite format)')
+@click.option('--param', '-p', help='Parameter path for injection (e.g., messages[0].content)')
+@click.option('--key', '-k', help='API key for direct API access')
+@click.option('--output', '-o', help='Output file for report (HTML or JSON)')
+@click.option('--timeout', '-t', default=30, help='Request timeout in seconds')
+@click.option('--verbose', '-v', count=True, help='Verbose output (-v: reasons, -vv: debug)')
+@click.option('--proxy', help='Use HTTP proxy for outbound requests (host:port)')
+@click.option('--cookie', '-C', help='Cookies for authentication (key=value; ...)')
+@click.option('--headers', '-H', help='Custom headers (key:value; ...)')
+@click.option('--format', '-F', type=click.Choice(['json', 'form', 'multipart']), default='json', help='Request body format')
+@click.option('--refresh-url', help='URL to fetch new session ID if expired')
+@click.option('--refresh-regex', help='Regex to extract session ID from refresh response')
+@click.option('--refresh-param', help='Parameter to update with new session ID')
+@click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
+@click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
+@click.option('--eval-url', help='URL for secondary LLM evaluation')
+@click.option('--eval-key', help='API key for secondary LLM')
+@click.option('--eval-model', help='Model for secondary LLM')
+@click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+@click.option('--show-response', is_flag=True, help='Show AI response for findings')
+@click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
+def chain_cmd(target, playbook, var, list_playbooks, dry_run, visualize, export_mermaid, mermaid_theme, mermaid_direction, live, request, param, key, output, timeout, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, show_response, verify_attempts):
+    """
+    Chain - Run attack chains from YAML playbooks
+
+    \b
+    Execute multi-step attack chains with:
+    - Conditional branching
+    - Context passing between steps
+    - Variable interpolation (level, risk, evasion defined in playbook)
+    - Live progress visualization
+
+    \b
+    Variables like level, risk, evasion are defined in the playbook's
+    variables section. Override them with -V:
+
+    \b
+    Examples:
+        aix chain --list
+        aix chain --playbook full_compromise https://target.com -k sk-xxx
+        aix chain --playbook full_compromise -V level=5 -V risk=3 https://target.com
+        aix chain --playbook full_compromise -V evasion=aggressive https://target.com
+        aix chain --playbook prompt_theft --dry-run https://target.com
+        aix chain --playbook custom.yaml --visualize
+        aix chain --playbook rag_pwn -o report.html https://target.com
+        aix chain -r request.txt -p "messages[0].content" --playbook full_compromise
+    """
+    print_banner()
+    _set_proxy_env(proxy)
+
+    # Handle request file input
+    parsed_request = None
+    if request:
+        if not param:
+            console.print("[red][-][/red] Error: --param/-p is required when using --request/-r")
+            raise click.Abort()
+        try:
+            parsed_request = load_request(request, param)
+            target = parsed_request.url
+        except RequestParseError as e:
+            console.print(f"[red][-][/red] Error parsing request file: {e}")
+            raise click.Abort()
+
+    # Parse variable overrides
+    variables = {}
+    for v in var:
+        if '=' in v:
+            k, val = v.split('=', 1)
+            # Try to parse as int/bool
+            if val.lower() == 'true':
+                variables[k] = True
+            elif val.lower() == 'false':
+                variables[k] = False
+            else:
+                try:
+                    variables[k] = int(val)
+                except ValueError:
+                    variables[k] = val
+
+    # Parse cookies and headers
+    cookies_dict = None
+    if cookie:
+        cookies_dict = dict(c.split('=', 1) for c in cookie.split(';') if '=' in c)
+
+    headers_dict = None
+    if headers:
+        headers_dict = dict(h.split(':', 1) for h in headers.split(';') if ':' in h)
+
+    # Build refresh config
+    refresh_config = None
+    if refresh_url:
+        refresh_config = {
+            'url': refresh_url,
+            'regex': refresh_regex,
+            'param': refresh_param,
+            'error': refresh_error
+        }
+
+    # Build eval config
+    eval_config = None
+    if eval_url or eval_provider:
+        eval_config = {
+            'url': eval_url,
+            'api_key': eval_key,
+            'model': eval_model,
+            'provider': eval_provider
+        }
+
+    chain.run(
+        target=target,
+        api_key=key,
+        playbook=playbook,
+        variables=variables,
+        dry_run=dry_run,
+        visualize=visualize,
+        export_mermaid=export_mermaid,
+        mermaid_theme=mermaid_theme,
+        mermaid_direction=mermaid_direction,
+        list_playbooks=list_playbooks,
+        live=live,
+        verbose=verbose,
+        output=output,
+        parsed_request=parsed_request,
+        proxy=proxy,
+        cookies=cookies_dict,
+        headers=headers_dict,
+        injection_param=param,
+        body_format=format,
+        refresh_config=refresh_config,
+        response_regex=response_regex,
+        eval_config=eval_config,
+        timeout=timeout,
+        show_response=show_response,
+        verify_attempts=verify_attempts,
+    )
+
+
+# ============================================================================
 # SCAN ALL COMMAND
 # ============================================================================
 @main.command()
@@ -951,10 +1102,10 @@ def db(export, clear, target, module):
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
-@click.option('--level', default=1, help='Level of tests to perform (1-5)')
-@click.option('--risk', default=1, help='Risk of tests to perform (1-3)')
+@click.option('--level', type=int, default=1, help='Level of tests to perform (1-5)')
+@click.option('--risk', type=int, default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
-@click.option('--verify-attempts', '-va', default=1, help='Number of verification attempts (confirmation)')
+@click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
 def scan(target, request, param, key, profile, evasion, output, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk, show_response, verify_attempts):
     """
     Scan - Run all modules against target

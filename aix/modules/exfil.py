@@ -51,7 +51,7 @@ class ExfilScanner(BaseScanner):
         await connector.connect()
 
         try:
-            for p in track(payloads, description="[bold magenta]📤 Exfiltrating Data...[/]", console=self.console):
+            for p in track(payloads, description="[bold magenta]📤 Exfiltrating Data...[/]", console=self.console, disable=not self.show_progress):
                 self.stats['total'] += 1
 
                 # Replace webhook placeholder

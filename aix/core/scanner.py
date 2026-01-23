@@ -24,7 +24,7 @@ class BaseScanner(ABC):
     """Base class for all AIX scanners to reduce code duplication"""
 
     def __init__(self, target: str, api_key: str | None = None, verbose: bool = False,
-                 parsed_request: Optional['ParsedRequest'] = None, timeout: int = 30, browser: bool = False, **kwargs):
+                 parsed_request: Optional['ParsedRequest'] = None, timeout: int = 30, browser: bool = False, console: Console | None = None, **kwargs):
         self.target = target
         self.api_key = api_key
         self.verbose = verbose
@@ -32,7 +32,12 @@ class BaseScanner(ABC):
         self.timeout = timeout # Set from parameter
         self.browser = browser
         self.show_response = kwargs.get('show_response', False)
-        self.console = Console()
+        # Always show progress unless explicitly disabled (default True)
+        self.show_progress = kwargs.get('show_progress', True)
+
+        # Quiet mode suppresses text output but keeps progress bars (used in chain mode)
+        self.quiet = kwargs.get('quiet', False)
+        self.console = console if console else Console()
 
         # Common optional arguments
         self.proxy = kwargs.get('proxy')
@@ -74,7 +79,8 @@ class BaseScanner(ABC):
                  self.eval_config['proxy'] = self.proxy
 
              self.evaluator = LLMEvaluator(**self.eval_config)
-             self.console.print(f"[bold green][*] LLM-as-a-Judge ENABLED: {self.eval_config.get('provider') or 'custom'} ({self.eval_config.get('model') or 'default'})[/bold green]")
+             if not self.quiet:
+                 self.console.print(f"[bold green][*] LLM-as-a-Judge ENABLED: {self.eval_config.get('provider') or 'custom'} ({self.eval_config.get('model') or 'default'})[/bold green]")
 
         # Module specific config (default, can be overridden)
         self.module_name = "BASE"
@@ -141,7 +147,8 @@ class BaseScanner(ABC):
                 self._print('info', f"Config: Level={self.level}, Risk={self.risk}{evasion_str} - Loaded {len(filtered_payloads)}/{len(payloads)} payloads")
             return filtered_payloads
         except Exception as e:
-            self.console.print(f"[yellow][!] Could not load payloads from {payload_path}: {e}[/yellow]")
+            if not self.quiet:
+                self.console.print(f"[yellow][!] Could not load payloads from {payload_path}: {e}[/yellow]")
             return []
 
     def _init_stats(self, **kwargs):
@@ -180,6 +187,10 @@ class BaseScanner(ABC):
 
     def _print(self, status: str, msg: str, tech: str = '', response: str = None):
         """Standardized formatted printing"""
+        # In quiet mode (chain execution), suppress text output but keep progress bars
+        if self.quiet:
+            return
+
         t = self.target[:28] + '...' if len(self.target) > 30 else self.target
         name = self.module_name[:7].upper() # Limit length
 
@@ -337,7 +348,7 @@ class BaseScanner(ABC):
                 elif "500" in error_str:
                      self._print('error', f"Target returned 500 Server Error ({technique})")
                      self._update_error_state(error_str)
-                elif self.verbose >= 1: # Print other errors if verbose
+                elif self.verbose >= 1 and not self.quiet: # Print other errors if verbose
                      self.console.print(f"[yellow][!] Error probing {technique}: {e}[/yellow]")
                      self._update_error_state(None) # Reset if generic error? Or ignore? 
                      # Let's reset for generic errors to be safe, or only pure successes?

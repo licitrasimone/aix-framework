@@ -61,7 +61,7 @@ class AgentScanner(BaseScanner):
         await connector.connect()
 
         try:
-            for p in track(payloads, description="[bold blue]🕵️ Hijacking Tools...  [/]", console=self.console):
+            for p in track(payloads, description="[bold blue]🕵️ Hijacking Tools...  [/]", console=self.console, disable=not self.show_progress):
                 self.stats['total'] += 1
 
                 try:

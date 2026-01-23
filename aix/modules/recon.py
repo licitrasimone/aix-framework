@@ -43,7 +43,8 @@ class ReconScanner(BaseScanner):
             with open(config_path) as f:
                 self.config = json.load(f)
         except Exception as e:
-            self.console.print(f"[yellow][!] Could not load config from {config_path}: {e}[/yellow]")
+            if not self.quiet:
+                self.console.print(f"[yellow][!] Could not load config from {config_path}: {e}[/yellow]")
             self.config = {
                 "model_signatures": {}, "negative_signatures": {},
                 "version_patterns": {}, "waf_signatures": {}
@@ -76,6 +77,8 @@ class ReconScanner(BaseScanner):
 
 
     def _print(self, status: str, msg: str, tech: str = '', response: str = None):
+        if self.quiet:
+            return
         t = self.target[:28] + '...' if len(self.target) > 30 else self.target
         name = self.module_name[:7].upper()
         if status == 'info':
@@ -486,7 +489,7 @@ class ReconScanner(BaseScanner):
             self._print('info', f'Running {len(self.payloads)} probe tests...')
 
             responses = []
-            for probe in track(self.payloads, description="[bold white]🔍 Mapping Surface...  [/]", console=self.console):
+            for probe in track(self.payloads, description="[bold white]🔍 Mapping Surface...  [/]", console=self.console, disable=not self.show_progress):
                 try:
                     import time
                     start = time.time()
@@ -534,7 +537,7 @@ class ReconScanner(BaseScanner):
                     elif "500" in error_str:
                          self._print('error', f"Target returned 500 Server Error ({probe['name']})")
                          self._update_error_state(error_str)
-                    elif self.verbose:
+                    elif self.verbose and not self.quiet:
                         import traceback
                         self.console.print(f"[red]Error probing {probe['name']}: {e}[/red]")
                         self.console.print(traceback.format_exc())
@@ -565,6 +568,18 @@ class ReconScanner(BaseScanner):
 
             if model:
                 self._print('success', f'Model detected: {model} (confidence: {confidence}%)')
+                # Add finding for model detection
+                self.findings.append(Finding(
+                    title=f"Model Detected: {model}",
+                    severity=Severity.INFO,
+                    technique="model_detection",
+                    payload="Recon probes",
+                    response=f"Model: {model}, Version: {version or 'unknown'}, Confidence: {confidence}%",
+                    target=self.target,
+                    reason=f"Model identified with {confidence}% confidence"
+                ))
+                self.db.add_result(self.target, 'recon', 'model_detection', 'success',
+                                   'recon_probes', model, 'info', reason=f"Confidence: {confidence}%")
             else:
                 self._print('warning', 'Could not identify model')
 
@@ -629,10 +644,13 @@ class ReconScanner(BaseScanner):
 
         # Print summary
         self._print_summary()
-        return self.results
+        # Return findings list for chain compatibility (results available via self.results)
+        return self.findings
 
     def _print_summary(self):
         """Print reconnaissance summary"""
+        if self.quiet:
+            return
         self.console.print()
         from rich.box import ROUNDED
         from rich.panel import Panel
@@ -698,7 +716,9 @@ class ReconScanner(BaseScanner):
                 timeout=self.timeout,
                 parsed_request=self.parsed_request,  # Critical fix for -r request mode
                 verbose=self.verbose,
-                console=self.console
+                console=self.console,
+                quiet=self.quiet,
+                show_progress=self.show_progress
             )
             
             # Using the same connector session would be ideal but for now we let it manage its own
@@ -709,12 +729,25 @@ class ReconScanner(BaseScanner):
                 # Always overwrite because fingerprinting is more granular/accurate
                 self.results['model'] = winner
                 self.results['model_confidence'] = 90 # High confidence if fingerprint logic matches
-                # family is in fp.db... accessing it is messy without method.
                 # Simplified update:
                 self.results['fingerprint_winner'] = winner
 
+                # Add a Finding for fingerprint success so chain knows recon succeeded
+                self.findings.append(Finding(
+                    title=f"Model Fingerprint: {winner}",
+                    severity=Severity.INFO,
+                    technique="fingerprint",
+                    payload="Advanced fingerprinting probes",
+                    response=f"Identified model: {winner}",
+                    target=self.target,
+                    reason="Model identified via behavioral fingerprinting"
+                ))
+                self.db.add_result(self.target, 'recon', 'fingerprint', 'success',
+                                   'fingerprint_probes', winner, 'info', reason="Model identified")
+
         except Exception as e:
-            self.console.print(f"[yellow][!] Advanced fingerprinting failed: {e}[/yellow]")
+            if not self.quiet:
+                self.console.print(f"[yellow][!] Advanced fingerprinting failed: {e}[/yellow]")
 
 
 
@@ -745,9 +778,9 @@ def run(target: str = None, browser: bool = False, output: str | None = None,
         show_response=show_response,
         evasion=kwargs.get('evasion', 'none')
     )
-    results = asyncio.run(scanner.run())
+    asyncio.run(scanner.run())
 
     if output:
         with open(output, 'w') as f:
-            json.dump(results, f, indent=2)
+            json.dump(scanner.results, f, indent=2)
         print(f"[green][+][/green] Results saved to {output}")

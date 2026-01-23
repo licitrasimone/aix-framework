@@ -1,0 +1,66 @@
+# Quick Scan Chain
+# Fast vulnerability assessment with core attack vectors
+
+name: "Quick Scan"
+description: "Fast vulnerability assessment covering core attack vectors"
+author: "AIX Framework"
+version: "1.0"
+tags: ["quick", "assessment", "core"]
+
+config:
+  stop_on_critical: false
+  continue_on_module_fail: true
+  max_duration: 180
+
+variables:
+  level: 1
+  risk: 1
+  evasion: "none"
+
+steps:
+  # Step 1: Quick recon
+  - id: recon
+    name: "Quick Reconnaissance"
+    module: recon
+    config:
+      level: 1
+    timeout: 120
+    on_success: inject
+    on_fail: inject
+
+  # Step 2: Injection test
+  - id: inject
+    name: "Injection Test"
+    module: inject
+    config:
+      level: 1
+    timeout: 60
+    on_success: jailbreak
+    on_fail: jailbreak
+
+  # Step 3: Jailbreak test
+  - id: jailbreak
+    name: "Jailbreak Test"
+    module: jailbreak
+    config:
+      level: 1
+    timeout: 60
+    on_success: extract
+    on_fail: extract
+
+  # Step 4: Extraction test
+  - id: extract
+    name: "Extraction Test"
+    module: extract
+    config:
+      level: 1
+    timeout: 60
+    on_success: report
+    on_fail: report
+
+  # Report
+  - id: report
+    name: "Generate Report"
+    type: report
+    config:
+      format: "html"

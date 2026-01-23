@@ -1,0 +1,125 @@
+# Full Compromise Chain
+# Complete attack chain from reconnaissance to data exfiltration
+
+name: "Full Compromise Chain"
+description: "Complete attack chain from recon to data exfiltration"
+author: "AIX Framework"
+version: "1.0"
+tags: ["comprehensive", "data-theft", "recon"]
+
+config:
+  stop_on_critical: true
+  continue_on_module_fail: false
+  max_duration: 600
+
+variables:
+  evasion: "light"
+  level: 2
+  risk: 2
+
+steps:
+  # Step 1: Reconnaissance
+  - id: recon
+    name: "Target Reconnaissance"
+    module: recon
+    config:
+      level: "{{level}}"
+      evasion: "{{evasion}}"
+    store:
+      model_type: "findings.model_type"
+      has_rag: "findings.has_rag"
+      has_tools: "findings.has_tools"
+    on_success: extract_prompt
+    on_fail: abort
+
+  # Step 2: Extract System Prompt
+  - id: extract_prompt
+    name: "System Prompt Extraction"
+    module: extract
+    config:
+      level: 3
+      evasion: "{{evasion}}"
+    store:
+      system_prompt: "findings.extracted_prompt"
+    on_success: analyze_target
+    on_fail: analyze_target
+
+  # Step 3: Conditional - Decide attack path
+  - id: analyze_target
+    name: "Analyze Target"
+    type: condition
+    conditions:
+      - if: "{{has_rag}} == true"
+        then: rag_attack
+      - if: "{{has_tools}} == true"
+        then: agent_attack
+      - else: jailbreak_attack
+
+  # Step 4a: RAG Attack Path
+  - id: rag_attack
+    name: "RAG Exploitation"
+    module: rag
+    config:
+      level: "{{level}}"
+      risk: "{{risk}}"
+    on_success: data_leak
+    on_fail: jailbreak_attack
+
+  # Step 4b: Agent Attack Path
+  - id: agent_attack
+    name: "Agent Exploitation"
+    module: agent
+    config:
+      level: "{{level}}"
+    on_success: data_leak
+    on_fail: jailbreak_attack
+
+  # Step 4c: Jailbreak Path
+  - id: jailbreak_attack
+    name: "Jailbreak with Context"
+    module: jailbreak
+    config:
+      level: 3
+      evasion: "{{evasion}}"
+    store:
+      jailbreak_success: "findings.any_success"
+    on_success: data_leak
+    on_fail: multiturn_attack
+
+  # Step 4d: Multi-turn fallback
+  - id: multiturn_attack
+    name: "Multi-Turn Escalation"
+    module: multiturn
+    config:
+      category: "crescendo"
+      level: 3
+    on_success: data_leak
+    on_fail: data_leak
+
+  # Step 5: Data Extraction
+  - id: data_leak
+    name: "Data Leakage Testing"
+    module: leak
+    config:
+      level: "{{level}}"
+      risk: "{{risk}}"
+    on_success: exfil_test
+    on_fail: report
+
+  # Step 6: Exfiltration Testing
+  - id: exfil_test
+    name: "Exfiltration Channels"
+    module: exfil
+    condition: "{{jailbreak_success}} == true"
+    config:
+      level: 2
+    on_success: report
+    on_fail: report
+
+  # Final: Generate Report
+  - id: report
+    name: "Generate Report"
+    type: report
+    config:
+      format: "html"
+      include_chain_visualization: true
