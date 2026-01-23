@@ -148,39 +148,65 @@ class Reporter:
 
         # Count findings by severity
         counts = dict.fromkeys(Severity, 0)
+        
+        # Group findings by target
+        findings_by_target: dict[str, list[Finding]] = {}
+        
         for finding in self.findings:
             counts[finding.severity] += 1
+            
+            target = finding.target or "Unknown Target"
+            if target not in findings_by_target:
+                findings_by_target[target] = []
+            findings_by_target[target].append(finding)
+
+        # Sort findings within each target by severity
+        severity_order = {
+            Severity.CRITICAL: 0, 
+            Severity.HIGH: 1, 
+            Severity.MEDIUM: 2, 
+            Severity.LOW: 3, 
+            Severity.INFO: 4
+        }
+        
+        for target in findings_by_target:
+            findings_by_target[target].sort(key=lambda f: severity_order.get(f.severity, 99))
 
         # Generate findings HTML
         findings_html = ""
-        for finding in self.findings:
-            severity_class = finding.severity.value
-            findings_html += f"""
-            <div class="finding {severity_class}">
-                <div class="finding-header">
-                    <span class="severity-badge {severity_class}">{finding.severity.value.upper()}</span>
-                    <span class="finding-title">{finding.title}</span>
+        
+        for target, target_findings in findings_by_target.items():
+            findings_html += f'<div class="target-group"><h3>{target}</h3>'
+            
+            for finding in target_findings:
+                severity_class = finding.severity.value
+                findings_html += f"""
+                <div class="finding {severity_class}">
+                    <div class="finding-header">
+                        <span class="severity-badge {severity_class}">{finding.severity.value.upper()}</span>
+                        <span class="finding-title">{finding.title}</span>
+                        <span class="technique-badge">{finding.technique}</span>
+                    </div>
+                    <div class="finding-body">
+                        {f'<div class="finding-field reason"><strong>Reason:</strong> {finding.reason}</div>' if finding.reason else ''}
+                        
+                        <details>
+                            <summary>Payload & Response</summary>
+                            <div class="finding-field">
+                                <strong>Payload:</strong>
+                                <pre><code>{self._escape_html(finding.payload)}</code></pre>
+                            </div>
+                            <div class="finding-field">
+                                <strong>Response:</strong>
+                                <pre><code>{self._escape_html(finding.response)}</code></pre>
+                            </div>
+                        </details>
+                        
+                        {f'<div class="finding-field"><strong>Details:</strong> {finding.details}</div>' if finding.details else ''}
+                    </div>
                 </div>
-                <div class="finding-body">
-                    <div class="finding-field">
-                        <strong>Target:</strong> {finding.target}
-                    </div>
-                    <div class="finding-field">
-                        <strong>Technique:</strong> {finding.technique}
-                    </div>
-                    {f'<div class="finding-field"><strong>Reason:</strong> {finding.reason}</div>' if finding.reason else ''}
-                    <div class="finding-field">
-                        <strong>Payload:</strong>
-                        <pre><code>{self._escape_html(finding.payload)}</code></pre>
-                    </div>
-                    <div class="finding-field">
-                        <strong>Response:</strong>
-                        <pre><code>{self._escape_html(finding.response)}</code></pre>
-                    </div>
-                    {f'<div class="finding-field"><strong>Details:</strong> {finding.details}</div>' if finding.details else ''}
-                </div>
-            </div>
-            """
+                """
+            findings_html += "</div>"
 
         html = f"""
 <!DOCTYPE html>
@@ -267,6 +293,20 @@ class Reporter:
         .findings h2 {{
             margin-bottom: 1rem;
             color: #00d4ff;
+            border-bottom: 1px solid #2a2a3a;
+            padding-bottom: 0.5rem;
+        }}
+        
+        .target-group {{
+            margin-bottom: 2rem;
+        }}
+        
+        .target-group h3 {{
+            color: #7bed9f;
+            margin-bottom: 1rem;
+            font-family: 'Courier New', monospace;
+            border-left: 3px solid #7bed9f;
+            padding-left: 1rem;
         }}
         
         .finding {{
@@ -283,6 +323,7 @@ class Reporter:
             display: flex;
             align-items: center;
             gap: 1rem;
+            flex-wrap: wrap;
         }}
         
         .severity-badge {{
@@ -291,6 +332,18 @@ class Reporter:
             font-size: 0.75rem;
             font-weight: bold;
             text-transform: uppercase;
+            min-width: 80px;
+            text-align: center;
+        }}
+        
+        .technique-badge {{
+            background: #2a2a3a;
+            color: #aaa;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-family: monospace;
+            margin-left: auto;
         }}
         
         .severity-badge.critical {{ background: #ff4757; color: white; }}
@@ -310,8 +363,30 @@ class Reporter:
             margin-bottom: 1rem;
         }}
         
+        .finding-field.reason {{
+            background: #2a2a3a;
+            padding: 0.75rem;
+            border-radius: 4px;
+            border-left: 3px solid #00d4ff;
+        }}
+        
         .finding-field strong {{
             color: #00d4ff;
+        }}
+        
+        details summmary {{
+            cursor: pointer;
+            color: #888;
+            margin-bottom: 1rem;
+            outline: none;
+        }}
+        
+        details summary:hover {{
+            color: #fff;
+        }}
+
+        details[open] summary {{
+            margin-bottom: 1rem;
         }}
         
         pre {{

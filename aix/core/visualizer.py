@@ -468,12 +468,12 @@ class LiveChainVisualizer:
 class MermaidExporter:
     """Export playbook as Mermaid diagram."""
 
-    def __init__(self, theme: str = 'default', direction: str = 'TD', icons: bool = True):
+    def __init__(self, theme: str = 'base', direction: str = 'TD', icons: bool = True):
         """
         Initialize exporter.
 
         Args:
-            theme: Mermaid theme (default, dark, forest, neutral)
+            theme: Mermaid theme (default, dark, forest, neutral, base)
             direction: Flow direction (TD, LR, BT, RL)
             icons: Include emoji icons in nodes
         """
@@ -495,14 +495,37 @@ class MermaidExporter:
 
         # Header
         lines.append(f"flowchart {self.direction}")
+        
+        # Link Style - Orthogonal/Technical
+        lines.append("    linkStyle default stroke:#00d4ff,stroke-width:2px,fill:none,stroke-dasharray: 0;")
+        
+        # Class Definitions (Tech/Circuit Theme)
+        lines.append("    classDef base fill:#0a0a0f,stroke:#00d4ff,stroke-width:2px,color:#fff;")
+        lines.append("    classDef attack fill:#0a0a0f,stroke:#ff4757,stroke-width:2px,color:#fff;")
+        lines.append("    classDef check fill:#0a0a0f,stroke:#ffa502,stroke-width:2px,color:#fff;")
+        lines.append("    classDef report fill:#0a0a0f,stroke:#2ed573,stroke-width:2px,color:#fff;")
+        lines.append("    classDef sub fill:#0a0a0f,stroke:#aaa,stroke-width:1px,color:#aaa,stroke-dasharray: 4 4;")
 
         # Subgraph for playbook
         lines.append(f"    subgraph {self._sanitize(playbook.name)}")
+        lines.append("    direction TB")
 
         # Nodes
         for step in playbook.steps:
             node = self._render_node(step)
-            lines.append(f"        {node}")
+            # Determine class
+            style_class = "base"
+            if step.type == StepType.CONDITION:
+                style_class = "check"
+            elif step.type == StepType.REPORT:
+                style_class = "report"
+            elif step.type == StepType.MODULE:
+                if step.module in ('recon', 'fingerprint'):
+                    style_class = "base"
+                else:
+                    style_class = "attack"
+            
+            lines.append(f"        {node}:::{style_class}")
 
         lines.append("    end")
         lines.append("")
@@ -513,10 +536,6 @@ class MermaidExporter:
             for edge in edges:
                 lines.append(f"    {edge}")
 
-        # Styling
-        lines.append("")
-        lines.extend(self._render_styles(playbook))
-
         return "\n".join(lines)
 
     def _render_node(self, step: StepConfig) -> str:
@@ -525,13 +544,26 @@ class MermaidExporter:
         label = f"{icon} {step.id}"
 
         if step.name and step.name != step.id:
-            label += f"<br/>{step.name}"
+            # Wrap long names
+            name = step.name
+            if len(name) > 20:
+                name = name[:20] + "..."
+            label += f"<br/>{name}"
 
-        # Node shape based on type
+        # Uniform Technical Shapes
         if step.type == StepType.CONDITION:
+            # Rhombus for decisions
             return f'{step.id}{{"{label}"}}'
         elif step.type == StepType.REPORT:
+            # Stadium/Rounded for IO/Report
             return f'{step.id}(["{label}"])'
+        elif step.type == StepType.MODULE:
+            if step.module in ('recon', 'fingerprint'):
+                # Standard Rectangle
+                return f'{step.id}["{label}"]'
+            else:
+                # Subroutine shape for attacks to make them pop slightly but look technical
+                return f'{step.id}[["{label}"]]'
         else:
             return f'{step.id}["{label}"]'
 
@@ -543,40 +575,20 @@ class MermaidExporter:
             for cond in step.conditions:
                 target = cond.get('then') or cond.get('else')
                 if target and target not in ('abort', 'continue', 'report'):
-                    label = cond.get('if', 'else')[:20]
-                    edges.append(f'{step.id} -->|{label}| {target}')
+                    label = cond.get('if', 'else')[:15]
+                    edges.append(f'{step.id} -- "{label}" --> {target}')
         else:
             if step.on_success and step.on_success not in ('abort', 'continue', 'report'):
-                edges.append(f'{step.id} -->|success| {step.on_success}')
+                edges.append(f'{step.id} --> {step.on_success}')
             if step.on_fail and step.on_fail not in ('abort', 'continue', 'report'):
-                edges.append(f'{step.id} -->|fail| {step.on_fail}')
+                # Dotted link for failures
+                edges.append(f'{step.id} -.-> {step.on_fail}')
 
         return edges
 
     def _render_styles(self, playbook: Playbook) -> list[str]:
-        """Render style definitions."""
-        styles = []
-
-        color_map = {
-            'recon': '#0891b2',
-            'inject': '#a855f7',
-            'jailbreak': '#dc2626',
-            'extract': '#eab308',
-            'leak': '#f97316',
-            'exfil': '#ef4444',
-            'rag': '#059669',
-            'agent': '#3b82f6',
-            'multiturn': '#8b5cf6',
-            'condition': '#6366f1',
-            'report': '#8b5cf6',
-        }
-
-        for step in playbook.steps:
-            module = step.module or step.type.value
-            color = color_map.get(module, '#64748b')
-            styles.append(f"    style {step.id} fill:{color}")
-
-        return styles
+        """Deprecated: Styles now handled via classDef."""
+        return []
 
     def _get_icon(self, step: StepConfig) -> str:
         """Get emoji icon for step type."""
@@ -594,7 +606,7 @@ class MermaidExporter:
             'dos': '💥',
             'fuzz': '🔀',
             'fingerprint': '🔎',
-            'condition': '🔀',
+            'condition': '❓',
             'report': '📊',
         }
         module = step.module or step.type.value
@@ -666,3 +678,160 @@ def print_execution_summary(
         console.print("│")
 
     console.print()
+
+class CytoscapeExporter:
+    """Export playbook and execution result as Cytoscape elements (JSON)."""
+
+    def __init__(self):
+        pass
+
+    def export(self, playbook: Playbook, result: 'ChainResult | None' = None) -> str:
+        """
+        Export playbook as simplified Cytoscape elements JSON string.
+        
+        Args:
+            playbook: Parsed playbook
+            result: Optional execution result to color-code nodes
+            
+        Returns:
+            JSON string defining 'nodes' and 'edges'
+        """
+        import json
+        
+        nodes = []
+        edges = []
+        
+        # Track execution status if result provided
+        step_status = {}
+        if result:
+            # Mark successful steps
+            # This is a simplification; we could map exact status from result.context
+            executed_ids = set()
+            if result.execution_path:
+                executed_ids = set(result.execution_path)
+            
+            for step in playbook.steps:
+                if step.id in executed_ids:
+                    # simplistic check: if it's in path, assume it ran
+                    # We'd ideally need the specific StepStatus from context
+                    step_status[step.id] = 'executed'
+                else:
+                    step_status[step.id] = 'pending'
+                    
+            # granular status if possible
+            if result.context:
+                for res in result.context.results.values():
+                    step_status[res.step_id] = res.status.name.lower() # success, failed, etc.
+
+        for step in playbook.steps:
+            # Node Data
+            status = step_status.get(step.id, 'default')
+            
+            # Additional details from result
+            details = {}
+            if result and result.context:
+                res = result.context.results.get(step.id)
+                if res:
+                    details['duration'] = f"{res.duration:.2f}s"
+                    details['error'] = res.error
+                    details['findings'] = res.findings_count
+                    
+                    # Serialize vars and output safely
+                    import json
+                    try:
+                        details['variables'] = json.dumps(res.stored_vars, indent=2) if res.stored_vars else None
+                    except Exception:
+                        details['variables'] = str(res.stored_vars)
+
+                    try:
+                        # Truncate output if too large to avoid lag
+                        out_str = json.dumps(res.output, indent=2)
+                        if len(out_str) > 1000:
+                            out_str = out_str[:1000] + "... (truncated)"
+                        details['output'] = out_str if res.output else None
+                    except Exception:
+                        details['output'] = str(res.output)[:1000]
+            
+            # Determine type for styling
+            node_type = 'step'
+            if step.type == StepType.CONDITION:
+                node_type = 'condition'
+            elif step.type == StepType.REPORT:
+                node_type = 'report'
+            
+            # Icon
+            icon = self._get_icon(step)
+            
+            # Label
+            label = f"{step.name or step.id}"
+            if len(label) > 20: 
+                label = label[:20] + "..."
+            
+            nodes.append({
+                "data": {
+                    "id": step.id,
+                    "label": label,
+                    "full_name": step.name or step.id,
+                    "type": node_type,
+                    "module": step.module or step.type.value,
+                    "status": status,
+                    "icon": icon,
+                    "details": details  # Pass rich details to frontend
+                }
+            })
+            
+            # Edges
+            if step.type == StepType.CONDITION and step.conditions:
+                for cond in step.conditions:
+                    target = cond.get('then') or cond.get('else')
+                    if target and target not in ('abort', 'continue', 'report'):
+                        cond_label = cond.get('if', 'else')[:15]
+                        edges.append({
+                            "data": {
+                                "source": step.id,
+                                "target": target,
+                                "label": cond_label,
+                                "type": "condition"
+                            }
+                        })
+            else:
+                if step.on_success and step.on_success not in ('abort', 'continue', 'report'):
+                    edges.append({
+                        "data": {
+                            "source": step.id,
+                            "target": step.on_success,
+                            "type": "success"
+                        }
+                    })
+                if step.on_fail and step.on_fail not in ('abort', 'continue', 'report'):
+                    edges.append({
+                        "data": {
+                            "source": step.id,
+                            "target": step.on_fail,
+                            "type": "fail"
+                        }
+                    })
+        
+        return json.dumps({"nodes": nodes, "edges": edges}, indent=2)
+
+    def _get_icon(self, step: StepConfig) -> str:
+        """Get unicode icon for step."""
+        icons = {
+            'recon': '🔍',
+            'inject': '💉',
+            'jailbreak': '🔓',
+            'extract': '📜',
+            'leak': '💧',
+            'exfil': '📤',
+            'rag': '🗄️',
+            'agent': '🤖',
+            'multiturn': '💬',
+            'memory': '🧠',
+            'dos': '💥',
+            'fuzz': '🔀',
+            'fingerprint': '🔎',
+            'condition': '❓',
+            'report': '📊',
+        }
+        module = step.module or step.type.value
+        return icons.get(module, '○')
