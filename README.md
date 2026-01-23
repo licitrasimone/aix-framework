@@ -29,6 +29,7 @@ AIX is an automated security testing framework for AI/LLM endpoints. It provides
 - **Memory Attacks** - Context manipulation and poisoning
 - **RAG Attacks** - Knowledge base and retrieval vulnerabilities
 - **Multi-Turn Attacks** - Conversation-based exploitation (crescendo, trust building, context poisoning)
+- **Attack Chains** - YAML-defined attack workflows with conditional branching and state passing
 
 ---
 
@@ -66,6 +67,9 @@ aix inject https://api.target.com/chat -k sk-xxx
 
 # Run all modules
 aix scan https://api.target.com/chat -k sk-xxx
+
+# Run attack chain playbook
+aix chain https://api.target.com/chat -k sk-xxx -P full_compromise
 
 # Use with Burp Suite request file
 aix inject -r request.txt -p "messages[0].content"
@@ -215,6 +219,39 @@ aix multiturn --profile company.com --max-turns 5 --turn-delay 1.0
 | `--max-turns` | Maximum turns per sequence (default: 10) |
 | `--turn-delay` | Delay between turns in seconds (default: 0.5) |
 
+### chain - Attack Chains
+Execute multi-step attack workflows defined in YAML playbooks. Chains support conditional branching, variable interpolation, and state passing between steps.
+
+```bash
+aix chain https://api.target.com -k sk-xxx -P full_compromise
+aix chain -r request.txt -p "messages[0].content" -P prompt_theft
+aix chain https://api.target.com -P rag_pwn -V level=3 -V evasion=aggressive
+aix chain --list                    # List available playbooks
+aix chain --show full_compromise    # Show playbook structure
+aix chain --dry-run -P quick_scan   # Preview execution plan
+```
+
+**Pre-Built Playbooks:**
+| Playbook | Description |
+|----------|-------------|
+| `full_compromise` | Complete attack chain from recon to data exfiltration |
+| `data_exfil` | Data exfiltration focused chain |
+| `prompt_theft` | System prompt extraction chains |
+| `quick_scan` | Fast security assessment |
+| `rag_pwn` | RAG-specific attack sequences |
+| `stealth_recon` | Low-noise reconnaissance |
+
+**Chain-Specific Options:**
+| Option | Description |
+|--------|-------------|
+| `-P, --playbook` | Playbook name or path to YAML file |
+| `-V, --var` | Override playbook variables (`key=value`) |
+| `--list` | List available playbooks |
+| `--show` | Show playbook structure |
+| `--dry-run` | Preview execution plan without running |
+| `--no-viz` | Disable live visualization |
+| `--export-mermaid` | Export chain as Mermaid diagram |
+
 ### scan - Full Scan
 Run all modules against a target for comprehensive security assessment.
 
@@ -260,6 +297,75 @@ aix scan --profile company.com --evasion aggressive
 | `--eval-key` | API key for secondary LLM |
 | `--eval-model` | Model for secondary LLM |
 | `--eval-provider` | Provider (`openai`, `anthropic`, `ollama`, `gemini`) |
+
+---
+
+## Attack Chain Playbooks
+
+Create custom attack workflows with YAML playbooks:
+
+```yaml
+# my_chain.yaml
+name: "Custom Attack Chain"
+description: "My custom attack workflow"
+version: "1.0"
+
+config:
+  stop_on_critical: true
+  continue_on_module_fail: false
+  max_duration: 300
+
+variables:
+  evasion: "light"
+  level: 2
+
+steps:
+  # Step 1: Reconnaissance
+  - id: recon
+    name: "Target Reconnaissance"
+    module: recon
+    config:
+      level: "{{level}}"
+    store:
+      has_rag: "findings.has_rag"
+    on_success: next_step
+    on_fail: abort
+
+  # Step 2: Conditional branching
+  - id: next_step
+    type: condition
+    conditions:
+      - if: "{{has_rag}} == true"
+        then: rag_attack
+      - else: inject_attack
+
+  # Step 3a: RAG path
+  - id: rag_attack
+    module: rag
+    config:
+      level: "{{level}}"
+    on_success: report
+    on_fail: report
+
+  # Step 3b: Injection path
+  - id: inject_attack
+    module: inject
+    config:
+      evasion: "{{evasion}}"
+    on_success: report
+    on_fail: report
+
+  # Final step
+  - id: report
+    type: report
+    config:
+      format: "html"
+```
+
+Run your custom playbook:
+```bash
+aix chain https://target.com -P ./my_chain.yaml -k sk-xxx
+```
 
 ---
 

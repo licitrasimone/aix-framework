@@ -70,25 +70,39 @@ This document outlines the planned improvements, feature requests, and future di
 
 ## Phase 3: Attack Chaining & Post-Exploitation
 
-### 3.1 Attack Chaining Engine
-- [ ] **Playbook System**: YAML-defined attack sequences
-- [ ] **Context Passing**: Use output from step N in step N+1
-- [ ] **Conditional Branching**: "If X succeeds, try Y"
-- [ ] **Attack Graph Visualization**: Visual representation of attack paths
+### 3.1 Attack Chaining Engine ✅ COMPLETED
+- [x] **Playbook System**: YAML-defined attack sequences
+- [x] **Context Passing**: Use output from step N in step N+1 via `store` directive
+- [x] **Conditional Branching**: `on_success`, `on_fail`, and `conditions` with if/then/else
+- [x] **Attack Graph Visualization**: Live execution display, Mermaid export, Cytoscape export
+- [x] **6 Pre-Built Playbooks**: full_compromise, data_exfil, prompt_theft, quick_scan, rag_pwn, stealth_recon
+- [x] **Variable Interpolation**: `{{variable}}` syntax across all step configs
+- [x] **Dry-Run Mode**: Preview execution plan before running
+- [x] **Live Visualization**: Real-time progress with Rich console UI
 - [ ] **Shared Playbook Library**: Community-contributed attack chains
 
 ```yaml
-# Example: attack_chain.yaml
+# Example: full_compromise.yaml
 name: "Full Compromise Chain"
+config:
+  stop_on_critical: true
+  continue_on_module_fail: false
 steps:
-  - module: recon
-    store: model_info
-  - module: extract
-    store: system_prompt
-  - module: jailbreak
-    context: "{{system_prompt}}"
-  - module: leak
-    goal: pii_extraction
+  - id: recon
+    module: recon
+    store:
+      model_type: "findings.model_type"
+      has_rag: "findings.has_rag"
+    on_success: extract_prompt
+  - id: extract_prompt
+    module: extract
+    on_success: analyze_target
+  - id: analyze_target
+    type: condition
+    conditions:
+      - if: "{{has_rag}} == true"
+        then: rag_attack
+      - else: jailbreak_attack
 ```
 
 ### 3.2 Post-Exploitation Framework
@@ -231,20 +245,21 @@ steps:
 - [x] MEMORY - Context manipulation attacks
 - [x] RAG - RAG-specific attacks
 - [x] MULTITURN - Multi-turn conversation attacks (8 categories, 16 sequences)
+- [x] CHAIN - Attack chain execution with YAML playbooks (6 pre-built playbooks)
 
 ---
 
 ## Priority Matrix
 
-| Phase | Impact | Effort | Priority |
-|-------|--------|--------|----------|
-| Phase 1: Advanced Attacks | Very High | Medium | **P0** |
-| Phase 2: Adaptive Testing | Very High | High | **P0** |
-| Phase 3: Attack Chaining | High | Medium | **P1** |
-| Phase 4: Enterprise/CI | High | Medium | **P1** |
-| Phase 5: Blue Team | Medium | Medium | **P2** |
-| Phase 6: Platform | Medium | High | **P2** |
-| Phase 7: Training | Low | Low | **P3** |
+| Phase | Impact | Effort | Priority | Status |
+|-------|--------|--------|----------|--------|
+| Phase 1: Advanced Attacks | Very High | Medium | **P0** | Multi-Turn ✅ |
+| Phase 2: Adaptive Testing | Very High | High | **P0** | Planned |
+| Phase 3: Attack Chaining | High | Medium | **P1** | Core ✅ |
+| Phase 4: Enterprise/CI | High | Medium | **P1** | Planned |
+| Phase 5: Blue Team | Medium | Medium | **P2** | Planned |
+| Phase 6: Platform | Medium | High | **P2** | Planned |
+| Phase 7: Training | Low | Low | **P3** | Planned |
 
 ---
 
@@ -258,11 +273,32 @@ steps:
 
 ---
 
-*Last Updated: January 2026*
+*Last Updated: January 23, 2026*
 
 ---
 
 ## Recent Changes
+
+### v1.2.0 - Attack Chain Module
+- Added `aix chain` command for executing YAML-defined attack playbooks
+- Implemented ChainExecutor for orchestrating multi-step attack workflows
+- Implemented ChainContext for state management and variable interpolation
+- Added PlaybookParser for YAML playbook loading and validation
+- Created 6 pre-built playbooks:
+  - `full_compromise` - End-to-end from recon to exfiltration
+  - `data_exfil` - Data exfiltration focused chain
+  - `prompt_theft` - System prompt extraction chains
+  - `quick_scan` - Fast security assessment
+  - `rag_pwn` - RAG-specific attack sequences
+  - `stealth_recon` - Low-noise reconnaissance
+- Implemented visualization system:
+  - PlaybookVisualizer for static playbook structure display
+  - LiveChainVisualizer for real-time execution progress
+  - DryRunVisualizer for execution plan preview
+  - MermaidExporter for Mermaid diagram generation
+  - CytoscapeExporter for interactive graph export
+- Added conditional branching with `on_success`, `on_fail`, and `conditions`
+- Added variable storage and interpolation across steps
 
 ### v1.1.0 - Multi-Turn Attack Module
 - Added `aix multiturn` command with 8 attack categories
