@@ -329,7 +329,7 @@ class AIXDatabase:
         module: str | None = None,
     ) -> None:
         """Export results to HTML report"""
-        from aix.core.reporter import Finding, Reporter, Severity
+        from aix.core.reporting.base import Finding, Reporter, Severity
 
         results = self.get_results(target=target, module=module, limit=1000)
 

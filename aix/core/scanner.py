@@ -2,6 +2,7 @@
 Base Scanner Module - Common logic for all AIX scanners
 """
 import json
+import asyncio
 import os
 from typing import Any, Optional
 from abc import ABC
@@ -11,7 +12,7 @@ from rich.console import Console
 from aix.core.connector import APIConnector, RequestConnector
 from aix.core.evasion import PayloadEvasion
 from aix.core.evaluator import LLMEvaluator
-from aix.core.reporter import Severity
+from aix.core.reporting.base import Severity
 from aix.core.request_parser import ParsedRequest
 from aix.db.database import AIXDatabase
 
@@ -395,3 +396,19 @@ class AttackResponse:
         self.response = response
 
 AIXScanner = BaseScanner
+
+
+def run_scanner(scanner_cls, target: str = None, api_key: str = None, **kwargs):
+    """
+    Helper to run any scanner class with asyncio.
+    Handles target validation and common setup.
+    """
+    if not target:
+        Console().print("[red][-][/red] No target specified")
+        return
+
+    # Initialize scanner with all arguments
+    scanner = scanner_cls(target, api_key=api_key, **kwargs)
+    
+    # Run async
+    return asyncio.run(scanner.run())

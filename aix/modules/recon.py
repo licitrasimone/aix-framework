@@ -11,7 +11,7 @@ from rich.table import Table
 from rich.progress import track
 
 from aix.core.reporter import Finding, Severity
-from aix.core.scanner import BaseScanner, CircuitBreakerError
+from aix.core.scanner import BaseScanner, CircuitBreakerError, run_scanner
 from aix.modules.fingerprint import FingerprintScanner
 
 if TYPE_CHECKING:
@@ -25,6 +25,7 @@ class ReconScanner(BaseScanner):
         super().__init__(target, api_key, verbose, parsed_request, timeout=timeout, browser=browser, **kwargs)
         self.module_name = "RECON"
         self.console_color = "cyan"
+        self.output = kwargs.get('output')
 
         # Load payloads via loading mechanism (but recon has special structure?)
         # Base scanner load_payloads handles severity format. Recon payloads might differ?
@@ -645,6 +646,15 @@ class ReconScanner(BaseScanner):
         # Print summary
         self._print_summary()
         # Return findings list for chain compatibility (results available via self.results)
+        # Save results if output file specified
+        if self.output:
+            try:
+                with open(self.output, 'w') as f:
+                    json.dump(self.results, f, indent=2)
+                self.console.print(f"[green][+][/green] Results saved to {self.output}")
+            except Exception as e:
+                self._print('error', f"Failed to save results to {self.output}: {e}")
+
         return self.findings
 
     def _print_summary(self):
@@ -751,36 +761,5 @@ class ReconScanner(BaseScanner):
 
 
 
-def run(target: str = None, browser: bool = False, output: str | None = None,
-        timeout: int = 30, verbose: bool = False,
-        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, show_response: bool = False, **kwargs) -> None:
-    if not target:
-        print("[red][-][/red] No target specified")
-        return
-
-    scanner = ReconScanner(
-        target,
-        api_key=kwargs.get('api_key'),
-        verbose=verbose,
-        parsed_request=parsed_request,
-        timeout=timeout,
-        browser=browser,
-        proxy=kwargs.get('proxy'),
-        cookies=cookies,
-        headers=kwargs.get('headers'),
-        body_format=kwargs.get('body_format'),
-        injection_param=kwargs.get('injection_param'),
-        refresh_config=kwargs.get('refresh_config'),
-        response_regex=kwargs.get('response_regex'),
-        eval_config=kwargs.get('eval_config'),
-        level=kwargs.get('level', 1),
-        risk=kwargs.get('risk', 1),
-        show_response=show_response,
-        evasion=kwargs.get('evasion', 'none')
-    )
-    asyncio.run(scanner.run())
-
-    if output:
-        with open(output, 'w') as f:
-            json.dump(scanner.results, f, indent=2)
-        print(f"[green][+][/green] Results saved to {output}")
+def run(target: str = None, api_key: str = None, **kwargs):
+    run_scanner(ReconScanner, target, api_key=api_key, **kwargs)

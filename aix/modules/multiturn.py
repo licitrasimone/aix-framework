@@ -23,7 +23,7 @@ from rich.table import Table
 
 from aix.core.conversation import ConversationManager, ConversationStatus
 from aix.core.reporter import Finding, Severity
-from aix.core.scanner import BaseScanner, CircuitBreakerError
+from aix.core.scanner import BaseScanner, CircuitBreakerError, run_scanner
 from aix.core.turn_evaluator import TurnEvaluator
 
 if TYPE_CHECKING:
@@ -266,53 +266,5 @@ class MultiTurnScanner(BaseScanner):
             self.console.print(table)
 
 
-def run(target: str = None, api_key: str = None, profile: str = None,
-        verbose: bool = False, output: str = None, evasion: str = 'none',
-        parsed_request: Optional['ParsedRequest'] = None, show_response: bool = False,
-        category: str = 'all', max_turns: int = 10, turn_delay: float = 0.5,
-        **kwargs):
-    """
-    Run multi-turn attack module.
-
-    Args:
-        target: Target URL
-        api_key: API key for authentication
-        profile: Saved profile name
-        verbose: Verbose output
-        output: Output file
-        evasion: Evasion level (none/light/aggressive)
-        parsed_request: Parsed Burp request
-        show_response: Show AI responses
-        category: Attack category filter (all, crescendo, trust_building, etc.)
-        max_turns: Maximum turns per sequence
-        turn_delay: Delay between turns in seconds
-        **kwargs: Additional arguments
-    """
-    if not target:
-        print("[red][-][/red] No target specified")
-        return
-
-    scanner = MultiTurnScanner(
-        target,
-        api_key=api_key,
-        verbose=verbose,
-        parsed_request=parsed_request,
-        proxy=kwargs.get('proxy'),
-        cookies=kwargs.get('cookies'),
-        headers=kwargs.get('headers'),
-        injection_param=kwargs.get('injection_param'),
-        body_format=kwargs.get('body_format'),
-        refresh_config=kwargs.get('refresh_config'),
-        response_regex=kwargs.get('response_regex'),
-        eval_config=kwargs.get('eval_config'),
-        level=kwargs.get('level', 1),
-        risk=kwargs.get('risk', 1),
-        show_response=show_response,
-        verify_attempts=kwargs.get('verify_attempts', 1),
-        evasion=evasion,
-        category=category,
-        max_turns=max_turns,
-        turn_delay=turn_delay
-    )
-
-    asyncio.run(scanner.run())
+def run(target: str = None, api_key: str = None, **kwargs):
+    run_scanner(MultiTurnScanner, target, api_key=api_key, **kwargs)

@@ -1,8 +1,9 @@
 """AIX Core Components"""
 
 from aix.core.connector import APIConnector, Connector, WebSocketConnector
-from aix.core.reporter import Finding, Reporter, Severity
 from aix.core.scanner import AIXScanner, AttackResponse, AttackResult, TargetProfile
+# Re-exporting for backward compatibility / convenience is optional but helpful
+from aix.core.reporting import Reporter, Finding, Severity
 
 __all__ = [
     'AIXScanner',

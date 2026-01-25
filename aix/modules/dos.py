@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.progress import track
 
 from aix.core.reporter import Finding, Severity
-from aix.core.scanner import BaseScanner
+from aix.core.scanner import BaseScanner, run_scanner
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -207,31 +207,5 @@ class DoSScanner(BaseScanner):
         return self.findings
 
 
-def run(target: str = None, api_key: str = None, profile: str = None,
-        verbose: bool = False, output: str = None,
-        parsed_request: Optional['ParsedRequest'] = None, show_response: bool = False, **kwargs):
-    if not target:
-        print("[red][-][/red] No target specified")
-        return
-
-    scanner = DoSScanner(target, api_key=api_key, browser=kwargs.get('browser'), verbose=verbose,
-                         parsed_request=parsed_request, proxy=kwargs.get('proxy'), cookies=kwargs.get('cookies'),
-                         headers=kwargs.get('headers'),
-                         injection_param=kwargs.get('injection_param'),
-                         body_format=kwargs.get('body_format'),
-                         safe_mode=kwargs.get('safe_mode', True),
-                         refresh_config=kwargs.get('refresh_config'),
-                         response_regex=kwargs.get('response_regex'),
-                         eval_config=kwargs.get('eval_config'),
-                         level=kwargs.get('level', 1),
-                         risk=kwargs.get('risk', 1),
-                         show_response=show_response,
-                         evasion=kwargs.get('evasion', 'none'))
-    # run function didn't have safe_mode before? Checking original file definition...
-    # Original run def: `def run(..., **kwargs):`
-    # Original DoSScanner init: `safe_mode: bool = True`.
-    # Original run call: `scanner = DoSScanner(..., **kwargs)`. It didn't pass safe_mode explicitly unless in kwargs.
-    # I should pass it if present.
-    # I'll check ifCLI passes safe_mode. Usually it does via click if defined.
-    # I'll add `safe_mode=kwargs.get('safe_mode', True)` to be safe.
-    asyncio.run(scanner.run())
+def run(target: str = None, api_key: str = None, **kwargs):
+    run_scanner(DoSScanner, target, api_key=api_key, **kwargs)
