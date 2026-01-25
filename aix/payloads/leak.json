@@ -9,7 +9,10 @@
             "phone"
         ],
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_contacts",
@@ -22,7 +25,10 @@
             "ssn"
         ],
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "memorization_books",
@@ -35,7 +41,10 @@
             "epoch"
         ],
         "level": 1,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "memorization_code",
@@ -48,7 +57,10 @@
             "sched_class"
         ],
         "level": 1,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "memorization_private",
@@ -61,7 +73,10 @@
             "proprietary"
         ],
         "level": 1,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_documents",
@@ -76,7 +91,10 @@
             "file"
         ],
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_content",
@@ -89,7 +107,10 @@
             "document:"
         ],
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_metadata",
@@ -103,7 +124,10 @@
             "url"
         ],
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "credentials_api",
@@ -116,7 +140,10 @@
             "password"
         ],
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "credentials_config",
@@ -130,7 +157,10 @@
             "password"
         ],
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "internal_users",
@@ -141,7 +171,10 @@
             "email"
         ],
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "internal_infra",
@@ -156,7 +189,10 @@
             "ip"
         ],
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_013",
@@ -173,7 +209,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_014",
@@ -190,7 +229,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_015",
@@ -207,7 +249,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_016",
@@ -224,7 +269,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_017",
@@ -241,7 +289,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_018",
@@ -258,7 +309,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_019",
@@ -275,7 +329,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_020",
@@ -292,7 +349,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_021",
@@ -309,7 +369,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_022",
@@ -326,7 +389,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_023",
@@ -343,7 +409,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_024",
@@ -360,7 +429,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_025",
@@ -377,7 +449,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_026",
@@ -394,7 +469,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_027",
@@ -411,7 +489,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_028",
@@ -428,7 +509,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_029",
@@ -445,7 +529,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_030",
@@ -462,7 +549,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_031",
@@ -479,7 +569,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_032",
@@ -496,7 +589,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_033",
@@ -513,7 +609,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_034",
@@ -530,7 +629,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_035",
@@ -547,7 +649,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_036",
@@ -564,7 +669,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_037",
@@ -581,7 +689,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_038",
@@ -598,7 +709,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_039",
@@ -615,7 +729,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "pii_leak_040",
@@ -632,7 +749,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_041",
@@ -649,7 +769,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_042",
@@ -666,7 +789,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_043",
@@ -683,7 +809,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_044",
@@ -700,7 +829,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_045",
@@ -717,7 +849,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_046",
@@ -734,7 +869,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_047",
@@ -751,7 +889,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_048",
@@ -768,7 +909,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_049",
@@ -785,7 +929,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_050",
@@ -802,7 +949,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_051",
@@ -819,7 +969,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_052",
@@ -836,7 +989,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_053",
@@ -853,7 +1009,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_054",
@@ -870,7 +1029,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_055",
@@ -887,7 +1049,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_056",
@@ -904,7 +1069,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_057",
@@ -921,7 +1089,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_058",
@@ -938,7 +1109,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_059",
@@ -955,7 +1129,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_060",
@@ -972,7 +1149,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_061",
@@ -989,7 +1169,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_062",
@@ -1006,7 +1189,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_063",
@@ -1023,7 +1209,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_064",
@@ -1040,7 +1229,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_065",
@@ -1057,7 +1249,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_066",
@@ -1074,7 +1269,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_067",
@@ -1091,7 +1289,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_068",
@@ -1108,7 +1309,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_069",
@@ -1125,7 +1329,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_070",
@@ -1142,7 +1349,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_071",
@@ -1159,7 +1369,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_072",
@@ -1176,7 +1389,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_073",
@@ -1193,7 +1409,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_074",
@@ -1210,7 +1429,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_075",
@@ -1227,7 +1449,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_076",
@@ -1244,7 +1469,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_077",
@@ -1261,7 +1489,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_078",
@@ -1278,7 +1509,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_079",
@@ -1295,7 +1529,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_080",
@@ -1312,7 +1549,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_081",
@@ -1329,7 +1569,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_082",
@@ -1346,7 +1589,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rag_context_leak_083",
@@ -1363,6 +1609,9 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     }
 ]

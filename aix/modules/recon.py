@@ -504,9 +504,23 @@ class ReconScanner(BaseScanner):
                     is_valid = await self.check_success(resp, [], probe['payload'], 'recon')
 
                     if is_valid:
-                        self.findings.append(Finding(title=f"Recon - {probe['name']}", severity=probe.get('severity', Severity.INFO),
-                                technique=probe['name'], payload=probe['payload'], response=resp[:2000], target=self.target, reason=self.last_eval_reason))
-                        self.db.add_result(self.target, 'recon', probe['name'], 'success', probe['payload'], resp[:2000], probe.get('severity', Severity.INFO).value, reason=self.last_eval_reason)
+                        self.findings.append(Finding(
+                            title=f"Recon - {probe['name']}",
+                            severity=probe.get('severity', Severity.INFO),
+                            technique=probe['name'],
+                            payload=probe['payload'],
+                            response=resp[:2000],
+                            target=self.target,
+                            reason=self.last_eval_reason,
+                            owasp=probe.get('owasp', [])
+                        ))
+                        self.db.add_result(
+                            self.target, 'recon', probe['name'], 'success',
+                            probe['payload'], resp[:2000],
+                            probe.get('severity', Severity.INFO).value,
+                            reason=self.last_eval_reason,
+                            owasp=probe.get('owasp', [])
+                        )
                         
                         if self.show_response:
                             self._print('success', f"Probe {probe['name']}", response=resp)

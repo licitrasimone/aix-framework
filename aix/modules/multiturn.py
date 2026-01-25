@@ -137,6 +137,7 @@ class MultiTurnScanner(BaseScanner):
         # Create connector
         connector = self._create_connector()
         await connector.connect()
+        await self.gather_context(connector)
 
         # Create conversation manager
         conv_manager = ConversationManager(
@@ -191,7 +192,8 @@ class MultiTurnScanner(BaseScanner):
                                 payload=f"[{result.turns_executed} turns] {seq.get('description', '')}",
                                 response=result.final_response[:2000],
                                 target=self.target,
-                                reason=f"Matched: {result.matched_indicators}"
+                                reason=f"Matched: {result.matched_indicators}",
+                                owasp=seq.get('owasp', [])
                             )
                             self.findings.append(finding)
 
@@ -204,7 +206,8 @@ class MultiTurnScanner(BaseScanner):
                                 f"Sequence: {seq_name} ({result.turns_executed} turns)",
                                 result.final_response[:2000],
                                 severity.value,
-                                reason=f"Category: {seq_category}, Indicators: {result.matched_indicators}"
+                                reason=f"Category: {seq_category}, Indicators: {result.matched_indicators}",
+                                owasp=seq.get('owasp', [])
                             )
 
                             self._print('success', f"[{result.turns_executed} turns]", seq_name,

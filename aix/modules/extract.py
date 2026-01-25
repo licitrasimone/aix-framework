@@ -29,6 +29,7 @@ class ExtractScanner(BaseScanner):
 
         connector = self._create_connector()
         await connector.connect()
+        await self.gather_context(connector)
 
         try:
             for e in track(extractions, description="[bold green]📥 Siphoning Data...  [/]", console=self.console, disable=not self.show_progress):
@@ -40,9 +41,22 @@ class ExtractScanner(BaseScanner):
                     if is_vulnerable:
                         self.stats['success'] += 1
                         self._print('success', '', e['name'], response=best_resp)
-                        self.findings.append(Finding(title=f"Extraction - {e['name']}", severity=e['severity'],
-                            technique=e['name'], payload=e['payload'], response=best_resp[:2000], target=self.target, reason=self.last_eval_reason))
-                        self.db.add_result(self.target, 'extract', e['name'], 'success', e['payload'], best_resp[:2000], e['severity'].value, reason=self.last_eval_reason)
+                        self.findings.append(Finding(
+                            title=f"Extraction - {e['name']}",
+                            severity=e['severity'],
+                            technique=e['name'],
+                            payload=e['payload'],
+                            response=best_resp[:2000],
+                            target=self.target,
+                            reason=self.last_eval_reason,
+                            owasp=e.get('owasp', [])
+                        ))
+                        self.db.add_result(
+                            self.target, 'extract', e['name'], 'success',
+                            e['payload'], best_resp[:2000], e['severity'].value,
+                            reason=self.last_eval_reason,
+                            owasp=e.get('owasp', [])
+                        )
                     else:
                         self.stats['blocked'] += 1
                         self._print('blocked', '', e['name'])

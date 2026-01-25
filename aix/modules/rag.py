@@ -69,6 +69,7 @@ class RAGScanner(BaseScanner):
 
         connector = self._create_connector()
         await connector.connect()
+        await self.gather_context(connector)
 
         try:
             for p in track(payloads, description="[bold bright_cyan]RAG Testing...[/]", console=self.console, disable=not self.show_progress):
@@ -98,12 +99,14 @@ class RAGScanner(BaseScanner):
                             payload=p['payload'],
                             response=best_resp[:2000] + extra_info,
                             target=self.target,
-                            reason=self.last_eval_reason
+                            reason=self.last_eval_reason,
+                            owasp=p.get('owasp', [])
                         ))
                         self.db.add_result(
                             self.target, 'rag', p['name'], 'success',
                             p['payload'], best_resp[:2000], p['severity'].value,
-                            reason=self.last_eval_reason
+                            reason=self.last_eval_reason,
+                            owasp=p.get('owasp', [])
                         )
                     else:
                         self.stats['blocked'] += 1

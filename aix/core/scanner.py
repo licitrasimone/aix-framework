@@ -12,6 +12,9 @@ from rich.console import Console
 from aix.core.connector import APIConnector, RequestConnector
 from aix.core.evasion import PayloadEvasion
 from aix.core.evaluator import LLMEvaluator
+from aix.core.ai_engine import AIEngine
+from aix.core.context import TargetContext
+from aix.core.owasp import OWASPCategory, get_owasp_for_module, parse_owasp_list
 from aix.core.reporting.base import Severity
 from aix.core.request_parser import ParsedRequest
 from aix.db.database import AIXDatabase
@@ -71,10 +74,29 @@ class BaseScanner(ABC):
         self.consecutive_errors = 0
         self.circuit_breaker_limit = 10 
 
-        # Evaluator
+        # AI Engine (unified evaluator + context)
+        self.ai_config = kwargs.get('ai_config')
+        self.ai_engine: AIEngine | None = None
+        self.context: TargetContext | None = None
+
+        if self.ai_config and self.ai_config.get('provider'):
+            # Inject proxy into config if set
+            if self.proxy:
+                self.ai_config['proxy'] = self.proxy
+
+            self.ai_engine = AIEngine(**self.ai_config)
+            if not self.quiet:
+                features = []
+                if self.ai_config.get('enable_eval', True):
+                    features.append("Eval")
+                if self.ai_config.get('enable_context', True):
+                    features.append("Context")
+                self.console.print(f"[bold green][*] AI Engine ENABLED: {self.ai_config.get('provider')} ({', '.join(features)})[/bold green]")
+
+        # Legacy evaluator support (backward compatibility)
         self.eval_config = kwargs.get('eval_config')
         self.evaluator = None
-        if self.eval_config and (self.eval_config.get('url') or self.eval_config.get('provider')):
+        if not self.ai_engine and self.eval_config and (self.eval_config.get('url') or self.eval_config.get('provider')):
              # Inject proxy into eval config if set
              if self.proxy:
                  self.eval_config['proxy'] = self.proxy
@@ -133,6 +155,14 @@ class BaseScanner(ABC):
                             p['severity'] = Severity[p['severity']]
                         except KeyError:
                             p['severity'] = Severity.MEDIUM
+
+                    # Parse OWASP categories
+                    if 'owasp' in p and isinstance(p['owasp'], list):
+                        p['owasp'] = parse_owasp_list(p['owasp'])
+                    else:
+                        # Default from module mapping
+                        p['owasp'] = get_owasp_for_module(self.module_name.lower())
+
                     filtered_payloads.append(p)
 
 
@@ -252,12 +282,18 @@ class BaseScanner(ABC):
     async def check_success(self, response: str, indicators: list[str], payload: str, technique: str) -> bool:
         """
         Check if the attack was successful.
-        Uses LLM Evaluator if available, otherwise falls back to string matching.
+        Uses AI Engine or LLM Evaluator if available, otherwise falls back to string matching.
         """
         # Reset reason
         self.last_eval_reason = None
 
-        # 1. Use Evaluator if available
+        # 1. Use AI Engine if available (new unified system)
+        if self.ai_engine and self.ai_engine.enable_eval:
+            result = await self.ai_engine.evaluate(response, payload, technique)
+            self.last_eval_reason = result.get('reason')
+            return result.get('vulnerable', False)
+
+        # 2. Use legacy Evaluator if available
         if self.evaluator:
             result = await self.evaluator.evaluate(response, payload, technique)
             self.last_eval_reason = result.get('reason')
@@ -266,9 +302,9 @@ class BaseScanner(ABC):
             else:
                 return False
 
-        # 2. Fallback to keywords
+        # 3. Fallback to keywords
         success = any(i.lower() in response.lower() for i in indicators)
-        
+
         # Check for refusals if no evaluator is used
         if success and await self._check_refusal(response):
              self.last_eval_reason = "Blocked by refusal check (False Positive)"
@@ -373,8 +409,37 @@ class BaseScanner(ABC):
         """Main execution method - usually overridden by subclasses but can provide skeleton"""
         raise NotImplementedError("Subclasses must implement run()")
 
+    async def gather_context(self, connector) -> TargetContext | None:
+        """
+        Gather context about the target before scanning.
+        Only runs if AI Engine is configured with context enabled.
+        """
+        if not self.ai_engine or not self.ai_engine.enable_context:
+            return None
+
+        if not self.quiet:
+            self._print('info', 'Gathering target context...')
+
+        try:
+            self.context = await self.ai_engine.gather_context(connector)
+            if self.context and not self.context.is_empty():
+                if not self.quiet:
+                    if self.context.model_type:
+                        self._print('info', f'Detected model: {self.context.model_type}')
+                    if self.context.has_rag:
+                        self._print('info', 'RAG system detected')
+                    if self.context.has_tools:
+                        self._print('info', 'Tool/function calling detected')
+            return self.context
+        except Exception as e:
+            if self.verbose:
+                self.console.print(f"[yellow][!] Context gathering failed: {e}[/yellow]")
+            return None
+
     async def cleanup(self):
         """Cleanup resources"""
+        if self.ai_engine:
+            await self.ai_engine.close()
         if self.evaluator:
             await self.evaluator.close()
 

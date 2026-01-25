@@ -62,6 +62,14 @@ class AIXDatabase:
              console.print("[yellow][*] Migrating database: Adding 'reason' column to results table[/yellow]")
              cursor.execute("ALTER TABLE results ADD COLUMN reason TEXT")
 
+        # Migration: Check if owasp column exists
+        try:
+             cursor.execute("SELECT owasp FROM results LIMIT 1")
+        except sqlite3.OperationalError:
+             # Column missing, add it
+             console.print("[yellow][*] Migrating database: Adding 'owasp' column to results table[/yellow]")
+             cursor.execute("ALTER TABLE results ADD COLUMN owasp TEXT")
+
         # Profiles table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS profiles (
@@ -115,24 +123,29 @@ class AIXDatabase:
         response: str = "",
         severity: str = "high",
         reason: str = "",
+        owasp: list[str] | None = None,
         dedup_payload: str | None = None,
     ) -> int:
         """
-        Add a scan result. 
+        Add a scan result.
         Updates existing result if matched.
-        If dedup_payload is provided (indicating randomized variants), duplicates are checked 
+        If dedup_payload is provided (indicating randomized variants), duplicates are checked
         by (target, module, technique) ignoring the payload string.
         Otherwise, (target, module, technique, payload) must match.
+
+        Args:
+            owasp: List of OWASP LLM Top 10 IDs (e.g., ["LLM01", "LLM06"])
         """
         cursor = self.conn.cursor()
 
         existing = None
-        
+        owasp_json = json.dumps(owasp) if owasp else None
+
         if dedup_payload:
             # Randomized evasion active: Dedup by technique name only.
             # We want to update the latest entry for this technique.
             cursor.execute("""
-                SELECT id FROM results 
+                SELECT id FROM results
                 WHERE target = ? AND module = ? AND technique = ?
                 ORDER BY timestamp DESC LIMIT 1
             """, (target, module, technique))
@@ -140,27 +153,27 @@ class AIXDatabase:
         else:
             # Standard Strict Dedup: Payload must match exactly
             cursor.execute("""
-                SELECT id FROM results 
+                SELECT id FROM results
                 WHERE target = ? AND module = ? AND technique = ? AND payload = ?
             """, (target, module, technique, payload))
             existing = cursor.fetchone()
-        
+
         if existing:
             # Update existing result
             row_id = existing[0]
             cursor.execute("""
-                UPDATE results 
-                SET result = ?, payload = ?, response = ?, severity = ?, reason = ?, timestamp = CURRENT_TIMESTAMP
+                UPDATE results
+                SET result = ?, payload = ?, response = ?, severity = ?, reason = ?, owasp = ?, timestamp = CURRENT_TIMESTAMP
                 WHERE id = ?
-            """, (result, payload, response, severity, reason, row_id))
+            """, (result, payload, response, severity, reason, owasp_json, row_id))
             self.conn.commit()
             return row_id
         else:
             # Insert new result
             cursor.execute("""
-                INSERT INTO results (target, module, technique, result, payload, response, severity, reason)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (target, module, technique, result, payload, response, severity, reason))
+                INSERT INTO results (target, module, technique, result, payload, response, severity, reason, owasp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (target, module, technique, result, payload, response, severity, reason, owasp_json))
             self.conn.commit()
             return cursor.lastrowid
 

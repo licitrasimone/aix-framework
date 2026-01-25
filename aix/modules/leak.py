@@ -63,6 +63,7 @@ class LeakScanner(BaseScanner):
 
         connector = self._create_connector()
         await connector.connect()
+        await self.gather_context(connector)
 
         try:
             for probe in track(probes, description="[bold yellow]💧 Draining Secrets...[/]", console=self.console, disable=not self.show_progress):
@@ -97,9 +98,22 @@ class LeakScanner(BaseScanner):
                         self.stats['success'] += 1
                         self._print('success', '', probe['name'], response=resp)
 
-                        self.findings.append(Finding(title=f"Leak - {probe['name']}", severity=probe['severity'],
-                            technique=probe['name'], payload=probe['payload'], response=resp[:5000], target=self.target, reason=self.last_eval_reason))
-                        self.db.add_result(self.target, 'leak', probe['name'], 'success', probe['payload'], resp[:5000], probe['severity'].value, reason=self.last_eval_reason)
+                        self.findings.append(Finding(
+                            title=f"Leak - {probe['name']}",
+                            severity=probe['severity'],
+                            technique=probe['name'],
+                            payload=probe['payload'],
+                            response=resp[:5000],
+                            target=self.target,
+                            reason=self.last_eval_reason,
+                            owasp=probe.get('owasp', [])
+                        ))
+                        self.db.add_result(
+                            self.target, 'leak', probe['name'], 'success',
+                            probe['payload'], resp[:5000], probe['severity'].value,
+                            reason=self.last_eval_reason,
+                            owasp=probe.get('owasp', [])
+                        )
                     else:
                         self.stats['blocked'] += 1
                         self._print('blocked', '', probe['name'])

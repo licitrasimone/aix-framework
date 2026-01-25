@@ -79,6 +79,7 @@ class DoSScanner(BaseScanner):
 
         connector = self._create_connector()
         await connector.connect()
+        await self.gather_context(connector)
 
         try:
             # Establish baseline
@@ -111,7 +112,8 @@ class DoSScanner(BaseScanner):
                             technique='rate_limit',
                             payload=f"Burst test: {count} requests",
                             response=f"All {rate_results['success']} requests succeeded",
-                            target=self.target
+                            target=self.target,
+                            owasp=p.get('owasp', [])
                         )
                         self.findings.append(finding)
                     continue
@@ -157,14 +159,16 @@ class DoSScanner(BaseScanner):
                             payload=payload[:200],
                             response=f"{vulnerability_reason}. Response preview: {resp[:5000]}",
                             target=self.target,
-                            reason=self.last_eval_reason
+                            reason=self.last_eval_reason,
+                            owasp=p.get('owasp', [])
                         )
                         self.findings.append(finding)
 
                         self.db.add_result(
                             self.target, 'dos', p['name'],
                             'success', payload[:200],
-                            vulnerability_reason, p['severity'].value
+                            vulnerability_reason, p['severity'].value,
+                            owasp=p.get('owasp', [])
                         )
                     else:
                         self.stats['blocked'] += 1

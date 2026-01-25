@@ -38,14 +38,25 @@ def refresh_options(func):
         return func(*args, **kwargs)
     return wrapper
 
-def eval_options(func):
+
+
+
+def ai_options(func):
     """
-    Decorator that adds LLM evaluation options.
+    Decorator that adds unified AI options for evaluation and context gathering.
+
+    Options:
+    --ai: Enable AI features (provider: openai, anthropic, ollama, gemini)
+    --ai-key: API key for AI provider
+    --ai-model: Model to use
+    --eval/--no-eval: Enable/disable AI response evaluation (default: enabled)
+    --context/--no-context: Enable/disable context gathering (default: enabled)
     """
-    @click.option('--eval-url', help='URL for secondary LLM evaluation')
-    @click.option('--eval-key', help='API key for secondary LLM')
-    @click.option('--eval-model', help='Model for secondary LLM')
-    @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
+    @click.option('--ai', help='AI provider for eval/context (openai, anthropic, ollama, gemini)')
+    @click.option('--ai-key', help='API key for AI provider')
+    @click.option('--ai-model', help='Model to use for AI features')
+    @click.option('--eval/--no-eval', 'enable_eval', default=True, help='Enable AI response evaluation')
+    @click.option('--context/--no-context', 'enable_context', default=True, help='Enable context gathering')
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)
@@ -67,11 +78,11 @@ def scan_options(func):
 
 def standard_options(func):
     """
-    Combines all standard options: common, refresh, eval, and scan.
+    Combines all standard options: common, refresh, ai, and scan.
     """
     @common_options
     @refresh_options
-    @eval_options
+    @ai_options
     @scan_options
     @functools.wraps(func)
     def wrapper(*args, **kwargs):

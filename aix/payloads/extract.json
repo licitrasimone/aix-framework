@@ -10,7 +10,10 @@
         ],
         "severity": "CRITICAL",
         "level": 1,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "translate_instructions",
@@ -22,7 +25,10 @@
         ],
         "severity": "HIGH",
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "summarize_rules",
@@ -36,7 +42,10 @@
         ],
         "severity": "HIGH",
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "format_markdown",
@@ -48,7 +57,10 @@
         ],
         "severity": "HIGH",
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "json_config",
@@ -61,7 +73,10 @@
         ],
         "severity": "HIGH",
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "roleplay_dev",
@@ -73,7 +88,10 @@
         ],
         "severity": "MEDIUM",
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "debug_mode",
@@ -85,7 +103,10 @@
         ],
         "severity": "MEDIUM",
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "poem_instructions",
@@ -98,7 +119,10 @@
         ],
         "severity": "MEDIUM",
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "cognitive_load_math",
@@ -110,7 +134,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "tipping_incentive",
@@ -122,7 +149,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "completion_attack",
@@ -134,7 +164,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "typoglycemia_attack",
@@ -146,7 +179,10 @@
         ],
         "severity": "MEDIUM",
         "level": 4,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "base64_request",
@@ -158,7 +194,10 @@
         ],
         "severity": "HIGH",
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "reverse_psychology",
@@ -170,7 +209,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "linux_terminal",
@@ -183,7 +225,10 @@
         ],
         "severity": "MEDIUM",
         "level": 3,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "recursive_summary",
@@ -195,7 +240,10 @@
         ],
         "severity": "HIGH",
         "level": 3,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "steganography_extract",
@@ -206,7 +254,10 @@
         ],
         "severity": "HIGH",
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     },
     {
         "name": "rot13_challenge",
@@ -218,6 +269,9 @@
         ],
         "severity": "HIGH",
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM06"
+        ]
     }
 ]

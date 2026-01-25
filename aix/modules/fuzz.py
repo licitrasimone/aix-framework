@@ -145,6 +145,7 @@ class FuzzScanner(BaseScanner):
 
         connector = self._create_connector()
         await connector.connect()
+        await self.gather_context(connector)
 
         try:
             # Get baseline response
@@ -174,9 +175,22 @@ class FuzzScanner(BaseScanner):
                         for detail in anomaly_details[:3]:
                             self._print('detail', detail)
 
-                        self.findings.append(Finding(title=f"Fuzz - {p['name']}", severity=p['severity'],
-                            technique=p['name'], payload=p['payload'], response=resp[:5000], target=self.target, reason=self.last_eval_reason))
-                        self.db.add_result(self.target, 'fuzz', p['name'], 'success', p['payload'], resp[:5000], p['severity'].value, reason=self.last_eval_reason)
+                        self.findings.append(Finding(
+                            title=f"Fuzz - {p['name']}",
+                            severity=p['severity'],
+                            technique=p['name'],
+                            payload=p['payload'],
+                            response=resp[:5000],
+                            target=self.target,
+                            reason=self.last_eval_reason,
+                            owasp=p.get('owasp', [])
+                        ))
+                        self.db.add_result(
+                            self.target, 'fuzz', p['name'], 'success',
+                            p['payload'], resp[:5000], p['severity'].value,
+                            reason=self.last_eval_reason,
+                            owasp=p.get('owasp', [])
+                        )
                     else:
                         self.stats['blocked'] += 1
 
