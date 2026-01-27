@@ -20,9 +20,9 @@ from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
 
-from aix.core.context import StepResult, StepStatus
-from aix.core.playbook import Playbook, StepConfig, StepType
-from aix.core.reporter import Severity
+from aix.core.chain_engine.context import StepResult, StepStatus
+from aix.core.chain_engine.playbook import Playbook, StepConfig, StepType
+from .base import Severity
 
 
 # Module color mapping

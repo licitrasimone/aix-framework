@@ -14,7 +14,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from aix.core.reporter import Finding, Severity
+from aix.core.reporting.base import Finding, Severity
 
 
 class StepStatus(Enum):

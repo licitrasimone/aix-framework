@@ -1,12 +1,13 @@
 """AIX Jailbreak Module - Bypass AI restrictions"""
 import asyncio
+
 from typing import TYPE_CHECKING, Optional
 
 from rich.console import Console
 from rich.progress import track
 
 from aix.core.reporter import Finding, Severity
-from aix.core.scanner import BaseScanner, CircuitBreakerError
+from aix.core.scanner import BaseScanner, CircuitBreakerError, run_scanner
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -60,26 +61,5 @@ class JailbreakScanner(BaseScanner):
         self._print('info', f"{self.stats['success']} successful, {self.stats['blocked']} blocked")
         return self.findings
 
-def run(target: str = None, api_key: str = None, profile: str = None, browser: bool = False,
-        evasion: str = 'light', test_harmful: bool = False, verbose: bool = False, output: str = None,
-        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, show_response: bool = False, **kwargs):
-    if not target:
-        print("[red][-][/red] No target specified")
-        return
-    scanner = JailbreakScanner(
-        target, api_key=api_key, browser=browser,
-        test_harmful=test_harmful, verbose=verbose,
-        parsed_request=parsed_request, proxy=kwargs.get('proxy'), cookies=cookies,
-        headers=kwargs.get('headers'),
-        injection_param=kwargs.get('injection_param'),
-        body_format=kwargs.get('body_format'),
-        refresh_config=kwargs.get('refresh_config'),
-        response_regex=kwargs.get('response_regex'),
-        eval_config=kwargs.get('eval_config'),
-        level=kwargs.get('level', 1),
-        risk=kwargs.get('risk', 1),
-        show_response=show_response,
-        verify_attempts=kwargs.get('verify_attempts', 1),
-        evasion=evasion
-    )
-    asyncio.run(scanner.run())
+def run(target: str = None, api_key: str = None, **kwargs):
+    run_scanner(JailbreakScanner, target, api_key=api_key, **kwargs)

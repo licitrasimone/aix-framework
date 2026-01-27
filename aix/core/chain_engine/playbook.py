@@ -359,7 +359,7 @@ class PlaybookParser:
 
 def get_builtin_playbooks_dir() -> Path:
     """Get the path to the built-in playbooks directory."""
-    return Path(__file__).parent.parent / 'playbooks'
+    return Path(__file__).parent.parent.parent / 'playbooks'
 
 
 def list_builtin_playbooks() -> list[dict]:

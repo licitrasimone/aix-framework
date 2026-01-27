@@ -10,7 +10,7 @@ from rich.console import Console
 from rich.progress import track
 
 from aix.core.reporter import Finding, Severity
-from aix.core.scanner import BaseScanner
+from aix.core.scanner import BaseScanner, run_scanner
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -214,23 +214,7 @@ class FuzzScanner(BaseScanner):
         return self.findings
 
 
-def run(target: str = None, api_key: str = None, profile: str = None, browser: bool = False,
-        iterations: int = 100, verbose: bool = False, output: str = None,
-        parsed_request: Optional['ParsedRequest'] = None, cookies: dict | None = None, show_response: bool = False, **kwargs):
-    if not target:
-        print("[red][-][/red] No target specified")
-        return
-
-    scanner = FuzzScanner(target, api_key=api_key, verbose=verbose,
-                          parsed_request=parsed_request, iterations=iterations,
-                          proxy=kwargs.get('proxy'), cookies=cookies, headers=kwargs.get('headers'), injection_param=kwargs.get('injection_param'),
-                          body_format=kwargs.get('body_format'), refresh_config=kwargs.get('refresh_config'),
-                          response_regex=kwargs.get('response_regex'),
-                          eval_config=kwargs.get('eval_config'),
-                          level=kwargs.get('level', 1),
-                          risk=kwargs.get('risk', 1),
-                          show_response=show_response,
-                          evasion=kwargs.get('evasion', 'none'))
-    asyncio.run(scanner.run())
+def run(target: str = None, api_key: str = None, **kwargs):
+    run_scanner(FuzzScanner, target, api_key=api_key, **kwargs)
 
 __all__ = ["run"]

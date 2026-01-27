@@ -17,12 +17,12 @@ from typing import Any, Callable, TYPE_CHECKING
 
 from rich.console import Console
 
-from aix.core.context import ChainContext, StepResult, StepStatus
-from aix.core.playbook import Playbook, StepConfig, StepType, StepAction
-from aix.core.reporter import Finding, Severity
+from .context import ChainContext, StepResult, StepStatus
+from .playbook import Playbook, StepConfig, StepType, StepAction
+from aix.core.reporting.base import Finding, Severity
 
 if TYPE_CHECKING:
-    from aix.core.visualizer import LiveChainVisualizer
+    from aix.core.reporting.visualizer import LiveChainVisualizer
 
 console = Console()
 
