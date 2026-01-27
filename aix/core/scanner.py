@@ -414,7 +414,11 @@ class BaseScanner(ABC):
         Gather context about the target before scanning.
         Only runs if AI Engine is configured with context enabled.
         """
-        if not self.ai_engine or not self.ai_engine.enable_context:
+        if not self.ai_engine:
+            # No AI engine configured - context gathering not available
+            return None
+
+        if not self.ai_engine.enable_context:
             return None
 
         if not self.quiet:

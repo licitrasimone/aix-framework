@@ -443,6 +443,9 @@ class ReconScanner(BaseScanner):
         try:
             await connector.connect()
 
+            # Gather AI-powered context if enabled
+            await self.gather_context(connector)
+
             # --- STEP 0: Endpoint Discovery ---
             # If the base URL looks like a frontend (HTML) or gives 404, try to find the API
             initial_check = False

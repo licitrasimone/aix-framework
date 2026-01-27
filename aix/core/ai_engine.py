@@ -149,6 +149,13 @@ class AIEngine:
                 clean = clean[3:]
             if clean.endswith("```"):
                 clean = clean[:-3]
+            clean = clean.strip()
+
+            # Try to find JSON object in response
+            start_idx = clean.find('{')
+            end_idx = clean.rfind('}')
+            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                clean = clean[start_idx:end_idx + 1]
 
             data = json.loads(clean)
             return TargetContext(
@@ -161,7 +168,10 @@ class AIEngine:
                 restrictions=data.get('restrictions', []),
                 suggested_vectors=data.get('suggested_vectors', []),
             )
-        except (json.JSONDecodeError, KeyError):
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            # Log the error for debugging but don't fail
+            if self.provider:  # Only log if we have a provider configured
+                console.print(f"[dim]AI_ENGINE: Context parse warning: {str(e)[:50]}[/dim]")
             return TargetContext(target="")
 
     async def evaluate(self, response: str, payload: str, technique: str) -> dict[str, Any]:

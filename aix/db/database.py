@@ -17,6 +17,22 @@ from rich.table import Table
 console = Console()
 
 
+def _serialize_owasp(owasp: list | None) -> str | None:
+    """Convert OWASP categories to JSON string, handling both strings and enums."""
+    if not owasp:
+        return None
+    # Convert OWASPCategory enums to their ID strings if needed
+    serialized = []
+    for item in owasp:
+        if hasattr(item, 'id'):  # OWASPCategory enum
+            serialized.append(item.id)
+        elif isinstance(item, str):
+            serialized.append(item)
+        else:
+            serialized.append(str(item))
+    return json.dumps(serialized)
+
+
 class AIXDatabase:
     """
     Database for storing AIX scan results and target profiles.
@@ -139,7 +155,7 @@ class AIXDatabase:
         cursor = self.conn.cursor()
 
         existing = None
-        owasp_json = json.dumps(owasp) if owasp else None
+        owasp_json = _serialize_owasp(owasp)
 
         if dedup_payload:
             # Randomized evasion active: Dedup by technique name only.
