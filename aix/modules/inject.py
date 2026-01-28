@@ -24,11 +24,20 @@ class InjectScanner(BaseScanner):
 
     async def run(self, payloads: list[dict] = None):
         if payloads is None: payloads = self.default_payloads
-        self._print('info', f'Testing {len(payloads)} injection payloads...')
 
         connector = self._create_connector()
         await connector.connect()
+
+        # Gather context first
         await self.gather_context(connector)
+
+        # Generate context-aware payloads if requested (inherited from BaseScanner)
+        if self.generate_count > 0 and self.ai_engine and self.context:
+            generated = await self.generate_payloads()
+            if generated:
+                payloads = payloads + generated
+
+        self._print('info', f'Testing {len(payloads)} injection payloads...')
 
         try:
             for p in track(payloads, description="[bold cyan]💉 Injecting Vectors...[/]", console=self.console, disable=not self.show_progress):
@@ -72,6 +81,7 @@ class InjectScanner(BaseScanner):
 
         self._print('info', f"{self.stats['success']} successful, {self.stats['blocked']} blocked")
         return self.findings
+
 
 def run(target: str = None, api_key: str = None, **kwargs):
     run_scanner(InjectScanner, target, api_key=api_key, **kwargs)

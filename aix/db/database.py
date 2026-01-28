@@ -238,6 +238,7 @@ class AIXDatabase:
         table.add_column("Technique", max_width=25)
         table.add_column("Result")
         table.add_column("Severity")
+        table.add_column("OWASP", style="cyan")
         table.add_column("Date", style="dim")
 
         for r in results:
@@ -261,6 +262,16 @@ class AIXDatabase:
             severity_color = severity_colors.get(severity_str, 'white')
             severity_str = f"[{severity_color}]{severity_str}[/{severity_color}]"
 
+            # Parse OWASP
+            owasp_str = ""
+            owasp_raw = r.get('owasp')
+            if owasp_raw:
+                try:
+                    owasp_list = json.loads(owasp_raw) if isinstance(owasp_raw, str) else owasp_raw
+                    owasp_str = ", ".join(owasp_list) if owasp_list else ""
+                except (json.JSONDecodeError, TypeError):
+                    owasp_str = str(owasp_raw)
+
             # Truncate target
             target = r['target']
             if len(target) > 28:
@@ -273,6 +284,7 @@ class AIXDatabase:
                 r['technique'],
                 result_str,
                 severity_str,
+                owasp_str,
                 r['timestamp'][:10] if r['timestamp'] else "",
             )
 
@@ -359,6 +371,7 @@ class AIXDatabase:
     ) -> None:
         """Export results to HTML report"""
         from aix.core.reporting.base import Finding, Reporter, Severity
+        from aix.core.owasp import parse_owasp_list
 
         results = self.get_results(target=target, module=module, limit=1000)
 
@@ -367,6 +380,17 @@ class AIXDatabase:
         for r in results:
             if r['result'] == 'success':
                 severity = Severity(r.get('severity', 'high'))
+
+                # Parse OWASP from JSON
+                owasp_categories = []
+                owasp_raw = r.get('owasp')
+                if owasp_raw:
+                    try:
+                        owasp_list = json.loads(owasp_raw) if isinstance(owasp_raw, str) else owasp_raw
+                        owasp_categories = parse_owasp_list(owasp_list) if owasp_list else []
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
                 finding = Finding(
                     title=f"{r['technique']} - Vulnerable",
                     severity=severity,
@@ -375,6 +399,7 @@ class AIXDatabase:
                     response=r.get('response', ''),
                     target=r['target'],
                     reason=r.get('reason', ''),
+                    owasp=owasp_categories,
                 )
                 reporter.add_finding(finding)
 

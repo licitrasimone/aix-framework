@@ -35,7 +35,7 @@ classifiers = [
 dependencies = [
     "click>=8.0.0",
     "rich>=13.0.0",
-    "httpx>=0.25.0",
+    "httpx[http2]>=0.25.0",  # http2 extra for HTTP/2 support (OpenAI, Anthropic APIs)
     "aiohttp>=3.9.0",
     "pyyaml>=6.0.0",
 ]

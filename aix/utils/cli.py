@@ -51,12 +51,14 @@ def ai_options(func):
     --ai-model: Model to use
     --no-eval: Disable AI response evaluation (enabled by default with --ai)
     --no-context: Disable context gathering (enabled by default with --ai)
+    --generate: Generate N context-aware payloads using AI
     """
     @click.option('--ai', help='AI provider for eval/context (openai, anthropic, ollama, gemini)')
     @click.option('--ai-key', help='API key for AI provider')
     @click.option('--ai-model', help='Model to use for AI features')
     @click.option('--no-eval', 'no_eval', is_flag=True, default=False, help='Disable AI response evaluation')
     @click.option('--no-context', 'no_context', is_flag=True, default=False, help='Disable AI context gathering')
+    @click.option('--generate', '-g', type=int, default=0, help='Generate N context-aware payloads using AI (requires --ai)')
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)

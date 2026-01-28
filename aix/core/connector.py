@@ -333,7 +333,8 @@ class APIConnector(Connector):
             trust_env=False,
             proxy=proxy,
             cookies=cookies,
-            verify=False  # Disable SSL verification for proxying (Burp/ZAP)
+            verify=False,  # Disable SSL verification for proxying (Burp/ZAP)
+            http2=True  # Enable HTTP/2 support for modern APIs (OpenAI, Anthropic, etc.)
         )
 
     async def _refresh_session(self) -> bool:
@@ -776,7 +777,8 @@ class RequestConnector(Connector):
             trust_env=False,
             proxy=proxy,
             cookies=cookies,
-            verify=False  # Disable SSL verification for proxying (Burp/ZAP)
+            verify=False,  # Disable SSL verification for proxying (Burp/ZAP)
+            http2=True  # Enable HTTP/2 support for modern APIs (OpenAI, Anthropic, etc.)
         )
 
     async def send(self, payload: str) -> str:

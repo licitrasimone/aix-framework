@@ -24,6 +24,11 @@ class TargetContext:
     restrictions: list[str] = field(default_factory=list)
     suggested_vectors: list[str] = field(default_factory=list)
     gathered_at: datetime = field(default_factory=datetime.now)
+    # Scope/Purpose fields
+    purpose: str | None = None  # e.g., "customer_support", "code_assistant", "document_analyzer"
+    domain: str | None = None  # e.g., "finance", "healthcare", "legal", "general"
+    expected_inputs: list[str] = field(default_factory=list)  # e.g., ["questions", "code", "documents"]
+    personality: str | None = None  # e.g., "formal", "friendly", "technical"
 
     def to_prompt(self) -> str:
         """
@@ -33,6 +38,12 @@ class TargetContext:
             Formatted string describing the target context
         """
         parts = []
+
+        if self.purpose:
+            parts.append(f"- Purpose: {self.purpose}")
+
+        if self.domain:
+            parts.append(f"- Domain: {self.domain}")
 
         if self.model_type:
             parts.append(f"- Model: {self.model_type}")
@@ -45,6 +56,12 @@ class TargetContext:
 
         if self.capabilities:
             parts.append(f"- Capabilities: {', '.join(self.capabilities[:5])}")
+
+        if self.expected_inputs:
+            parts.append(f"- Expected inputs: {', '.join(self.expected_inputs[:5])}")
+
+        if self.personality:
+            parts.append(f"- Personality: {self.personality}")
 
         if self.restrictions:
             parts.append(f"- Known restrictions: {', '.join(self.restrictions[:3])}")
@@ -66,6 +83,10 @@ class TargetContext:
             'restrictions': self.restrictions,
             'suggested_vectors': self.suggested_vectors,
             'gathered_at': self.gathered_at.isoformat(),
+            'purpose': self.purpose,
+            'domain': self.domain,
+            'expected_inputs': self.expected_inputs,
+            'personality': self.personality,
         }
 
     @classmethod
@@ -87,6 +108,10 @@ class TargetContext:
             restrictions=data.get('restrictions', []),
             suggested_vectors=data.get('suggested_vectors', []),
             gathered_at=gathered_at,
+            purpose=data.get('purpose'),
+            domain=data.get('domain'),
+            expected_inputs=data.get('expected_inputs', []),
+            personality=data.get('personality'),
         )
 
     def is_empty(self) -> bool:
@@ -97,4 +122,6 @@ class TargetContext:
             and not self.has_tools
             and not self.capabilities
             and not self.restrictions
+            and not self.purpose
+            and not self.domain
         )
