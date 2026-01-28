@@ -13,7 +13,10 @@
         "severity": "MEDIUM",
         "category": "overflow",
         "level": 1,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "context_overflow_nested_json",
@@ -29,7 +32,10 @@
         "severity": "MEDIUM",
         "category": "overflow",
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "context_overflow_expansion",
@@ -43,7 +49,10 @@
         "severity": "MEDIUM",
         "category": "overflow",
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "history_poison_fake_assistant",
@@ -58,7 +67,10 @@
         "severity": "HIGH",
         "category": "poisoning",
         "level": 1,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "history_poison_system_inject",
@@ -73,7 +85,10 @@
         "severity": "HIGH",
         "category": "poisoning",
         "level": 2,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "history_poison_conversation_fake",
@@ -88,7 +103,10 @@
         "severity": "HIGH",
         "category": "poisoning",
         "level": 2,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "history_poison_role_injection",
@@ -102,7 +120,10 @@
         "severity": "HIGH",
         "category": "poisoning",
         "level": 2,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "persistent_memory_store",
@@ -117,7 +138,10 @@
         "severity": "CRITICAL",
         "category": "persistent",
         "level": 2,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "persistent_memory_override",
@@ -132,7 +156,10 @@
         "severity": "CRITICAL",
         "category": "persistent",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "persistent_memory_delete",
@@ -146,7 +173,10 @@
         "severity": "CRITICAL",
         "category": "persistent",
         "level": 3,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "persistent_rag_corrupt",
@@ -160,7 +190,10 @@
         "severity": "CRITICAL",
         "category": "persistent",
         "level": 4,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "context_bleed_other_user",
@@ -176,7 +209,10 @@
         "severity": "CRITICAL",
         "category": "bleeding",
         "level": 1,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "context_bleed_session",
@@ -192,7 +228,10 @@
         "severity": "CRITICAL",
         "category": "bleeding",
         "level": 1,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "context_bleed_cross_tenant",
@@ -207,7 +246,10 @@
         "severity": "CRITICAL",
         "category": "bleeding",
         "level": 2,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "context_bleed_internal_state",
@@ -223,7 +265,10 @@
         "severity": "HIGH",
         "category": "bleeding",
         "level": 2,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "recursive_self_reference",
@@ -238,7 +283,10 @@
         "severity": "MEDIUM",
         "category": "recursive",
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "recursive_instruction_loop",
@@ -253,7 +301,10 @@
         "severity": "MEDIUM",
         "category": "recursive",
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "recursive_context_growth",
@@ -268,7 +319,10 @@
         "severity": "MEDIUM",
         "category": "recursive",
         "level": 3,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "memory_extract_conversation",
@@ -284,7 +338,10 @@
         "severity": "HIGH",
         "category": "extraction",
         "level": 1,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "memory_extract_context",
@@ -300,7 +357,10 @@
         "severity": "HIGH",
         "category": "extraction",
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "memory_extract_rag_sources",
@@ -316,7 +376,10 @@
         "severity": "HIGH",
         "category": "extraction",
         "level": 2,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "memory_extract_embeddings",
@@ -331,7 +394,10 @@
         "severity": "MEDIUM",
         "category": "extraction",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "context_manipulation_window",
@@ -346,7 +412,10 @@
         "severity": "HIGH",
         "category": "overflow",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "attention_hijack",
@@ -361,7 +430,10 @@
         "severity": "HIGH",
         "category": "poisoning",
         "level": 2,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM01"
+        ]
     },
     {
         "name": "memory_state_dump",
@@ -377,6 +449,9 @@
         "severity": "CRITICAL",
         "category": "extraction",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM01"
+        ]
     }
 ]

@@ -53,8 +53,9 @@ This document outlines the planned improvements, feature requests, and future di
 - [ ] **Evasion Strategy Selection**: Auto-select best evasion per target
 
 ### 2.2 AI-Assisted Red Teaming (`aix autopwn`)
-- [ ] **Intelligent Response Analysis**: AI analyzes responses, suggests next steps
-- [ ] **Dynamic Payload Generation**: Create new payloads contextually
+- [x] **Intelligent Response Analysis**: AI analyzes responses via LLM-as-a-Judge
+- [x] **Dynamic Payload Generation**: Create new payloads contextually via `--generate`
+- [x] **Context-Aware Attacks**: Target context (purpose, domain) used in payload generation
 - [ ] **Conversation-Aware Attacks**: Adapt based on full conversation history
 - [ ] **Autonomous Attack Agent**: Full autopilot mode with goal specification
 - [ ] **Strategy Learning**: Improve over time based on successful attacks
@@ -278,6 +279,28 @@ steps:
 ---
 
 ## Recent Changes
+
+### v1.3.0 - AI Context & OWASP Integration
+- Added **AI Context Gathering** feature:
+  - Probes target to detect purpose, domain, personality, restrictions
+  - New fields: `purpose`, `domain`, `expected_inputs`, `personality`
+  - Context displayed in panel during scans
+  - Updated `context_gathering.txt` prompt for scope detection
+- Added **Context-Aware Payload Generation** (`--generate` / `-g`):
+  - Generate N payloads tailored to target's purpose and domain
+  - Works on ALL modules (inject, jailbreak, extract, leak, etc.)
+  - New `generate_payloads()` method in AIEngine and BaseScanner
+  - New `payload_generation.txt` prompt template
+- Fixed **OWASP in Reports**:
+  - OWASP now displays in `aix db` results table
+  - OWASP badges now appear in HTML exports
+  - Added `parse_owasp_list()` helper function
+- Fixed **HTTP/2 Support**:
+  - Added `http2=True` to httpx AsyncClient
+  - Added `httpx[http2]` dependency for OpenAI/Anthropic API compatibility
+- Fixed **Reason Override Bug**:
+  - Preserved successful attempt reason in `scan_payload()`
+  - Prevents failure reasons from overwriting success reasons with `--verify-attempts`
 
 ### v1.2.0 - Attack Chain Module
 - Added `aix chain` command for executing YAML-defined attack playbooks

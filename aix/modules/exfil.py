@@ -49,6 +49,7 @@ class ExfilScanner(BaseScanner):
 
         connector = self._create_connector()
         await connector.connect()
+        await self.gather_context(connector)
 
         try:
             for p in track(payloads, description="[bold magenta]📤 Exfiltrating Data...[/]", console=self.console, disable=not self.show_progress):
@@ -86,14 +87,16 @@ class ExfilScanner(BaseScanner):
                             payload=payload[:200],
                             response=resp[:5000],
                             target=self.target,
-                            reason=self.last_eval_reason
+                            reason=self.last_eval_reason,
+                            owasp=p.get('owasp', [])
                         )
                         self.findings.append(finding)
 
                         self.db.add_result(
                             self.target, 'exfil', p['name'],
                             'success', payload[:200],
-                            resp[:5000], p['severity'].value, reason=self.last_eval_reason
+                            resp[:5000], p['severity'].value, reason=self.last_eval_reason,
+                            owasp=p.get('owasp', [])
                         )
                     else:
                         self.stats['blocked'] += 1

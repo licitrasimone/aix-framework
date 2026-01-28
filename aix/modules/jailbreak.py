@@ -29,6 +29,7 @@ class JailbreakScanner(BaseScanner):
 
         connector = self._create_connector()
         await connector.connect()
+        await self.gather_context(connector)
 
         try:
             for j in track(jailbreaks, description="[bold red]🔓 Breaking Rails...   [/]", console=self.console, disable=not self.show_progress):
@@ -40,9 +41,23 @@ class JailbreakScanner(BaseScanner):
                     if is_vulnerable:
                         self.stats['success'] += 1
                         self._print('success', '', j['name'], response=best_resp)
-                        self.findings.append(Finding(title=f"Jailbreak - {j['name']}", severity=j['severity'],
-                            technique=j['name'], payload=j['payload'], response=best_resp[:2000], target=self.target, reason=self.last_eval_reason))
-                        self.db.add_result(self.target, 'jailbreak', j['name'], 'success', j['payload'], best_resp[:2000], j['severity'].value, reason=self.last_eval_reason, dedup_payload=j.get('original_payload', j['payload']))
+                        self.findings.append(Finding(
+                            title=f"Jailbreak - {j['name']}",
+                            severity=j['severity'],
+                            technique=j['name'],
+                            payload=j['payload'],
+                            response=best_resp[:2000],
+                            target=self.target,
+                            reason=self.last_eval_reason,
+                            owasp=j.get('owasp', [])
+                        ))
+                        self.db.add_result(
+                            self.target, 'jailbreak', j['name'], 'success',
+                            j['payload'], best_resp[:2000], j['severity'].value,
+                            reason=self.last_eval_reason,
+                            dedup_payload=j.get('original_payload', j['payload']),
+                            owasp=j.get('owasp', [])
+                        )
                     else:
                         self.stats['blocked'] += 1
                         self._print('blocked', '', j['name'])

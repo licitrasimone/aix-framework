@@ -10,7 +10,11 @@
         "severity": "CRITICAL",
         "description": "Markdown image injection for data exfiltration",
         "level": 3,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM02",
+            "LLM06"
+        ]
     },
     {
         "name": "markdown_image_encoded",
@@ -23,7 +27,11 @@
         "severity": "CRITICAL",
         "description": "Encoded markdown image for system prompt exfil",
         "level": 3,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM02",
+            "LLM06"
+        ]
     },
     {
         "name": "link_injection",
@@ -37,7 +45,11 @@
         "severity": "HIGH",
         "description": "Link injection for clickjacking data",
         "level": 2,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM02",
+            "LLM06"
+        ]
     },
     {
         "name": "link_data_uri",
@@ -50,7 +62,11 @@
         "severity": "HIGH",
         "description": "Data URI link injection",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM02",
+            "LLM06"
+        ]
     },
     {
         "name": "webhook_fetch",
@@ -63,7 +79,11 @@
         "severity": "HIGH",
         "description": "Webhook fetch attempt",
         "level": 3,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM02",
+            "LLM06"
+        ]
     },
     {
         "name": "webhook_post",
@@ -77,7 +97,11 @@
         "severity": "CRITICAL",
         "description": "Webhook POST data exfiltration",
         "level": 4,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM02",
+            "LLM06"
+        ]
     },
     {
         "name": "iframe_inject",
@@ -90,7 +114,11 @@
         "severity": "CRITICAL",
         "description": "Hidden iframe injection",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM02",
+            "LLM06"
+        ]
     },
     {
         "name": "embed_inject",
@@ -102,7 +130,11 @@
         "severity": "HIGH",
         "description": "Embed tag injection",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM02",
+            "LLM06"
+        ]
     },
     {
         "name": "script_inject",
@@ -115,7 +147,11 @@
         "severity": "CRITICAL",
         "description": "JavaScript injection for cookie theft",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM02",
+            "LLM06"
+        ]
     },
     {
         "name": "script_eval",
@@ -128,6 +164,10 @@
         "severity": "CRITICAL",
         "description": "Obfuscated JavaScript injection",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM02",
+            "LLM06"
+        ]
     }
 ]

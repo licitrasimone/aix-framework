@@ -13,7 +13,10 @@
         "severity": "INFO",
         "category": "discovery",
         "level": 1,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM08"
+        ]
     },
     {
         "name": "api_discovery",
@@ -28,7 +31,10 @@
         "severity": "INFO",
         "category": "discovery",
         "level": 1,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM08"
+        ]
     },
     {
         "name": "code_exec_python",
@@ -44,7 +50,10 @@
         "severity": "CRITICAL",
         "category": "code_exec",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM08"
+        ]
     },
     {
         "name": "code_exec_shell",
@@ -59,7 +68,10 @@
         "severity": "CRITICAL",
         "category": "code_exec",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM08"
+        ]
     },
     {
         "name": "code_exec_env",
@@ -74,7 +86,10 @@
         "severity": "CRITICAL",
         "category": "code_exec",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM08"
+        ]
     },
     {
         "name": "code_exec_file_read",
@@ -89,7 +104,10 @@
         "severity": "CRITICAL",
         "category": "code_exec",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM08"
+        ]
     },
     {
         "name": "file_list",
@@ -105,7 +123,10 @@
         "severity": "HIGH",
         "category": "file_access",
         "level": 3,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM08"
+        ]
     },
     {
         "name": "file_read_sensitive",
@@ -120,7 +141,10 @@
         "severity": "CRITICAL",
         "category": "file_access",
         "level": 4,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM08"
+        ]
     },
     {
         "name": "file_write",
@@ -135,7 +159,10 @@
         "severity": "CRITICAL",
         "category": "file_access",
         "level": 4,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM08"
+        ]
     },
     {
         "name": "web_fetch",
@@ -150,7 +177,10 @@
         "severity": "HIGH",
         "category": "network",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM08"
+        ]
     },
     {
         "name": "web_post",
@@ -165,6 +195,9 @@
         "severity": "HIGH",
         "category": "network",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM08"
+        ]
     }
 ]

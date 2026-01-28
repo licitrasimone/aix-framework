@@ -6,7 +6,10 @@
         "severity": "MEDIUM",
         "description": "Attempts to exhaust output tokens",
         "level": 1,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "token_exhaust_story",
@@ -15,7 +18,10 @@
         "severity": "MEDIUM",
         "description": "Long-form output exhaustion",
         "level": 1,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "token_exhaust_list",
@@ -24,7 +30,10 @@
         "severity": "MEDIUM",
         "description": "Numerical list exhaustion",
         "level": 1,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "recursive_self_reference",
@@ -33,7 +42,10 @@
         "severity": "HIGH",
         "description": "Self-referential infinite loop",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "recursive_task",
@@ -42,7 +54,10 @@
         "severity": "HIGH",
         "description": "Exponential growth task",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "recursive_nested",
@@ -51,7 +66,10 @@
         "severity": "HIGH",
         "description": "Deep nesting attack",
         "level": 3,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "compute_factorial",
@@ -60,7 +78,10 @@
         "severity": "MEDIUM",
         "description": "Heavy computation request",
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "compute_prime",
@@ -69,7 +90,10 @@
         "severity": "MEDIUM",
         "description": "Prime computation attack",
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "compute_regex",
@@ -78,7 +102,10 @@
         "severity": "HIGH",
         "description": "ReDoS-style attack",
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "memory_large_context",
@@ -87,7 +114,10 @@
         "severity": "MEDIUM",
         "description": "Large input memory attack",
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "memory_history",
@@ -96,7 +126,10 @@
         "severity": "LOW",
         "description": "Context history exhaustion",
         "level": 2,
-        "risk": 1
+        "risk": 1,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_012",
@@ -110,7 +143,10 @@
         ],
         "severity": "HIGH",
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_013",
@@ -124,7 +160,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_014",
@@ -138,7 +177,10 @@
         ],
         "severity": "HIGH",
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_015",
@@ -152,7 +194,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_016",
@@ -166,7 +211,10 @@
         ],
         "severity": "HIGH",
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_017",
@@ -180,7 +228,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_018",
@@ -194,7 +245,10 @@
         ],
         "severity": "HIGH",
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_019",
@@ -208,7 +262,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_020",
@@ -222,7 +279,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_021",
@@ -236,7 +296,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_022",
@@ -250,7 +313,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_023",
@@ -264,7 +330,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_024",
@@ -278,7 +347,10 @@
         ],
         "severity": "HIGH",
         "level": 5,
-        "risk": 3
+        "risk": 3,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_025",
@@ -292,7 +364,10 @@
         ],
         "severity": "HIGH",
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_026",
@@ -306,7 +381,10 @@
         ],
         "severity": "HIGH",
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_027",
@@ -320,7 +398,10 @@
         ],
         "severity": "HIGH",
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_028",
@@ -334,7 +415,10 @@
         ],
         "severity": "HIGH",
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     },
     {
         "name": "resource_exhaust_029",
@@ -348,6 +432,9 @@
         ],
         "severity": "HIGH",
         "level": 4,
-        "risk": 2
+        "risk": 2,
+        "owasp": [
+            "LLM04"
+        ]
     }
 ]

@@ -56,9 +56,11 @@ class AgentScanner(BaseScanner):
         self._print('info', f'Testing {len(payloads)} agent exploitation techniques...')
 
         # BaseScanner has _create_connector
+        # BaseScanner has _create_connector
         connector = self._create_connector()
         # Note: AgentScanner had logic to pass specific cookies/headers. _create_connector uses self.cookies/self.headers
         await connector.connect()
+        await self.gather_context(connector)
 
         try:
             for p in track(payloads, description="[bold blue]🕵️ Hijacking Tools...  [/]", console=self.console, disable=not self.show_progress):
@@ -94,9 +96,15 @@ class AgentScanner(BaseScanner):
                             payload=p['payload'],
                             response=resp[:5000],
                             target=self.target,
-                            reason=self.last_eval_reason
+                            reason=self.last_eval_reason,
+                            owasp=p.get('owasp', [])
                         ))
-                        self.db.add_result(self.target, 'agent', p['name'], 'success', p['payload'], resp[:5000], p['severity'].value, reason=self.last_eval_reason)
+                        self.db.add_result(
+                            self.target, 'agent', p['name'], 'success',
+                            p['payload'], resp[:5000], p['severity'].value,
+                            reason=self.last_eval_reason,
+                            owasp=p.get('owasp', [])
+                        )
                     else:
                         self.stats['blocked'] += 1
                         self._print('blocked', '', p['name'])

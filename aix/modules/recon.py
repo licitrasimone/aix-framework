@@ -443,6 +443,9 @@ class ReconScanner(BaseScanner):
         try:
             await connector.connect()
 
+            # Gather AI-powered context if enabled
+            await self.gather_context(connector)
+
             # --- STEP 0: Endpoint Discovery ---
             # If the base URL looks like a frontend (HTML) or gives 404, try to find the API
             initial_check = False
@@ -504,9 +507,23 @@ class ReconScanner(BaseScanner):
                     is_valid = await self.check_success(resp, [], probe['payload'], 'recon')
 
                     if is_valid:
-                        self.findings.append(Finding(title=f"Recon - {probe['name']}", severity=probe.get('severity', Severity.INFO),
-                                technique=probe['name'], payload=probe['payload'], response=resp[:2000], target=self.target, reason=self.last_eval_reason))
-                        self.db.add_result(self.target, 'recon', probe['name'], 'success', probe['payload'], resp[:2000], probe.get('severity', Severity.INFO).value, reason=self.last_eval_reason)
+                        self.findings.append(Finding(
+                            title=f"Recon - {probe['name']}",
+                            severity=probe.get('severity', Severity.INFO),
+                            technique=probe['name'],
+                            payload=probe['payload'],
+                            response=resp[:2000],
+                            target=self.target,
+                            reason=self.last_eval_reason,
+                            owasp=probe.get('owasp', [])
+                        ))
+                        self.db.add_result(
+                            self.target, 'recon', probe['name'], 'success',
+                            probe['payload'], resp[:2000],
+                            probe.get('severity', Severity.INFO).value,
+                            reason=self.last_eval_reason,
+                            owasp=probe.get('owasp', [])
+                        )
                         
                         if self.show_response:
                             self._print('success', f"Probe {probe['name']}", response=resp)
@@ -665,7 +682,7 @@ class ReconScanner(BaseScanner):
         from rich.box import ROUNDED
         from rich.panel import Panel
         from rich.table import Table
-        
+
         # Main Results Table
         table = Table(title="🎯 Reconnaissance Report", box=ROUNDED, show_header=True, header_style="bold cyan")
         table.add_column("Property", style="bold white", width=20)
@@ -673,18 +690,18 @@ class ReconScanner(BaseScanner):
 
         # Helper for color-coding confidence
         conf_style = "green" if self.results['model_confidence'] > 70 else "yellow" if self.results['model_confidence'] > 30 else "red"
-        
+
         # Add basic info
         table.add_row("Target URL", f"[link={self.target}]{self.target}[/link]")
         table.add_row("Model Detected", f"[bold {conf_style}]{self.results['model'] or 'Unknown'}[/]")
         table.add_row("Version", self.results['version'] or "Unknown")
         table.add_row("Confidence Score", f"[{conf_style}]{self.results['model_confidence']}%[/]")
         table.add_row("Authentication", self.results['auth_type'])
-        
+
         # WAF Status
         waf = self.results['waf_detected']
         table.add_row("WAF / Protection", f"[red]{waf}[/]" if waf else "[green]None Detected[/]")
-        
+
         # Capabilities
         caps = self.results['capabilities']
         if caps:
@@ -697,9 +714,31 @@ class ReconScanner(BaseScanner):
             avg = sum(self.results['response_times']) / len(self.results['response_times'])
             color = "green" if avg < 1.0 else "yellow" if avg < 3.0 else "red"
             table.add_row("Avg Latency", f"[{color}]{avg:.2f}s[/]")
-            
+
         self.console.print(table)
-        
+
+        # AI Context Panel (if gathered)
+        if self.context and not self.context.is_empty():
+            ctx_table = Table(show_header=False, box=None, padding=(0, 1))
+            ctx_table.add_column("Property", style="cyan", width=18)
+            ctx_table.add_column("Value", style="white")
+
+            if self.context.purpose:
+                ctx_table.add_row("Purpose", f"[bold yellow]{self.context.purpose}[/bold yellow]")
+            if self.context.domain:
+                ctx_table.add_row("Domain", self.context.domain)
+            if self.context.personality:
+                ctx_table.add_row("Personality", self.context.personality)
+            if self.context.expected_inputs:
+                ctx_table.add_row("Expected Inputs", ", ".join(self.context.expected_inputs[:4]))
+            if self.context.restrictions:
+                ctx_table.add_row("Restrictions", ", ".join(self.context.restrictions[:3]))
+            if self.context.suggested_vectors:
+                vectors = ", ".join(self.context.suggested_vectors[:5])
+                ctx_table.add_row("Attack Vectors", f"[bold red]{vectors}[/bold red]")
+
+            self.console.print(Panel(ctx_table, title="🤖 AI Context Analysis", border_style="yellow"))
+
         # Discovered Endpoints Panel
         if self.results.get('discovered_endpoints'):
             eps = "\n".join([f"[green]✓[/] {ep}" for ep in self.results['discovered_endpoints']])

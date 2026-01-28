@@ -9,11 +9,14 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
+if TYPE_CHECKING:
+    from aix.core.owasp import OWASPCategory
 
 console = Console()
 
@@ -38,6 +41,7 @@ class Finding:
     target: str = ""
     details: str = ""
     reason: str = ""  # New field for exploit motivation/reason
+    owasp: list['OWASPCategory'] = field(default_factory=list)  # OWASP LLM Top 10 mapping
     timestamp: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict[str, Any]:
@@ -50,6 +54,7 @@ class Finding:
             'target': self.target,
             'details': self.details,
             'reason': self.reason,
+            'owasp': [cat.id for cat in self.owasp] if self.owasp else [],
             'timestamp': self.timestamp.isoformat(),
         }
 
@@ -88,9 +93,16 @@ class Reporter:
 
         color = severity_colors.get(finding.severity, "white")
 
+        # Build OWASP line if categories exist
+        owasp_line = ""
+        if finding.owasp:
+            owasp_ids = ", ".join(cat.id for cat in finding.owasp)
+            owasp_line = f"[dim]OWASP:[/dim] {owasp_ids}\n"
+
         console.print(Panel(
             f"[bold]{finding.title}[/bold]\n\n"
             f"[dim]Technique:[/dim] {finding.technique}\n"
+            f"{owasp_line}"
             f"[dim]Reason:[/dim] {finding.reason}\n"
             f"[dim]Payload:[/dim] {finding.payload[:100]}...\n"
             f"[dim]Response:[/dim] {finding.response[:200]}...",
@@ -180,6 +192,12 @@ class Reporter:
             
             for finding in target_findings:
                 severity_class = finding.severity.value
+                # Generate OWASP badges
+                owasp_badges = ""
+                if finding.owasp:
+                    owasp_badges = '<div class="owasp-tags">' + ''.join(
+                        f'<span class="owasp-badge">{cat.id}</span>' for cat in finding.owasp
+                    ) + '</div>'
                 findings_html += f"""
                 <div class="finding {severity_class}">
                     <div class="finding-header">
@@ -188,8 +206,9 @@ class Reporter:
                         <span class="technique-badge">{finding.technique}</span>
                     </div>
                     <div class="finding-body">
+                        {owasp_badges}
                         {f'<div class="finding-field reason"><strong>Reason:</strong> {finding.reason}</div>' if finding.reason else ''}
-                        
+
                         <details>
                             <summary>Payload & Response</summary>
                             <div class="finding-field">
@@ -201,7 +220,7 @@ class Reporter:
                                 <pre><code>{self._escape_html(finding.response)}</code></pre>
                             </div>
                         </details>
-                        
+
                         {f'<div class="finding-field"><strong>Details:</strong> {finding.details}</div>' if finding.details else ''}
                     </div>
                 </div>
@@ -345,7 +364,25 @@ class Reporter:
             font-family: monospace;
             margin-left: auto;
         }}
-        
+
+        .owasp-tags {{
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }}
+
+        .owasp-badge {{
+            background: #1a1a2a;
+            border: 1px solid #00d4ff;
+            color: #00d4ff;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: monospace;
+            font-weight: bold;
+        }}
+
         .severity-badge.critical {{ background: #ff4757; color: white; }}
         .severity-badge.high {{ background: #ffa502; color: black; }}
         .severity-badge.medium {{ background: #3742fa; color: white; }}

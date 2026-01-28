@@ -12,6 +12,9 @@ from rich.console import Console
 from aix.core.connector import APIConnector, RequestConnector
 from aix.core.evasion import PayloadEvasion
 from aix.core.evaluator import LLMEvaluator
+from aix.core.ai_engine import AIEngine
+from aix.core.context import TargetContext
+from aix.core.owasp import OWASPCategory, get_owasp_for_module, parse_owasp_list
 from aix.core.reporting.base import Severity
 from aix.core.request_parser import ParsedRequest
 from aix.db.database import AIXDatabase
@@ -71,10 +74,30 @@ class BaseScanner(ABC):
         self.consecutive_errors = 0
         self.circuit_breaker_limit = 10 
 
-        # Evaluator
+        # AI Engine (unified evaluator + context)
+        self.ai_config = kwargs.get('ai_config')
+        self.ai_engine: AIEngine | None = None
+        self.context: TargetContext | None = None
+        self.generate_count = kwargs.get('generate', 0)  # Number of payloads to generate
+
+        if self.ai_config and self.ai_config.get('provider'):
+            # Inject proxy into config if set
+            if self.proxy:
+                self.ai_config['proxy'] = self.proxy
+
+            self.ai_engine = AIEngine(**self.ai_config)
+            if not self.quiet:
+                features = []
+                if self.ai_config.get('enable_eval', True):
+                    features.append("Eval")
+                if self.ai_config.get('enable_context', True):
+                    features.append("Context")
+                self.console.print(f"[bold green][*] AI Engine ENABLED: {self.ai_config.get('provider')} ({', '.join(features)})[/bold green]")
+
+        # Legacy evaluator support (backward compatibility)
         self.eval_config = kwargs.get('eval_config')
         self.evaluator = None
-        if self.eval_config and (self.eval_config.get('url') or self.eval_config.get('provider')):
+        if not self.ai_engine and self.eval_config and (self.eval_config.get('url') or self.eval_config.get('provider')):
              # Inject proxy into eval config if set
              if self.proxy:
                  self.eval_config['proxy'] = self.proxy
@@ -133,6 +156,14 @@ class BaseScanner(ABC):
                             p['severity'] = Severity[p['severity']]
                         except KeyError:
                             p['severity'] = Severity.MEDIUM
+
+                    # Parse OWASP categories
+                    if 'owasp' in p and isinstance(p['owasp'], list):
+                        p['owasp'] = parse_owasp_list(p['owasp'])
+                    else:
+                        # Default from module mapping
+                        p['owasp'] = get_owasp_for_module(self.module_name.lower())
+
                     filtered_payloads.append(p)
 
 
@@ -252,12 +283,18 @@ class BaseScanner(ABC):
     async def check_success(self, response: str, indicators: list[str], payload: str, technique: str) -> bool:
         """
         Check if the attack was successful.
-        Uses LLM Evaluator if available, otherwise falls back to string matching.
+        Uses AI Engine or LLM Evaluator if available, otherwise falls back to string matching.
         """
         # Reset reason
         self.last_eval_reason = None
 
-        # 1. Use Evaluator if available
+        # 1. Use AI Engine if available (new unified system)
+        if self.ai_engine and self.ai_engine.enable_eval:
+            result = await self.ai_engine.evaluate(response, payload, technique)
+            self.last_eval_reason = result.get('reason')
+            return result.get('vulnerable', False)
+
+        # 2. Use legacy Evaluator if available
         if self.evaluator:
             result = await self.evaluator.evaluate(response, payload, technique)
             self.last_eval_reason = result.get('reason')
@@ -266,9 +303,9 @@ class BaseScanner(ABC):
             else:
                 return False
 
-        # 2. Fallback to keywords
+        # 3. Fallback to keywords
         success = any(i.lower() in response.lower() for i in indicators)
-        
+
         # Check for refusals if no evaluator is used
         if success and await self._check_refusal(response):
              self.last_eval_reason = "Blocked by refusal check (False Positive)"
@@ -293,7 +330,7 @@ class BaseScanner(ABC):
         Robust payload scanning.
         Sends payload `verify_attempts` times.
         Returns: (is_vulnerable, best_response)
-        
+
         Logic:
         - If verify_attempts > 1:
             - Try N times.
@@ -307,7 +344,8 @@ class BaseScanner(ABC):
         successes = 0
         failures = 0
         best_response = None
-        
+        best_reason = None  # Store reason from successful attempt
+
         # If default 1 attempt, use fast path
         if attempts <= 1:
             resp = await connector.send(payload)
@@ -317,30 +355,33 @@ class BaseScanner(ABC):
         # Robust loop
         if self.verbose >= 2:
             self._print('info', f"Probing {technique} ({attempts} attempts)...")
-        
+
         for i in range(attempts):
             try:
                 resp = await connector.send(payload)
                 if not resp:
                     resp = "" # Handle empty
-                
+
                 success = await self.check_success(resp, indicators, payload, technique)
-                
+
                 if success:
                     successes += 1
                     best_response = resp # Prefer successful response
+                    # Save the reason from successful attempt (don't let failures overwrite it)
+                    if not best_reason:
+                        best_reason = self.last_eval_reason
                     # Optimization: If user didn't ask for full rigorous stats, maybe stop?
                     # User said "sent always n attempts". So we continue.
                 else:
                     failures += 1
                     if not best_response:
                         best_response = resp # Keep at least one response (even failure)
-            
+
             except Exception as e:
                 failures += 1
                 if not best_response:
                      best_response = f"Error: {str(e)}"
-                
+
                 # Check for critical errors (403, etc.)
                 error_str = str(e)
                 if "403" in error_str:
@@ -351,7 +392,7 @@ class BaseScanner(ABC):
                      self._update_error_state(error_str)
                 elif self.verbose >= 1 and not self.quiet: # Print other errors if verbose
                      self.console.print(f"[yellow][!] Error probing {technique}: {e}[/yellow]")
-                     self._update_error_state(None) # Reset if generic error? Or ignore? 
+                     self._update_error_state(None) # Reset if generic error? Or ignore?
                      # Let's reset for generic errors to be safe, or only pure successes?
                      # Ideally 403 is the blocker. If we get a connection error, maybe we shouldn't reset.
                      # But for now, let's only increment on 403/500 as per logic.
@@ -361,6 +402,9 @@ class BaseScanner(ABC):
         # Decision Logic
         if successes > 0:
             self._update_error_state(None) # Reset count on any success
+            # Restore the reason from a successful attempt
+            if best_reason:
+                self.last_eval_reason = best_reason
             if successes < attempts:
                  self._print('warning', f"{technique}: Unstable exploit ({successes}/{attempts} successes)")
             else:
@@ -373,8 +417,145 @@ class BaseScanner(ABC):
         """Main execution method - usually overridden by subclasses but can provide skeleton"""
         raise NotImplementedError("Subclasses must implement run()")
 
+    async def gather_context(self, connector) -> TargetContext | None:
+        """
+        Gather context about the target before scanning.
+        Only runs if AI Engine is configured with context enabled.
+        """
+        if not self.ai_engine:
+            # No AI engine configured - context gathering not available
+            return None
+
+        if not self.ai_engine.enable_context:
+            return None
+
+        if not self.quiet:
+            self._print('info', 'Gathering target context...')
+
+        try:
+            self.context = await self.ai_engine.gather_context(connector)
+            if self.context and not self.context.is_empty():
+                if not self.quiet:
+                    self._print_context_summary(self.context)
+            return self.context
+        except Exception as e:
+            if self.verbose:
+                self.console.print(f"[yellow][!] Context gathering failed: {e}[/yellow]")
+            return None
+
+    def _print_context_summary(self, context: TargetContext) -> None:
+        """Print a summary of gathered context."""
+        from rich.panel import Panel
+        from rich.table import Table
+
+        # Build context table
+        table = Table(show_header=False, box=None, padding=(0, 1))
+        table.add_column("Property", style="cyan")
+        table.add_column("Value", style="white")
+
+        # Purpose & Domain (most important)
+        if context.purpose:
+            table.add_row("Purpose", f"[bold]{context.purpose}[/bold]")
+        if context.domain:
+            table.add_row("Domain", context.domain)
+
+        # Model info
+        if context.model_type:
+            table.add_row("Model", context.model_type)
+
+        # Capabilities
+        caps = []
+        if context.has_rag:
+            caps.append("[green]RAG[/green]")
+        if context.has_tools:
+            caps.append("[green]Tools[/green]")
+        if context.capabilities:
+            caps.extend(context.capabilities[:3])
+        if caps:
+            table.add_row("Capabilities", ", ".join(caps))
+
+        # Expected inputs
+        if context.expected_inputs:
+            table.add_row("Expected Inputs", ", ".join(context.expected_inputs[:4]))
+
+        # Personality
+        if context.personality:
+            table.add_row("Personality", context.personality)
+
+        # Restrictions
+        if context.restrictions:
+            table.add_row("Restrictions", ", ".join(context.restrictions[:3]))
+
+        # Suggested attack vectors
+        if context.suggested_vectors:
+            vectors = ", ".join(context.suggested_vectors[:4])
+            table.add_row("Suggested Attacks", f"[yellow]{vectors}[/yellow]")
+
+        self.console.print(Panel(table, title="[bold cyan]Target Context[/bold cyan]", border_style="cyan"))
+
+    async def generate_payloads(self) -> list[dict]:
+        """
+        Generate context-aware payloads using AI Engine.
+        Returns payloads in scanner-compatible format.
+        """
+        if not self.ai_engine or not self.context:
+            return []
+
+        if self.generate_count <= 0:
+            return []
+
+        # Get OWASP category for this module
+        owasp_categories = get_owasp_for_module(self.module_name.lower())
+        owasp_str = ", ".join([f"{cat.id}: {cat.name}" for cat in owasp_categories]) if owasp_categories else "General"
+
+        self._print('info', f'Generating {self.generate_count} context-aware payloads...')
+
+        try:
+            generated = await self.ai_engine.generate_payloads(
+                owasp_category=owasp_str,
+                attack_type=self.module_name.lower(),
+                count=self.generate_count
+            )
+
+            # Convert to payload format expected by scanner
+            payloads = []
+            for i, g in enumerate(generated):
+                technique_name = g.get('technique', f'generated_{i+1}')
+
+                # Get default OWASP for this module
+                module_owasp = get_owasp_for_module(self.module_name.lower())
+
+                payloads.append({
+                    'name': f"ai_gen_{technique_name}",
+                    'payload': g['payload'],
+                    'indicators': [],  # Will use LLM evaluation
+                    'severity': Severity.HIGH,
+                    'owasp': module_owasp,
+                    'rationale': g.get('rationale', ''),
+                    'generated': True,
+                    'level': 1,
+                    'risk': 1,
+                })
+
+                # Print generated payload info
+                if self.verbose:
+                    self._print('info', f"Generated: {technique_name}")
+                    if g.get('rationale'):
+                        self._print('detail', f"Rationale: {g['rationale'][:100]}...")
+
+            if payloads and not self.quiet:
+                self._print('info', f'Added {len(payloads)} AI-generated payloads')
+
+            return payloads
+
+        except Exception as e:
+            self._print('warning', f'Payload generation failed: {e}')
+            return []
+
     async def cleanup(self):
         """Cleanup resources"""
+        if self.ai_engine:
+            await self.ai_engine.close()
         if self.evaluator:
             await self.evaluator.close()
 

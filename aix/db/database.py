@@ -17,6 +17,22 @@ from rich.table import Table
 console = Console()
 
 
+def _serialize_owasp(owasp: list | None) -> str | None:
+    """Convert OWASP categories to JSON string, handling both strings and enums."""
+    if not owasp:
+        return None
+    # Convert OWASPCategory enums to their ID strings if needed
+    serialized = []
+    for item in owasp:
+        if hasattr(item, 'id'):  # OWASPCategory enum
+            serialized.append(item.id)
+        elif isinstance(item, str):
+            serialized.append(item)
+        else:
+            serialized.append(str(item))
+    return json.dumps(serialized)
+
+
 class AIXDatabase:
     """
     Database for storing AIX scan results and target profiles.
@@ -61,6 +77,14 @@ class AIXDatabase:
              # Column missing, add it
              console.print("[yellow][*] Migrating database: Adding 'reason' column to results table[/yellow]")
              cursor.execute("ALTER TABLE results ADD COLUMN reason TEXT")
+
+        # Migration: Check if owasp column exists
+        try:
+             cursor.execute("SELECT owasp FROM results LIMIT 1")
+        except sqlite3.OperationalError:
+             # Column missing, add it
+             console.print("[yellow][*] Migrating database: Adding 'owasp' column to results table[/yellow]")
+             cursor.execute("ALTER TABLE results ADD COLUMN owasp TEXT")
 
         # Profiles table
         cursor.execute("""
@@ -115,24 +139,29 @@ class AIXDatabase:
         response: str = "",
         severity: str = "high",
         reason: str = "",
+        owasp: list[str] | None = None,
         dedup_payload: str | None = None,
     ) -> int:
         """
-        Add a scan result. 
+        Add a scan result.
         Updates existing result if matched.
-        If dedup_payload is provided (indicating randomized variants), duplicates are checked 
+        If dedup_payload is provided (indicating randomized variants), duplicates are checked
         by (target, module, technique) ignoring the payload string.
         Otherwise, (target, module, technique, payload) must match.
+
+        Args:
+            owasp: List of OWASP LLM Top 10 IDs (e.g., ["LLM01", "LLM06"])
         """
         cursor = self.conn.cursor()
 
         existing = None
-        
+        owasp_json = _serialize_owasp(owasp)
+
         if dedup_payload:
             # Randomized evasion active: Dedup by technique name only.
             # We want to update the latest entry for this technique.
             cursor.execute("""
-                SELECT id FROM results 
+                SELECT id FROM results
                 WHERE target = ? AND module = ? AND technique = ?
                 ORDER BY timestamp DESC LIMIT 1
             """, (target, module, technique))
@@ -140,27 +169,27 @@ class AIXDatabase:
         else:
             # Standard Strict Dedup: Payload must match exactly
             cursor.execute("""
-                SELECT id FROM results 
+                SELECT id FROM results
                 WHERE target = ? AND module = ? AND technique = ? AND payload = ?
             """, (target, module, technique, payload))
             existing = cursor.fetchone()
-        
+
         if existing:
             # Update existing result
             row_id = existing[0]
             cursor.execute("""
-                UPDATE results 
-                SET result = ?, payload = ?, response = ?, severity = ?, reason = ?, timestamp = CURRENT_TIMESTAMP
+                UPDATE results
+                SET result = ?, payload = ?, response = ?, severity = ?, reason = ?, owasp = ?, timestamp = CURRENT_TIMESTAMP
                 WHERE id = ?
-            """, (result, payload, response, severity, reason, row_id))
+            """, (result, payload, response, severity, reason, owasp_json, row_id))
             self.conn.commit()
             return row_id
         else:
             # Insert new result
             cursor.execute("""
-                INSERT INTO results (target, module, technique, result, payload, response, severity, reason)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (target, module, technique, result, payload, response, severity, reason))
+                INSERT INTO results (target, module, technique, result, payload, response, severity, reason, owasp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (target, module, technique, result, payload, response, severity, reason, owasp_json))
             self.conn.commit()
             return cursor.lastrowid
 
@@ -209,6 +238,7 @@ class AIXDatabase:
         table.add_column("Technique", max_width=25)
         table.add_column("Result")
         table.add_column("Severity")
+        table.add_column("OWASP", style="cyan")
         table.add_column("Date", style="dim")
 
         for r in results:
@@ -232,6 +262,16 @@ class AIXDatabase:
             severity_color = severity_colors.get(severity_str, 'white')
             severity_str = f"[{severity_color}]{severity_str}[/{severity_color}]"
 
+            # Parse OWASP
+            owasp_str = ""
+            owasp_raw = r.get('owasp')
+            if owasp_raw:
+                try:
+                    owasp_list = json.loads(owasp_raw) if isinstance(owasp_raw, str) else owasp_raw
+                    owasp_str = ", ".join(owasp_list) if owasp_list else ""
+                except (json.JSONDecodeError, TypeError):
+                    owasp_str = str(owasp_raw)
+
             # Truncate target
             target = r['target']
             if len(target) > 28:
@@ -244,6 +284,7 @@ class AIXDatabase:
                 r['technique'],
                 result_str,
                 severity_str,
+                owasp_str,
                 r['timestamp'][:10] if r['timestamp'] else "",
             )
 
@@ -330,6 +371,7 @@ class AIXDatabase:
     ) -> None:
         """Export results to HTML report"""
         from aix.core.reporting.base import Finding, Reporter, Severity
+        from aix.core.owasp import parse_owasp_list
 
         results = self.get_results(target=target, module=module, limit=1000)
 
@@ -338,6 +380,17 @@ class AIXDatabase:
         for r in results:
             if r['result'] == 'success':
                 severity = Severity(r.get('severity', 'high'))
+
+                # Parse OWASP from JSON
+                owasp_categories = []
+                owasp_raw = r.get('owasp')
+                if owasp_raw:
+                    try:
+                        owasp_list = json.loads(owasp_raw) if isinstance(owasp_raw, str) else owasp_raw
+                        owasp_categories = parse_owasp_list(owasp_list) if owasp_list else []
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
                 finding = Finding(
                     title=f"{r['technique']} - Vulnerable",
                     severity=severity,
@@ -346,6 +399,7 @@ class AIXDatabase:
                     response=r.get('response', ''),
                     target=r['target'],
                     reason=r.get('reason', ''),
+                    owasp=owasp_categories,
                 )
                 reporter.add_finding(finding)
 

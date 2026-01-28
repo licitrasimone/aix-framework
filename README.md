@@ -290,7 +290,17 @@ aix scan --profile company.com --evasion aggressive
 | `--refresh-param` | Parameter to update with new session ID |
 | `--refresh-error` | String/Regex in response body that triggers refresh |
 
-### LLM Evaluation Options
+### AI Engine Options
+| Option | Description |
+|--------|-------------|
+| `--ai` | AI provider for evaluation and context (`openai`, `anthropic`, `ollama`, `gemini`) |
+| `--ai-key` | API key for AI provider |
+| `--ai-model` | Model to use (e.g., `gpt-4o`, `claude-3-sonnet`) |
+| `--no-eval` | Disable LLM-as-a-Judge evaluation |
+| `--no-context` | Disable AI context gathering |
+| `--generate` / `-g` | Generate N context-aware payloads using AI |
+
+### Legacy LLM Evaluation Options
 | Option | Description |
 |--------|-------------|
 | `--eval-url` | URL for secondary LLM evaluation |
@@ -403,6 +413,53 @@ aix db --export report.html
 # Clear database
 aix db --clear
 ```
+
+---
+
+## AI-Powered Features
+
+AIX includes AI-powered features for smarter testing:
+
+### Context Gathering
+Automatically analyze the target AI to understand its purpose, domain, and capabilities:
+
+```bash
+aix recon https://api.target.com --ai openai --ai-key sk-xxx
+```
+
+This probes the target and extracts:
+- **Purpose**: What the AI is designed to do (customer_support, code_assistant, etc.)
+- **Domain**: Operating sector (finance, healthcare, legal, etc.)
+- **Capabilities**: RAG, tools, code generation, etc.
+- **Restrictions**: Detected guardrails and limitations
+- **Suggested Attacks**: Recommended attack vectors
+
+### Context-Aware Payload Generation
+Generate payloads tailored to the target's specific purpose and domain:
+
+```bash
+# Generate 5 context-aware payloads
+aix inject https://api.target.com --ai openai --ai-key sk-xxx -g 5
+
+# Works on all modules
+aix jailbreak https://api.target.com --ai openai --ai-key sk-xxx -g 5
+aix extract https://api.target.com --ai openai --ai-key sk-xxx -g 5
+aix rag https://api.target.com --ai openai --ai-key sk-xxx -g 5
+```
+
+Generated payloads use domain-specific language and are framed as legitimate requests within the AI's expected purpose.
+
+### LLM-as-a-Judge Evaluation
+Use a secondary LLM to evaluate attack success instead of keyword matching:
+
+```bash
+aix inject https://api.target.com --ai openai --ai-key sk-xxx
+```
+
+This provides:
+- Lower false positives (understands context)
+- Better detection of subtle bypasses
+- Reasoning explanations for each finding
 
 ---
 
