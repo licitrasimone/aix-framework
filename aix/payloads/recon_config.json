@@ -413,5 +413,143 @@
             "rate limit",
             "too many requests"
         ]
+    },
+    "rag_indicators": {
+        "citation_patterns": [
+            ["according to", 3],
+            ["source:", 5],
+            ["document:", 5],
+            ["reference:", 4],
+            ["from the retrieved", 6],
+            ["knowledge base", 6],
+            ["vector database", 8],
+            ["based on my search", 5],
+            ["based on the provided", 5],
+            ["the document states", 6],
+            ["retrieved information", 6]
+        ],
+        "retrieval_keywords": [
+            "retrieved", "fetched", "indexed", "embedded", "chunk",
+            "pinecone", "weaviate", "chroma", "faiss", "milvus", "qdrant",
+            "semantic search", "vector search", "knowledge retrieval"
+        ]
+    },
+    "system_prompt_indicators": {
+        "instruction_patterns": [
+            ["you are a", 5],
+            ["your role is", 5],
+            ["you must always", 6],
+            ["you must never", 6],
+            ["system:", 8],
+            ["instructions:", 7],
+            ["guidelines:", 5],
+            ["do not", 2],
+            ["cannot", 2],
+            ["restricted from", 6],
+            ["you have been configured", 6],
+            ["your purpose is", 5]
+        ],
+        "behavioral_constraints": [
+            "ethical guidelines",
+            "content policy",
+            "safety guidelines",
+            "not allowed",
+            "forbidden",
+            "prohibited",
+            "restricted",
+            "refrain from",
+            "decline to"
+        ]
+    },
+    "tool_signatures": {
+        "code_execution": [
+            ["python", 3],
+            ["code interpreter", 8],
+            ["execute code", 8],
+            ["run code", 6],
+            ["jupyter", 5],
+            ["sandbox", 4],
+            ["code execution", 8]
+        ],
+        "web_browsing": [
+            ["browse", 3],
+            ["search the web", 6],
+            ["real-time", 4],
+            ["internet access", 6],
+            ["bing", 5],
+            ["web search", 6],
+            ["browse the internet", 7]
+        ],
+        "file_access": [
+            ["upload", 3],
+            ["download", 3],
+            ["read file", 5],
+            ["write file", 5],
+            ["file system", 6],
+            ["file access", 6]
+        ],
+        "function_calling": [
+            ["function calling", 8],
+            ["tool use", 6],
+            ["api", 3],
+            ["invoke", 4],
+            ["external service", 5],
+            ["call functions", 7]
+        ],
+        "database_access": [
+            ["database", 4],
+            ["sql", 5],
+            ["query", 3],
+            ["data store", 5]
+        ]
+    },
+    "capability_signatures": {
+        "summarization": [
+            ["summarize", 5],
+            ["summary", 4],
+            ["condense", 4],
+            ["tldr", 5]
+        ],
+        "translation": [
+            ["translate", 5],
+            ["language", 3],
+            ["multilingual", 6],
+            ["languages", 3]
+        ],
+        "math": [
+            ["calculate", 4],
+            ["math", 4],
+            ["equation", 4],
+            ["arithmetic", 5],
+            ["mathematical", 5]
+        ],
+        "structured_output": [
+            ["json", 5],
+            ["xml", 4],
+            ["yaml", 4],
+            ["structured", 4],
+            ["format", 2]
+        ],
+        "reasoning": [
+            ["reasoning", 5],
+            ["chain-of-thought", 8],
+            ["step-by-step", 5],
+            ["logic", 4],
+            ["step by step", 5]
+        ],
+        "vision": [
+            ["image", 5],
+            ["visual", 5],
+            ["picture", 4],
+            ["see", 2],
+            ["multimodal", 6],
+            ["vision", 6]
+        ],
+        "audio": [
+            ["audio", 5],
+            ["speech", 5],
+            ["voice", 4],
+            ["listen", 3]
+        ]
     }
 }
