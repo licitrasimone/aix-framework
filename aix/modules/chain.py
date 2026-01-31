@@ -102,6 +102,7 @@ class ChainScanner(BaseScanner):
             body_format=self.body_format,
             refresh_config=self.refresh_config,
             response_regex=self.response_regex,
+            response_path=self.response_path,
             eval_config=self.eval_config if hasattr(self, 'eval_config') else None,
             verify_attempts=self.verify_attempts,
             show_response=self.show_response,

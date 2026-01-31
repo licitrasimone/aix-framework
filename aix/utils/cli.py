@@ -73,6 +73,7 @@ def scan_options(func):
     @click.option('--show-response', is_flag=True, help='Show AI response for findings')
     @click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
     @click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
+    @click.option('--response-path', '-rp', help='JSON path to extract response (e.g., response, data.message, choices.0.text)')
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)

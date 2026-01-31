@@ -113,7 +113,7 @@ def main(ctx, version):
 @standard_options
 @click.option('--timeout', '-t', default=30, help='Request timeout in seconds')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts, key=None, profile=None):
+def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, response_path, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts, key=None, profile=None):
     """
     Reconnaissance - Discover AI endpoint details
 
@@ -150,7 +150,7 @@ def recon_cmd(target, request, param, output, timeout, verbose, proxy, cookie, h
               parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
               injection_param=param, body_format=format,
               refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-              response_regex=response_regex,
+              response_regex=response_regex, response_path=response_path,
               ai_config=ai_config,
               level=level, risk=risk, show_response=show_response, verify_attempts=verify_attempts)
 
@@ -171,7 +171,7 @@ main.add_command(recon_cmd, name='recon')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='light', help='Evasion level')
 @click.option('--payloads', help='Custom payloads file')
 @click.option('--threads', default=5, help='Number of threads')
-def inject_cmd(target, request, param, key, profile, targets, evasion, payloads, threads, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, ai, ai_key, ai_model, no_eval, no_context, generate, level, risk, show_response, verify_attempts):
+def inject_cmd(target, request, param, key, profile, targets, evasion, payloads, threads, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, response_path, ai, ai_key, ai_model, no_eval, no_context, generate, level, risk, show_response, verify_attempts):
     """
     Inject - Prompt injection attacks
 
@@ -212,7 +212,7 @@ def inject_cmd(target, request, param, key, profile, targets, evasion, payloads,
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        response_regex=response_regex,
+        response_regex=response_regex, response_path=response_path,
         ai_config=ai_config,
         level=level, risk=risk, show_response=show_response, verify_attempts=verify_attempts,
         generate=generate
@@ -229,7 +229,7 @@ main.add_command(inject_cmd, name='inject')
 @standard_options
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='light', help='Evasion level')
 @click.option('--test-harmful', is_flag=True, help='Test harmful content generation')
-def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, ai, ai_key, ai_model, no_eval, no_context, generate, level, risk, show_response, verify_attempts):
+def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, response_path, ai, ai_key, ai_model, no_eval, no_context, generate, level, risk, show_response, verify_attempts):
     """
     Jailbreak - Bypass AI restrictions
 
@@ -265,7 +265,7 @@ def jailbreak_cmd(target, request, param, key, profile, evasion, test_harmful, v
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        response_regex=response_regex,
+        response_regex=response_regex, response_path=response_path,
         ai_config=ai_config,
         level=level, risk=risk, show_response=show_response, verify_attempts=verify_attempts,
         generate=generate
@@ -281,7 +281,7 @@ main.add_command(jailbreak_cmd, name='jailbreak')
 @main.command()
 @standard_options
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-def extract_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts):
+def extract_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, response_path, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts):
     """
     Extract - System prompt extraction
 
@@ -318,7 +318,7 @@ def extract_cmd(target, request, param, key, profile, verbose, output, proxy, co
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        response_regex=response_regex,
+        response_regex=response_regex, response_path=response_path,
         ai_config=ai_config,
         level=level, risk=risk, show_response=show_response, verify_attempts=verify_attempts,
         generate=generate
@@ -334,7 +334,7 @@ main.add_command(extract_cmd, name='extract')
 @main.command()
 @standard_options
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts):
+def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, response_path, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts):
     """
     Leak - Training data extraction
 
@@ -371,7 +371,7 @@ def leak_cmd(target, request, param, key, profile, verbose, output, proxy, cooki
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        response_regex=response_regex,
+        response_regex=response_regex, response_path=response_path,
         ai_config=ai_config,
         level=level, risk=risk, show_response=show_response, verify_attempts=verify_attempts,
         generate=generate
@@ -388,7 +388,7 @@ main.add_command(leak_cmd, name='leak')
 @standard_options
 @click.option('--webhook', '-w', help='Webhook URL for exfiltration testing')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-def exfil_cmd(target, request, param, key, profile, webhook, verbose, output, proxy, cookie, headers, format, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts, refresh_url=None, refresh_regex=None, refresh_param=None, refresh_error=None, response_regex=None):
+def exfil_cmd(target, request, param, key, profile, webhook, verbose, output, proxy, cookie, headers, format, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts, refresh_url=None, refresh_regex=None, refresh_param=None, refresh_error=None, response_regex=None, response_path=None):
     """
     Exfil - Data exfiltration testing
 
@@ -439,7 +439,7 @@ main.add_command(exfil_cmd, name='exfil')
 @main.command()
 @standard_options
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts):
+def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, response_path, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts):
     """
     Agent - AI agent exploitation
 
@@ -476,7 +476,7 @@ def agent_cmd(target, request, param, key, profile, verbose, output, proxy, cook
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        response_regex=response_regex,
+        response_regex=response_regex, response_path=response_path,
         ai_config=ai_config,
         level=level, risk=risk, show_response=show_response, verify_attempts=verify_attempts,
         generate=generate
@@ -492,7 +492,7 @@ main.add_command(agent_cmd, name='agent')
 @main.command()
 @standard_options
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts):
+def dos_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, response_path, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts):
     """
     DoS - Denial of Service testing
 
@@ -537,7 +537,7 @@ main.add_command(dos_cmd, name='dos')
 @standard_options
 @click.option('--iterations', '-i', default=100, help='Number of fuzz iterations')
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts):
+def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, response_path, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts):
     """
     Fuzz - Fuzzing and edge cases
 
@@ -566,7 +566,7 @@ def fuzz_cmd(target, request, param, key, profile, iterations, verbose, output, 
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        response_regex=response_regex,
+        response_regex=response_regex, response_path=response_path,
         ai_config=ai_config,
         level=level, risk=risk, show_response=show_response,
         generate=generate
@@ -582,7 +582,7 @@ main.add_command(fuzz_cmd, name='fuzz')
 @main.command()
 @standard_options
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-def memory_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts):
+def memory_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, response_path, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts):
     """
     Memory - Memory and context manipulation attacks
 
@@ -615,7 +615,7 @@ def memory_cmd(target, request, param, key, profile, verbose, output, proxy, coo
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        response_regex=response_regex,
+        response_regex=response_regex, response_path=response_path,
         ai_config=ai_config,
         level=level, risk=risk, show_response=show_response, verify_attempts=verify_attempts,
         generate=generate
@@ -631,7 +631,9 @@ main.add_command(memory_cmd, name='memory')
 @main.command()
 @standard_options
 @click.option('--evasion', '-e', type=click.Choice(['none', 'light', 'aggressive']), default='none', help='Evasion level')
-def rag_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts):
+@click.option('--canary', help='Canary token to search for in RAG knowledge base (runs canary detection payloads)')
+@click.option('--category', '-c', type=click.Choice(['all', 'indirect_injection', 'context_poisoning', 'source_manipulation', 'retrieval_bypass', 'kb_extraction', 'chunk_boundary', 'canary', 'fishing', 'targeted']), default='all', help='Attack category filter')
+def rag_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, response_path, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts, canary, category):
     """
     RAG - RAG-specific vulnerability testing
 
@@ -643,6 +645,27 @@ def rag_cmd(target, request, param, key, profile, verbose, output, proxy, cookie
     - Retrieval bypass techniques
     - Knowledge base extraction
     - Chunk boundary attacks
+    - Canary token detection
+    - RAG fishing (info extraction via innocent queries)
+    - Targeted document extraction
+
+    \b
+    Categories:
+        indirect_injection  - Inject instructions via documents
+        context_poisoning   - Poison retrieval context
+        source_manipulation - Extract/manipulate sources
+        retrieval_bypass    - Bypass RAG retrieval
+        kb_extraction       - Extract knowledge base info
+        chunk_boundary      - Exploit chunk boundaries
+        canary              - Detect canary tokens in KB
+        fishing             - Extract info via innocent queries
+        targeted            - Targeted document extraction
+
+    \b
+    Canary Token Testing:
+        Use --canary to test if a specific token/string exists in the
+        RAG knowledge base. The token will be inserted into various
+        prompts designed to trigger retrieval of documents containing it.
 
     \b
     Examples:
@@ -650,6 +673,8 @@ def rag_cmd(target, request, param, key, profile, verbose, output, proxy, cookie
         aix rag -r request.txt -p "messages[0].content"
         aix rag --profile company.com --evasion aggressive
         aix rag https://api.target.com --ai openai --ai-key sk-xxx
+        aix rag https://api.target.com --canary "SECRET_TOKEN_123"
+        aix rag https://api.target.com --category fishing
     """
     print_banner()
     target, parsed_request = validate_input(target, request, param)
@@ -670,10 +695,11 @@ def rag_cmd(target, request, param, key, profile, verbose, output, proxy, cookie
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        response_regex=response_regex,
+        response_regex=response_regex, response_path=response_path,
         ai_config=ai_config,
         level=level, risk=risk, show_response=show_response, verify_attempts=verify_attempts,
-        generate=generate
+        generate=generate,
+        canary=canary, category=category
     )
 
 
@@ -689,7 +715,7 @@ main.add_command(rag_cmd, name='rag')
 @click.option('--category', '-c', type=click.Choice(['all', 'crescendo', 'trust_building', 'context_poisoning', 'role_lock', 'memory_injection', 'instruction_layering', 'cognitive_overload', 'authority_transfer']), default='all', help='Attack category filter')
 @click.option('--max-turns', default=10, help='Maximum turns per sequence')
 @click.option('--turn-delay', default=0.5, help='Delay between turns in seconds')
-def multiturn_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts, category, max_turns, turn_delay):
+def multiturn_cmd(target, request, param, key, profile, verbose, output, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, response_path, ai, ai_key, ai_model, no_eval, no_context, generate, evasion, level, risk, show_response, verify_attempts, category, max_turns, turn_delay):
     """
     Multi-Turn - Multi-turn conversation attacks
 
@@ -742,7 +768,7 @@ def multiturn_cmd(target, request, param, key, profile, verbose, output, proxy, 
         parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
         injection_param=param, body_format=format,
         refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-        response_regex=response_regex,
+        response_regex=response_regex, response_path=response_path,
         ai_config=ai_config,
         level=level, risk=risk, show_response=show_response, verify_attempts=verify_attempts,
         category=category, max_turns=max_turns, turn_delay=turn_delay,
@@ -821,13 +847,14 @@ def db(export, clear, target, module):
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
 @click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
+@click.option('--response-path', '-rp', help='JSON path to extract response (e.g., response, data.message, choices.0.text)')
 @click.option('--eval-url', help='URL for secondary LLM evaluation')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
 @click.option('--eval-provider', help='Provider for secondary LLM (openai, anthropic, ollama, gemini)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
 @click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
-def chain_cmd(target, playbook, var, list_playbooks, dry_run, visualize, export_mermaid, mermaid_theme, mermaid_direction, live, request, param, key, output, timeout, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, show_response, verify_attempts):
+def chain_cmd(target, playbook, var, list_playbooks, dry_run, visualize, export_mermaid, mermaid_theme, mermaid_direction, live, request, param, key, output, timeout, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, response_path, eval_url, eval_key, eval_model, eval_provider, show_response, verify_attempts):
     """
     Chain - Run attack chains from YAML playbooks
 
@@ -936,6 +963,7 @@ def chain_cmd(target, playbook, var, list_playbooks, dry_run, visualize, export_
         body_format=format,
         refresh_config=refresh_config,
         response_regex=response_regex,
+        response_path=response_path,
         eval_config=eval_config,
         timeout=timeout,
         show_response=show_response,
@@ -964,6 +992,7 @@ def chain_cmd(target, playbook, var, list_playbooks, dry_run, visualize, export_
 @click.option('--refresh-param', help='Parameter to update with new session ID')
 @click.option('--refresh-error', help='String/Regex in response body that triggers refresh')
 @click.option('--response-regex', '-rr', help='Regex to extract specific content from response (matches last occurrence)')
+@click.option('--response-path', '-rp', help='JSON path to extract response (e.g., response, data.message, choices.0.text)')
 @click.option('--eval-url', help='URL for secondary LLM evaluation')
 @click.option('--eval-key', help='API key for secondary LLM')
 @click.option('--eval-model', help='Model for secondary LLM')
@@ -972,7 +1001,7 @@ def chain_cmd(target, playbook, var, list_playbooks, dry_run, visualize, export_
 @click.option('--risk', type=int, default=1, help='Risk of tests to perform (1-3)')
 @click.option('--show-response', is_flag=True, help='Show AI response for findings')
 @click.option('--verify-attempts', '-va', type=int, default=1, help='Number of verification attempts (confirmation)')
-def scan(target, request, param, key, profile, evasion, output, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, eval_url, eval_key, eval_model, eval_provider, level, risk, show_response, verify_attempts):
+def scan(target, request, param, key, profile, evasion, output, verbose, proxy, cookie, headers, format, refresh_url, refresh_regex, refresh_param, refresh_error, response_regex, response_path, eval_url, eval_key, eval_model, eval_provider, level, risk, show_response, verify_attempts):
     """
     Scan - Run all modules against target
 
@@ -1021,7 +1050,7 @@ def scan(target, request, param, key, profile, evasion, output, verbose, proxy, 
                 parsed_request=parsed_request, proxy=proxy, cookies=cookie, headers=headers,
                 injection_param=param, body_format=format,
                 refresh_config={'url': refresh_url, 'regex': refresh_regex, 'param': refresh_param, 'error': refresh_error},
-                response_regex=response_regex,
+                response_regex=response_regex, response_path=response_path,
                 eval_config={'url': eval_url, 'api_key': eval_key, 'model': eval_model, 'provider': eval_provider},
                 level=level, risk=risk, show_response=show_response, verify_attempts=verify_attempts
             )

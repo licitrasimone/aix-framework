@@ -64,7 +64,7 @@ class ExfilScanner(BaseScanner):
 
                     # Check for indicators using LLM or keywords
                     # Scan payload (handles N attempts)
-                    is_vulnerable, best_resp = await self.scan_payload(connector, p['payload'], p['indicators'], p['name'])
+                    is_vulnerable, best_resp = await self.scan_payload(connector, payload, p['indicators'], p['name'])
                     if is_vulnerable:
                         resp = best_resp # Update resp reference for URLs check
 

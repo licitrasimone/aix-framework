@@ -68,10 +68,7 @@ class AgentScanner(BaseScanner):
 
                 try:
                     # Scan payload (handles N attempts)
-                    is_vulnerable, best_resp = await self.scan_payload(connector, p['payload'], p['indicators'], p['name'])
-                    
-                    if is_vulnerable:
-                         resp = best_resp # Update resp for tool extraction
+                    is_vulnerable, resp = await self.scan_payload(connector, p['payload'], p['indicators'], p['name'])
 
                     # For discovery payloads, also extract tool names
                     if p['category'] == 'discovery':
