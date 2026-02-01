@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 authors = [
-    {name = "AIX Team", email = "aix@example.com"}
+    {name = "Simone Licitra", email = "licitrasimone@gmail.com"}
 ]
 keywords = [
     "ai", "llm", "security", "pentesting", "red-team", 
@@ -24,7 +24,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -57,10 +56,11 @@ dev = [
 aix = "aix.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/aix-framework/aix"
-Documentation = "https://github.com/aix-framework/aix#readme"
-Repository = "https://github.com/aix-framework/aix"
-Issues = "https://github.com/aix-framework/aix/issues"
+Homepage = "https://github.com/licitrasimone/aix-framework"
+Documentation = "https://github.com/licitrasimone/aix-framework#readme"
+Repository = "https://github.com/licitrasimone/aix-framework"
+Issues = "https://github.com/licitrasimone/aix-framework/issues"
+Changelog = "https://github.com/licitrasimone/aix-framework/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -74,7 +74,7 @@ include = ["aix*"]
 
 [tool.black]
 line-length = 100
-target-version = ['py39', 'py310', 'py311', 'py312']
+target-version = ['py310', 'py311', 'py312']
 
 [tool.ruff]
 line-length = 100

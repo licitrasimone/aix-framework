@@ -1,0 +1,9 @@
+aix-framework (1.0.0-1) unstable; urgency=medium
+
+  * Initial release.
+  * AI eXploit Framework for AI/LLM security testing
+  * Includes reconnaissance, prompt injection, jailbreak modules
+  * OWASP LLM Top 10 vulnerability mapping
+  * Rich CLI interface with HTML reporting
+
+ -- Simone Licitra <licitrasimone@gmail.com>  Fri, 31 Jan 2025 12:00:00 +0000
