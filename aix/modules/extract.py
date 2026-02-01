@@ -25,11 +25,18 @@ class ExtractScanner(BaseScanner):
 
     async def run(self, extractions: list[dict] = None):
         if extractions is None: extractions = self.default_extractions
-        self._print('info', f'Testing {len(extractions)} extraction techniques...')
 
         connector = self._create_connector()
         await connector.connect()
         await self.gather_context(connector)
+
+        # Generate context-aware payloads if requested
+        if self.generate_count > 0 and self.ai_engine and self.context:
+            generated = await self.generate_payloads()
+            if generated:
+                extractions = extractions + generated
+
+        self._print('info', f'Testing {len(extractions)} extraction techniques...')
 
         try:
             for e in track(extractions, description="[bold green]📥 Siphoning Data...  [/]", console=self.console, disable=not self.show_progress):

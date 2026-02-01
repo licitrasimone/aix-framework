@@ -132,12 +132,27 @@ class MultiTurnScanner(BaseScanner):
             self._print('warning', "No sequences to execute")
             return self.findings
 
-        self._print('info', f"Testing {len(sequences)} multi-turn sequences...")
-
         # Create connector
         connector = self._create_connector()
         await connector.connect()
         await self.gather_context(connector)
+
+        # Generate context-aware payloads if requested
+        if self.generate_count > 0 and self.ai_engine and self.context:
+            generated = await self.generate_payloads()
+            if generated:
+                # Convert generated payloads to simple sequences
+                for g in generated:
+                    sequences.append({
+                        "name": g.get('name', 'Generated Attack'),
+                        "category": "generated",
+                        "description": "AI-generated context-aware attack",
+                        "severity": "HIGH",
+                        "turns": [{"payload": g['payload'], "indicators": g.get('indicators', [])}],
+                        "owasp": g.get('owasp', [])
+                    })
+
+        self._print('info', f"Testing {len(sequences)} multi-turn sequences...")
 
         # Create conversation manager
         conv_manager = ConversationManager(

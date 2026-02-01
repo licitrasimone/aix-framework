@@ -94,11 +94,18 @@ class RAGScanner(BaseScanner):
     async def run(self, payloads: list[dict] = None):
         if payloads is None:
             payloads = self.default_payloads
-        self._print('info', f'Testing {len(payloads)} RAG attack payloads...')
 
         connector = self._create_connector()
         await connector.connect()
         await self.gather_context(connector)
+
+        # Generate context-aware payloads if requested
+        if self.generate_count > 0 and self.ai_engine and self.context:
+            generated = await self.generate_payloads()
+            if generated:
+                payloads = payloads + generated
+
+        self._print('info', f'Testing {len(payloads)} RAG attack payloads...')
 
         try:
             for p in track(payloads, description="[bold bright_cyan]RAG Testing...[/]", console=self.console, disable=not self.show_progress):

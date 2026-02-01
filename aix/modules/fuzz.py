@@ -141,11 +141,17 @@ class FuzzScanner(BaseScanner):
         # Limit to iterations count
         payloads = payloads[:self.iterations]
 
-        self._print('info', f'Running {len(payloads)} fuzz tests...')
-
         connector = self._create_connector()
         await connector.connect()
         await self.gather_context(connector)
+
+        # Generate context-aware payloads if requested
+        if self.generate_count > 0 and self.ai_engine and self.context:
+            generated = await self.generate_payloads()
+            if generated:
+                payloads = payloads + generated
+
+        self._print('info', f'Running {len(payloads)} fuzz tests...')
 
         try:
             # Get baseline response
