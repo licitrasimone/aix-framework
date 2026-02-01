@@ -209,15 +209,37 @@ class APIConnector(Connector):
 
     def _detect_api_format(self) -> str:
         """Detect API format from URL"""
+        # Parse the URL to avoid relying on arbitrary substrings
+        parsed = urllib.parse.urlparse(self.url)
+        hostname = (parsed.hostname or "").lower()
         url_lower = self.url.lower()
 
-        if "openai" in url_lower or "azure" in url_lower:
+        # OpenAI / Azure OpenAI: keep heuristic but prefer hostname-based checks
+        if (
+            hostname == "api.openai.com"
+            or hostname.endswith(".openai.azure.com")
+            or "openai" in hostname
+            or "azure" in hostname
+            or ("openai" in url_lower or "azure" in url_lower)
+        ):
             return "openai"
-        elif "anthropic" in url_lower:
+
+        # Anthropic: check hostname first, fall back to full URL for backwards compatibility
+        if "anthropic" in hostname or "anthropic" in url_lower:
             return "anthropic"
-        elif "ollama" in url_lower or ":11434" in url_lower:
+
+        # Ollama / local models: use hostname and explicit port 11434
+        if (
+            "ollama" in hostname
+            or parsed.port == 11434
+            or ":11434" in url_lower
+        ):
             return "ollama"
-        elif "generativelanguage.googleapis.com" in url_lower:
+
+        # Gemini: restrict detection to the actual Gemini host name
+        if hostname == "generativelanguage.googleapis.com" or hostname.endswith(
+            ".generativelanguage.googleapis.com"
+        ):
             return "gemini"
 
         return "generic"
