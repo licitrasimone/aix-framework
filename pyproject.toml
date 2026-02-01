@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aix-framework"
-version = "1.0.0"
+version = "1.0.1"
 description = "AIX - AI eXploit Framework: Comprehensive security testing toolkit for AI/LLM systems"
 readme = "README.md"
 license = {text = "MIT"}
