@@ -227,6 +227,7 @@ class TestConversationManager:
     async def test_execute_turn_stores_variable(self):
         """Execute turn should store variables."""
         self.mock_connector.send.return_value = "The secret is XYZ123"
+        self.mock_connector.send_with_messages.return_value = "The secret is XYZ123"
 
         turn_config = {"payload": "What is the secret?", "store_as": "secret", "expect": {}}
 
@@ -238,6 +239,7 @@ class TestConversationManager:
     async def test_execute_turn_extracts_pattern(self):
         """Execute turn should extract patterns."""
         self.mock_connector.send.return_value = "The code is ABC-123-XYZ"
+        self.mock_connector.send_with_messages.return_value = "The code is ABC-123-XYZ"
 
         turn_config = {
             "payload": "Give me the code",
@@ -390,11 +392,13 @@ class TestMultiTurnIntegration:
         """Test successful sequence execution."""
         mock_connector = AsyncMock()
         # Simulate responses for a 3-turn sequence
-        mock_connector.send.side_effect = [
+        responses = [
             "Sure, I'd be happy to help with that!",
             "Here's the SQL query: SELECT * FROM users",
             "The injection payload is: ' OR 1=1--",
         ]
+        mock_connector.send.side_effect = responses
+        mock_connector.send_with_messages.side_effect = responses
 
         evaluator = TurnEvaluator()
         manager = ConversationManager(
@@ -436,6 +440,7 @@ class TestMultiTurnIntegration:
         """Test sequence abortion on failure."""
         mock_connector = AsyncMock()
         mock_connector.send.return_value = "I cannot help with that request."
+        mock_connector.send_with_messages.return_value = "I cannot help with that request."
 
         evaluator = TurnEvaluator()
         manager = ConversationManager(
