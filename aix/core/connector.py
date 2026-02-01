@@ -229,11 +229,7 @@ class APIConnector(Connector):
             return "anthropic"
 
         # Ollama / local models: use hostname and explicit port 11434
-        if (
-            "ollama" in hostname
-            or parsed.port == 11434
-            or ":11434" in url_lower
-        ):
+        if "ollama" in hostname or parsed.port == 11434 or ":11434" in url_lower:
             return "ollama"
 
         # Gemini: restrict detection to the actual Gemini host name
