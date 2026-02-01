@@ -52,6 +52,7 @@ class BaseScanner(ABC):
         self.body_format = kwargs.get('body_format')
         self.refresh_config = kwargs.get('refresh_config')
         self.response_regex = kwargs.get('response_regex')
+        self.response_path = kwargs.get('response_path')
 
         # Filtering config
         self.level = kwargs.get('level', 1)
@@ -199,6 +200,7 @@ class BaseScanner(ABC):
                 timeout=self.timeout,
                 refresh_config=self.refresh_config,
                 response_regex=self.response_regex,
+                response_path=self.response_path,
                 console=self.console
             )
         else:
@@ -214,6 +216,7 @@ class BaseScanner(ABC):
                 timeout=self.timeout,
                 refresh_config=self.refresh_config,
                 response_regex=self.response_regex,
+                response_path=self.response_path,
                 console=self.console
             )
 

@@ -196,6 +196,7 @@ class APIConnector(Connector):
         self.client: httpx.AsyncClient | None = None
         self.refresh_config = kwargs.get('refresh_config', {})
         self.response_regex = kwargs.get('response_regex')
+        self.response_path = kwargs.get('response_path')
 
         # Detect API format from URL if not specified
         if api_format == 'generic':
@@ -296,8 +297,10 @@ class APIConnector(Connector):
         extracted_text = ""
         path = self.format_config['response_path']
 
-        # Handle profile-specific response path
-        if self.profile and hasattr(self.profile, 'response_path'):
+        # Priority: CLI option > profile > format default
+        if self.response_path:
+            path = self.response_path
+        elif self.profile and hasattr(self.profile, 'response_path') and self.profile.response_path:
             path = self.profile.response_path
 
         extracted_text = extract_from_path(data, path)

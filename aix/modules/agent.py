@@ -53,14 +53,17 @@ class AgentScanner(BaseScanner):
     async def run(self, payloads: list[dict] = None):
         if payloads is None: payloads = self.default_payloads
 
-        self._print('info', f'Testing {len(payloads)} agent exploitation techniques...')
-
-        # BaseScanner has _create_connector
-        # BaseScanner has _create_connector
         connector = self._create_connector()
-        # Note: AgentScanner had logic to pass specific cookies/headers. _create_connector uses self.cookies/self.headers
         await connector.connect()
         await self.gather_context(connector)
+
+        # Generate context-aware payloads if requested
+        if self.generate_count > 0 and self.ai_engine and self.context:
+            generated = await self.generate_payloads()
+            if generated:
+                payloads = payloads + generated
+
+        self._print('info', f'Testing {len(payloads)} agent exploitation techniques...')
 
         try:
             for p in track(payloads, description="[bold blue]🕵️ Hijacking Tools...  [/]", console=self.console, disable=not self.show_progress):
@@ -68,10 +71,7 @@ class AgentScanner(BaseScanner):
 
                 try:
                     # Scan payload (handles N attempts)
-                    is_vulnerable, best_resp = await self.scan_payload(connector, p['payload'], p['indicators'], p['name'])
-                    
-                    if is_vulnerable:
-                         resp = best_resp # Update resp for tool extraction
+                    is_vulnerable, resp = await self.scan_payload(connector, p['payload'], p['indicators'], p['name'])
 
                     # For discovery payloads, also extract tool names
                     if p['category'] == 'discovery':

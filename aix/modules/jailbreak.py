@@ -25,11 +25,18 @@ class JailbreakScanner(BaseScanner):
 
     async def run(self, jailbreaks: list[dict] = None):
         if jailbreaks is None: jailbreaks = self.default_jailbreaks
-        self._print('info', f'Testing {len(jailbreaks)} jailbreak techniques...')
 
         connector = self._create_connector()
         await connector.connect()
         await self.gather_context(connector)
+
+        # Generate context-aware payloads if requested
+        if self.generate_count > 0 and self.ai_engine and self.context:
+            generated = await self.generate_payloads()
+            if generated:
+                jailbreaks = jailbreaks + generated
+
+        self._print('info', f'Testing {len(jailbreaks)} jailbreak techniques...')
 
         try:
             for j in track(jailbreaks, description="[bold red]🔓 Breaking Rails...   [/]", console=self.console, disable=not self.show_progress):

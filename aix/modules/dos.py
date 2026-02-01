@@ -73,13 +73,19 @@ class DoSScanner(BaseScanner):
         if payloads is None:
             payloads = self.default_payloads
 
-        self._print('info', f'Testing {len(payloads)} DoS techniques...')
-        if self.safe_mode:
-            self._print('info', 'Safe mode enabled - limited test intensity')
-
         connector = self._create_connector()
         await connector.connect()
         await self.gather_context(connector)
+
+        # Generate context-aware payloads if requested
+        if self.generate_count > 0 and self.ai_engine and self.context:
+            generated = await self.generate_payloads()
+            if generated:
+                payloads = payloads + generated
+
+        self._print('info', f'Testing {len(payloads)} DoS techniques...')
+        if self.safe_mode:
+            self._print('info', 'Safe mode enabled - limited test intensity')
 
         try:
             # Establish baseline

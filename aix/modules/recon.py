@@ -65,7 +65,29 @@ class ReconScanner(BaseScanner):
             'filters_detected': [],
             'response_times': [],
             'errors': [],
-            'discovered_endpoints': []
+            'discovered_endpoints': [],
+            # Enhanced detection fields
+            'rag_detected': False,
+            'rag_confidence': 0,
+            'rag_indicators': [],
+            'system_prompt_indicators': {},
+            'temperature_estimate': None,
+            'is_deterministic': None,
+            'response_variance': None,
+            'context_window_estimate': None,
+            'truncation_detected': False,
+            'tools': {
+                'code_execution': False,
+                'web_browsing': False,
+                'file_access': False,
+                'function_calling': False,
+                'database_access': False
+            },
+            'modalities': {'input': ['text'], 'output': ['text']},
+            'input_processing': {
+                'supported_formats': [],
+                'sanitization_detected': False
+            }
         }
         
         # Load discovery paths
@@ -205,6 +227,290 @@ class ReconScanner(BaseScanner):
             return "None / Unknown"
             
         return ", ".join(list(set(auth_types)))
+
+    def _detect_rag(self, responses: list) -> dict:
+        """Detect RAG (Retrieval-Augmented Generation) usage"""
+        all_text = " ".join(r.get('response', '') for r in responses if r.get('response')).lower()
+
+        rag_score = 0
+        indicators = []
+
+        # Check citation patterns
+        citation_patterns = self.config.get('rag_indicators', {}).get('citation_patterns', [])
+        for pattern, weight in citation_patterns:
+            if pattern in all_text:
+                rag_score += weight
+                indicators.append(pattern)
+
+        # Check retrieval keywords
+        retrieval_keywords = self.config.get('rag_indicators', {}).get('retrieval_keywords', [])
+        for keyword in retrieval_keywords:
+            if keyword in all_text:
+                rag_score += 3
+                indicators.append(keyword)
+
+        # Check for structured citation patterns (e.g., [1], [Source])
+        citation_refs = re.findall(r'\[(?:Source|Doc|Ref|\d+)\]', all_text, re.IGNORECASE)
+        if citation_refs:
+            rag_score += len(citation_refs) * 2
+            indicators.extend(citation_refs[:3])
+
+        return {
+            'detected': rag_score >= 10,
+            'confidence': min(rag_score * 5, 100),
+            'indicators': list(set(indicators))[:5]
+        }
+
+    def _detect_system_prompt_indicators(self, responses: list) -> dict:
+        """Detect system prompt leakage and behavioral constraints"""
+        all_text = " ".join(r.get('response', '') for r in responses if r.get('response')).lower()
+
+        score = 0
+        indicators = []
+        leaked_hints = []
+
+        # Check instruction patterns
+        instruction_patterns = self.config.get('system_prompt_indicators', {}).get('instruction_patterns', [])
+        for pattern, weight in instruction_patterns:
+            if pattern in all_text:
+                score += weight
+                indicators.append(pattern)
+
+        # Check behavioral constraints
+        constraints = self.config.get('system_prompt_indicators', {}).get('behavioral_constraints', [])
+        for constraint in constraints:
+            if constraint in all_text:
+                score += 4
+                indicators.append(constraint)
+
+        # Extract potential leaked hints (sentences containing "you are" or "your role")
+        hint_patterns = [
+            r'(?:you are|i am)[^.!?]{5,100}[.!?]',
+            r'(?:my role|your role)[^.!?]{5,100}[.!?]',
+            r'(?:instructed to|told to)[^.!?]{5,100}[.!?]'
+        ]
+        for pattern in hint_patterns:
+            matches = re.findall(pattern, all_text)
+            leaked_hints.extend(matches[:2])
+
+        return {
+            'detected': score >= 15,
+            'confidence': min(score * 4, 100),
+            'indicators': list(set(indicators))[:5],
+            'leaked_hints': leaked_hints[:3]
+        }
+
+    async def _detect_temperature(self, connector) -> dict:
+        """Detect temperature/determinism by comparing repeated identical prompts"""
+        test_prompts = [
+            "Complete: 1, 2, 3, 4,",
+            "What is the capital of Japan? Answer in one word.",
+            "Say 'hello' exactly as written."
+        ]
+
+        results = []
+
+        for prompt in test_prompts:
+            responses = []
+            for _ in range(3):  # Send each prompt 3 times
+                try:
+                    resp = await connector.send(prompt)
+                    responses.append(resp.strip().lower()[:100])  # Compare first 100 chars
+                    await asyncio.sleep(0.2)
+                except Exception:
+                    pass
+
+            if len(responses) >= 2:
+                # Calculate variance
+                unique_responses = len(set(responses))
+                variance = unique_responses / len(responses)
+                results.append({
+                    'prompt': prompt[:30],
+                    'unique': unique_responses,
+                    'total': len(responses),
+                    'variance': variance
+                })
+
+        if not results:
+            return {'detected': False, 'temperature_estimate': None, 'is_deterministic': None}
+
+        # Aggregate variance
+        avg_variance = sum(r['variance'] for r in results) / len(results)
+
+        # Estimate temperature
+        if avg_variance <= 0.1:
+            temp_estimate = 0.0
+            is_deterministic = True
+        elif avg_variance <= 0.3:
+            temp_estimate = 0.3
+            is_deterministic = False
+        elif avg_variance <= 0.5:
+            temp_estimate = 0.7
+            is_deterministic = False
+        else:
+            temp_estimate = 1.0
+            is_deterministic = False
+
+        return {
+            'detected': True,
+            'temperature_estimate': temp_estimate,
+            'is_deterministic': is_deterministic,
+            'variance': round(avg_variance, 2),
+            'samples': results
+        }
+
+    async def _detect_context_window(self, connector) -> dict:
+        """Detect context window size through progressive testing"""
+        # Marker word to check retention
+        marker = "XYZMARKER7749"
+
+        # Test sizes (in approximate tokens via word count * 1.3)
+        test_sizes = [1000, 2000, 4000, 8000, 16000]
+
+        last_successful = 0
+        truncation_detected = None
+
+        for size in test_sizes:
+            # Generate filler text
+            word_count = int(size / 1.3)
+            filler = " ".join(["lorem ipsum dolor sit amet"] * (word_count // 5))
+
+            # Create prompt with marker at start
+            prompt = f"Remember this marker: {marker}. {filler} Now, what was the marker I asked you to remember at the start?"
+
+            try:
+                resp = await connector.send(prompt)
+
+                if marker in resp:
+                    last_successful = size
+                else:
+                    truncation_detected = size
+                    break
+
+            except Exception:
+                # Request too large
+                truncation_detected = size
+                break
+
+            await asyncio.sleep(0.5)
+
+        # Estimate window size
+        if truncation_detected:
+            estimate = (last_successful + truncation_detected) // 2
+        elif last_successful > 0:
+            estimate = last_successful * 2  # Could be larger
+        else:
+            estimate = None
+
+        return {
+            'detected': estimate is not None,
+            'context_window_estimate': estimate,
+            'last_successful_tokens': last_successful,
+            'truncation_detected_at': truncation_detected
+        }
+
+    def _detect_tools(self, responses: list) -> dict:
+        """Detect specific tool capabilities"""
+        all_text = " ".join(r.get('response', '') for r in responses if r.get('response')).lower()
+
+        detected_tools = {}
+        tool_sigs = self.config.get('tool_signatures', {})
+
+        for tool_type, patterns in tool_sigs.items():
+            score = 0
+            matches = []
+            for pattern, weight in patterns:
+                if pattern in all_text:
+                    score += weight
+                    matches.append(pattern)
+
+            if score >= 5:
+                detected_tools[tool_type] = {
+                    'detected': True,
+                    'confidence': min(score * 10, 100),
+                    'indicators': matches[:3]
+                }
+
+        return {
+            'tools_detected': list(detected_tools.keys()),
+            'tool_details': detected_tools,
+            'has_tools': len(detected_tools) > 0
+        }
+
+    def _detect_capabilities_extended(self, responses: list) -> dict:
+        """Detect extended capabilities and modalities"""
+        all_text = " ".join(r.get('response', '') for r in responses if r.get('response')).lower()
+
+        capabilities = []
+        modalities = {'input': ['text'], 'output': ['text']}
+
+        # Check capability signatures
+        cap_sigs = self.config.get('capability_signatures', {})
+        for cap_type, patterns in cap_sigs.items():
+            score = 0
+            for pattern, weight in patterns:
+                if pattern in all_text:
+                    score += weight
+            if score >= 5:
+                capabilities.append(cap_type)
+
+        # Detect input modalities
+        if 'image' in all_text or 'vision' in all_text or 'picture' in all_text:
+            modalities['input'].append('image')
+        if 'audio' in all_text or 'speech' in all_text or 'voice' in all_text:
+            modalities['input'].append('audio')
+
+        # Detect output modalities
+        if 'json' in all_text or 'structured' in all_text:
+            modalities['output'].append('structured')
+        if 'code' in all_text or 'python' in all_text:
+            modalities['output'].append('code')
+
+        return {
+            'capabilities': capabilities,
+            'modalities': modalities
+        }
+
+    async def _detect_input_processing(self, connector) -> dict:
+        """Detect input processing and sanitization behavior"""
+        tests = {
+            'json': ('{"test": "value"}', ['test', 'value', 'json']),
+            'xml': ('<tag>content</tag>', ['tag', 'content', 'xml']),
+            'markdown': ('# Header\n**bold**', ['header', 'bold', 'markdown']),
+            'special_chars': ('Test: <>&"\'', ['<', '>', '&'])
+        }
+
+        processing_detected = {}
+        sanitization_detected = False
+
+        for format_type, (payload, indicators) in tests.items():
+            try:
+                resp = await connector.send(f"Echo back exactly: {payload}")
+                resp_lower = resp.lower()
+
+                # Check if format was processed/interpreted
+                processed = any(ind in resp_lower for ind in indicators)
+
+                # Check if sanitization occurred (special chars removed/escaped)
+                if format_type == 'special_chars':
+                    if '&lt;' in resp or '&gt;' in resp:
+                        sanitization_detected = True
+
+                processing_detected[format_type] = {
+                    'recognized': processed,
+                    'echo_match': payload in resp
+                }
+
+            except Exception:
+                processing_detected[format_type] = {'recognized': False, 'error': True}
+
+            await asyncio.sleep(0.2)
+
+        return {
+            'formats_detected': processing_detected,
+            'sanitization_detected': sanitization_detected,
+            'supported_formats': [k for k, v in processing_detected.items() if v.get('recognized')]
+        }
 
     async def _probe_rate_limit(self, connector) -> tuple:
         """Probe for rate limiting"""
@@ -620,6 +926,89 @@ class ReconScanner(BaseScanner):
             if self.results['capabilities']:
                 self._print('info', f'Capabilities: {", ".join(self.results["capabilities"])}')
 
+            # --- ENHANCED DETECTION PHASE ---
+            self._print('info', 'Running enhanced detection probes...')
+
+            # 1. RAG Detection
+            rag_result = self._detect_rag(responses)
+            self.results['rag_detected'] = rag_result['detected']
+            self.results['rag_confidence'] = rag_result.get('confidence', 0)
+            self.results['rag_indicators'] = rag_result.get('indicators', [])
+            if rag_result['detected']:
+                self._print('success', f'RAG system detected (confidence: {rag_result["confidence"]}%)')
+                self.findings.append(Finding(
+                    title="RAG System Detected",
+                    severity=Severity.INFO,
+                    technique="rag_detection",
+                    payload="RAG detection probes",
+                    response=f"Indicators: {', '.join(rag_result.get('indicators', []))}",
+                    target=self.target,
+                    reason=f"RAG detected with {rag_result['confidence']}% confidence"
+                ))
+
+            # 2. System Prompt Detection
+            system_prompt_result = self._detect_system_prompt_indicators(responses)
+            self.results['system_prompt_indicators'] = system_prompt_result
+            if system_prompt_result['detected']:
+                self._print('warning', f'System prompt indicators detected (confidence: {system_prompt_result["confidence"]}%)')
+                self.findings.append(Finding(
+                    title="System Prompt Indicators",
+                    severity=Severity.MEDIUM,
+                    technique="system_prompt_detection",
+                    payload="System prompt probes",
+                    response=f"Hints: {system_prompt_result.get('leaked_hints', [])}",
+                    target=self.target,
+                    reason="Potential system prompt leakage detected"
+                ))
+
+            # 3. Temperature/Determinism Detection
+            self._print('info', 'Testing response determinism...')
+            temp_result = await self._detect_temperature(connector)
+            self.results['temperature_estimate'] = temp_result.get('temperature_estimate')
+            self.results['is_deterministic'] = temp_result.get('is_deterministic')
+            self.results['response_variance'] = temp_result.get('variance')
+            if temp_result['detected']:
+                det_str = "Yes" if temp_result['is_deterministic'] else "No"
+                self._print('info', f'Temperature estimate: {temp_result["temperature_estimate"]}, Deterministic: {det_str}')
+
+            # 4. Context Window Detection
+            self._print('info', 'Probing context window...')
+            ctx_result = await self._detect_context_window(connector)
+            self.results['context_window_estimate'] = ctx_result.get('context_window_estimate')
+            self.results['truncation_detected'] = ctx_result.get('truncation_detected_at') is not None
+            if ctx_result['detected']:
+                self._print('info', f'Context window estimate: ~{ctx_result["context_window_estimate"]} tokens')
+
+            # 5. Tools Detection (Enhanced)
+            tools_result = self._detect_tools(responses)
+            self.results['tools'] = {
+                tool: details.get('detected', False)
+                for tool, details in tools_result.get('tool_details', {}).items()
+            }
+            # Merge with existing tools dict
+            for tool_type in ['code_execution', 'web_browsing', 'file_access', 'function_calling', 'database_access']:
+                if tool_type not in self.results['tools']:
+                    self.results['tools'][tool_type] = False
+            if tools_result['has_tools']:
+                self._print('success', f'Tools detected: {", ".join(tools_result["tools_detected"])}')
+                self.results['capabilities'].extend(tools_result['tools_detected'])
+
+            # 6. Capabilities Detection (Enhanced)
+            cap_result = self._detect_capabilities_extended(responses)
+            self.results['capabilities'] = list(set(self.results['capabilities'] + cap_result.get('capabilities', [])))
+            self.results['modalities'] = cap_result.get('modalities', {'input': ['text'], 'output': ['text']})
+            if cap_result['capabilities']:
+                self._print('info', f'Extended capabilities: {", ".join(cap_result["capabilities"])}')
+
+            # 7. Input Processing Detection
+            self._print('info', 'Testing input processing...')
+            input_result = await self._detect_input_processing(connector)
+            self.results['input_processing'] = input_result
+            if input_result['supported_formats']:
+                self._print('info', f'Supported input formats: {", ".join(input_result["supported_formats"])}')
+
+            # --- END ENHANCED DETECTION PHASE ---
+
             # Calculate average response time
             if self.results['response_times']:
                 avg_time = sum(self.results['response_times']) / len(self.results['response_times'])
@@ -714,6 +1103,47 @@ class ReconScanner(BaseScanner):
             avg = sum(self.results['response_times']) / len(self.results['response_times'])
             color = "green" if avg < 1.0 else "yellow" if avg < 3.0 else "red"
             table.add_row("Avg Latency", f"[{color}]{avg:.2f}s[/]")
+
+        # RAG Detection
+        if self.results.get('rag_detected'):
+            table.add_row("RAG System", f"[green]Detected ({self.results.get('rag_confidence', 0)}% confidence)[/]")
+        else:
+            table.add_row("RAG System", "[dim]Not detected[/]")
+
+        # Temperature
+        if self.results.get('temperature_estimate') is not None:
+            temp = self.results['temperature_estimate']
+            det = "Yes" if self.results.get('is_deterministic') else "No"
+            table.add_row("Temperature", f"~{temp} (Deterministic: {det})")
+
+        # Context Window
+        if self.results.get('context_window_estimate'):
+            ctx = self.results['context_window_estimate']
+            table.add_row("Context Window", f"~{ctx:,} tokens")
+
+        # System Prompt Indicators
+        sys_prompt = self.results.get('system_prompt_indicators', {})
+        if sys_prompt.get('detected'):
+            table.add_row("System Prompt", f"[yellow]Indicators detected ({sys_prompt.get('confidence', 0)}%)[/]")
+
+        # Tools
+        tools = self.results.get('tools', {})
+        active_tools = [k.replace('_', ' ').title() for k, v in tools.items() if v]
+        if active_tools:
+            table.add_row("Tools/Agency", f"[cyan]{', '.join(active_tools)}[/]")
+
+        # Modalities
+        modalities = self.results.get('modalities', {})
+        if modalities.get('input') or modalities.get('output'):
+            in_mod = ", ".join(modalities.get('input', ['text']))
+            out_mod = ", ".join(modalities.get('output', ['text']))
+            table.add_row("Input Modalities", in_mod)
+            table.add_row("Output Modalities", out_mod)
+
+        # Input Processing
+        input_proc = self.results.get('input_processing', {})
+        if input_proc.get('supported_formats'):
+            table.add_row("Input Formats", ", ".join(input_proc['supported_formats']))
 
         self.console.print(table)
 

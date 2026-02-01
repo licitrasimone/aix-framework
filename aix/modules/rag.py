@@ -16,12 +16,41 @@ if TYPE_CHECKING:
 class RAGScanner(BaseScanner):
     """Scanner for RAG-specific vulnerabilities including indirect injection, context poisoning, and knowledge base attacks."""
 
+    # Default canary placeholders to replace
+    CANARY_PLACEHOLDER = 'AIX_CANARY'
+
     def __init__(self, target: str, api_key: str | None = None, verbose: bool = False,
-                 parsed_request: Optional['ParsedRequest'] = None, **kwargs):
+                 parsed_request: Optional['ParsedRequest'] = None, canary: str | None = None,
+                 category: str = 'all', **kwargs):
         super().__init__(target, api_key, verbose, parsed_request, **kwargs)
         self.module_name = "RAG"
         self.console_color = "bright_cyan"
-        self.default_payloads = self.load_payloads('rag.json')
+        self.canary = canary
+        self.category = category
+        self.default_payloads = self._load_filtered_payloads()
+
+    def _load_filtered_payloads(self) -> list[dict]:
+        """Load and filter payloads based on canary token and/or category."""
+        all_payloads = self.load_payloads('rag.json')
+
+        # Filter by category first
+        if self.category and self.category != 'all':
+            # If category is 'canary' and canary token provided, or just filtering by category
+            filtered_payloads = [p.copy() for p in all_payloads if p.get('category') == self.category]
+        else:
+            # All categories
+            filtered_payloads = [p.copy() for p in all_payloads]
+
+        # If canary token is provided, inject it into canary payloads
+        if self.canary:
+            for p in filtered_payloads:
+                if p.get('category') == 'canary':
+                    # Replace placeholder with user-specified canary token
+                    p['payload'] = p['payload'].replace(self.CANARY_PLACEHOLDER, self.canary)
+                    # Update indicators to include the user's canary token
+                    p['indicators'] = [self.canary] + [ind for ind in p['indicators'] if ind != self.CANARY_PLACEHOLDER]
+
+        return filtered_payloads
 
     def _extract_sources(self, response: str) -> list[str]:
         """Extract cited sources and document references from response."""
@@ -65,11 +94,18 @@ class RAGScanner(BaseScanner):
     async def run(self, payloads: list[dict] = None):
         if payloads is None:
             payloads = self.default_payloads
-        self._print('info', f'Testing {len(payloads)} RAG attack payloads...')
 
         connector = self._create_connector()
         await connector.connect()
         await self.gather_context(connector)
+
+        # Generate context-aware payloads if requested
+        if self.generate_count > 0 and self.ai_engine and self.context:
+            generated = await self.generate_payloads()
+            if generated:
+                payloads = payloads + generated
+
+        self._print('info', f'Testing {len(payloads)} RAG attack payloads...')
 
         try:
             for p in track(payloads, description="[bold bright_cyan]RAG Testing...[/]", console=self.console, disable=not self.show_progress):
@@ -125,5 +161,5 @@ class RAGScanner(BaseScanner):
         return self.findings
 
 
-def run(target: str = None, api_key: str = None, **kwargs):
-    run_scanner(RAGScanner, target, api_key=api_key, **kwargs)
+def run(target: str = None, api_key: str = None, canary: str = None, category: str = 'all', **kwargs):
+    run_scanner(RAGScanner, target, api_key=api_key, canary=canary, category=category, **kwargs)
