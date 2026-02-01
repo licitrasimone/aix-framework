@@ -226,9 +226,7 @@ class ReconScanner(BaseScanner):
                     auth_types.append("Custom Authorization")
 
             # Check for API Key headers
-            api_keys = [
-                k for k in headers if "api-key" in k or "x-api-key" in k or "apikey" in k
-            ]
+            api_keys = [k for k in headers if "api-key" in k or "x-api-key" in k or "apikey" in k]
             if api_keys:
                 auth_types.append(f"Header API Key ({api_keys[0]})")
 
