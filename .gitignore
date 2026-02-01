@@ -60,9 +60,14 @@ outputs/
 
 # Testing
 .coverage
+coverage.xml
 .pytest_cache/
 htmlcov/
 .tox/
 .nox/
 .ruff_cache/
+.mypy_cache/
+
+# Planning/Notes
 .PLAN.md
+TODO.md

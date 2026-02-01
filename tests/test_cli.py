@@ -191,13 +191,13 @@ class TestCLIEvaluatorOptions:
         return CliRunner()
 
     def test_eval_options_in_inject(self, runner):
-        """Test evaluator options exist in inject"""
+        """Test AI evaluator options exist in inject"""
         result = runner.invoke(main, ['inject', '--help'])
 
-        eval_options = ['--eval-provider', '--eval-key', '--eval-model', '--eval-url']
+        ai_options = ['--ai', '--ai-key', '--ai-model']
 
-        for opt in eval_options:
-            assert opt in result.output, f"Evaluator option '{opt}' not found"
+        for opt in ai_options:
+            assert opt in result.output, f"AI option '{opt}' not found"
 
 
 class TestCLIProxyOptions:
