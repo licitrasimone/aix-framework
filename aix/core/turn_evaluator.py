@@ -25,7 +25,6 @@ class TurnEvaluator:
         "of course",
         "certainly",
         "happy to",
-        "i can",
         "i'd be glad",
         "let me",
         "here's",
