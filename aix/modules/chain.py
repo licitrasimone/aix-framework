@@ -4,33 +4,26 @@ AIX Chain Module - Attack chain execution from YAML playbooks
 This module provides the interface for running attack chains defined
 in YAML playbook files.
 """
+
 import asyncio
-from pathlib import Path
-from typing import Optional
 
 from rich.console import Console
 
 from aix.core.chain_engine.executor import ChainExecutor, ChainResult, print_chain_summary
-from aix.core.chain_engine.context import ChainContext
 from aix.core.chain_engine.playbook import (
-    Playbook,
-    PlaybookParser,
     PlaybookError,
+    PlaybookParser,
     find_playbook,
     list_builtin_playbooks,
 )
 from aix.core.reporting.chain import ChainReporter
-from aix.core.reporting.base import Reporter
-from aix.core.scanner import BaseScanner
 from aix.core.reporting.visualizer import (
-    PlaybookVisualizer,
     DryRunVisualizer,
     LiveChainVisualizer,
     MermaidExporter,
-    CytoscapeExporter,
-    print_execution_summary,
+    PlaybookVisualizer,
 )
-
+from aix.core.scanner import BaseScanner
 
 console = Console()
 
@@ -50,7 +43,7 @@ class ChainScanner(BaseScanner):
         playbook_path: str | None = None,
         var_overrides: dict | None = None,
         live_viz: bool = True,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(target, api_key, verbose, **kwargs)
         self.show_progress = True  # Always show progress in module steps
@@ -64,24 +57,24 @@ class ChainScanner(BaseScanner):
     async def run(self):
         """Execute the chain playbook."""
         if not self.playbook_path:
-            self._print('error', "No playbook specified")
+            self._print("error", "No playbook specified")
             return self.findings
 
         # Find and parse playbook
         path = find_playbook(self.playbook_path)
         if not path:
-            self._print('error', f"Playbook not found: {self.playbook_path}")
+            self._print("error", f"Playbook not found: {self.playbook_path}")
             return self.findings
 
         parser = PlaybookParser()
         try:
             playbook = parser.parse(path)
         except PlaybookError as e:
-            self._print('error', f"Failed to parse playbook: {e}")
+            self._print("error", f"Failed to parse playbook: {e}")
             return self.findings
 
-        self._print('info', f"Running playbook: {playbook.name}")
-        self._print('info', f"Steps: {len(playbook.steps)}, Variables: {len(playbook.variables)}")
+        self._print("info", f"Running playbook: {playbook.name}")
+        self._print("info", f"Steps: {len(playbook.steps)}, Variables: {len(playbook.variables)}")
 
         # Create visualizer if enabled
         visualizer = LiveChainVisualizer(self.console) if self.live_viz else None
@@ -103,7 +96,7 @@ class ChainScanner(BaseScanner):
             refresh_config=self.refresh_config,
             response_regex=self.response_regex,
             response_path=self.response_path,
-            eval_config=self.eval_config if hasattr(self, 'eval_config') else None,
+            eval_config=self.eval_config if hasattr(self, "eval_config") else None,
             verify_attempts=self.verify_attempts,
             show_response=self.show_response,
             timeout=self.timeout,
@@ -118,9 +111,9 @@ class ChainScanner(BaseScanner):
         self.findings = self.chain_result.findings
 
         # Update stats
-        self.stats['total'] = self.chain_result.steps_executed
-        self.stats['success'] = self.chain_result.steps_successful
-        self.stats['blocked'] = self.chain_result.steps_failed
+        self.stats["total"] = self.chain_result.steps_executed
+        self.stats["success"] = self.chain_result.steps_successful
+        self.stats["blocked"] = self.chain_result.steps_failed
 
         # Print summary
         print_chain_summary(self.chain_result, self.console)
@@ -136,13 +129,13 @@ def run(
     dry_run: bool = False,
     visualize: bool = False,
     export_mermaid: bool = False,
-    mermaid_theme: str = 'default',
-    mermaid_direction: str = 'TD',
+    mermaid_theme: str = "default",
+    mermaid_direction: str = "TD",
     list_playbooks: bool = False,
     live: bool = True,
     verbose: bool = False,
     output: str = None,
-    **kwargs
+    **kwargs,
 ):
     """
     Run an attack chain from a playbook.
@@ -227,7 +220,7 @@ def run(
         playbook_path=playbook,
         var_overrides=variables,
         live_viz=live,
-        **kwargs
+        **kwargs,
     )
 
     asyncio.run(scanner.run())
@@ -253,12 +246,11 @@ def _list_playbooks():
 
     for pb in playbooks:
         console.print(f"\n[bold]{pb['name']}[/bold] [dim]({pb['filename']})[/dim]")
-        if pb['description']:
+        if pb["description"]:
             console.print(f"  {pb['description']}")
         console.print(f"  [dim]Steps: {pb['step_count']}, Author: {pb['author'] or 'AIX'}[/dim]")
-        if pb['tags']:
-            tags = ", ".join(pb['tags'])
+        if pb["tags"]:
+            tags = ", ".join(pb["tags"])
             console.print(f"  [dim]Tags: {tags}[/dim]")
 
     console.print()
-

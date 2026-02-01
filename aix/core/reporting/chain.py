@@ -13,12 +13,13 @@ from pathlib import Path
 
 from rich.console import Console
 
-from aix.core.chain_engine import ChainResult
-from aix.core.chain_engine import Playbook
+from aix.core.chain_engine import ChainResult, Playbook
+
 from .base import Severity
 from .visualizer import CytoscapeExporter
 
 console = Console()
+
 
 class ChainReporter:
     """
@@ -29,33 +30,33 @@ class ChainReporter:
         """Export chain result to file (JSON or HTML)."""
         output_path = Path(output)
 
-        if output_path.suffix == '.json':
+        if output_path.suffix == ".json":
             self.export_json(result, output_path)
         else:
             self.export_html(result, output_path, playbook)
 
     def export_json(self, result: ChainResult, path: Path) -> None:
         """Export as JSON."""
-        with open(path, 'w') as f:
+        with open(path, "w") as f:
             json.dump(result.to_dict(), f, indent=2)
         console.print(f"[green][+] Report saved to {path}[/green]")
 
     def export_html(self, result: ChainResult, path: Path, playbook: Playbook) -> None:
         """Export as HTML with interactive Cytoscape visualization."""
-        
+
         # Generate Graph Data
         exporter = CytoscapeExporter()
         graph_elements_json = exporter.export(playbook, result)
-        
+
         # Count findings by severity
         counts = dict.fromkeys(Severity, 0)
-        
+
         # Group findings by target
         findings_by_target: dict[str, list] = {}
-        
+
         for finding in result.findings:
             counts[finding.severity] += 1
-            
+
             target = finding.target or "Unknown Target"
             if target not in findings_by_target:
                 findings_by_target[target] = []
@@ -63,22 +64,22 @@ class ChainReporter:
 
         # Sort findings within each target by severity
         severity_order = {
-            Severity.CRITICAL: 0, 
-            Severity.HIGH: 1, 
-            Severity.MEDIUM: 2, 
-            Severity.LOW: 3, 
-            Severity.INFO: 4
+            Severity.CRITICAL: 0,
+            Severity.HIGH: 1,
+            Severity.MEDIUM: 2,
+            Severity.LOW: 3,
+            Severity.INFO: 4,
         }
-        
+
         for target in findings_by_target:
             findings_by_target[target].sort(key=lambda f: severity_order.get(f.severity, 99))
 
         # Build findings HTML
         findings_html = ""
-        
+
         for target, target_findings in findings_by_target.items():
             findings_html += f'<div class="target-group"><h3>{target}</h3>'
-            
+
             for finding in target_findings:
                 severity_class = finding.severity.value
                 findings_html += f"""
@@ -562,15 +563,16 @@ class ChainReporter:
     </script>
 </html>
         """
-        
+
         path.write_text(html)
         console.print(f"[green][+] Report saved to {path}[/green]")
 
     def _escape_html(self, text: str) -> str:
         """Escape HTML special characters"""
-        return (text
-            .replace('&', '&amp;')
-            .replace('<', '&lt;')
-            .replace('>', '&gt;')
-            .replace('"', '&quot;')
-            .replace("'", '&#39;'))
+        return (
+            text.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+            .replace("'", "&#39;")
+        )

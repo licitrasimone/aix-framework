@@ -7,6 +7,7 @@ Handles:
 - Condition evaluation
 - Step result tracking
 """
+
 import operator
 import re
 from dataclasses import dataclass, field
@@ -19,6 +20,7 @@ from aix.core.reporting.base import Finding, Severity
 
 class StepStatus(Enum):
     """Status of a step execution."""
+
     PENDING = "pending"
     RUNNING = "running"
     SUCCESS = "success"
@@ -30,6 +32,7 @@ class StepStatus(Enum):
 @dataclass
 class StepResult:
     """Result from executing a single step."""
+
     step_id: str
     status: StepStatus
     success: bool
@@ -64,13 +67,13 @@ class StepResult:
     def to_dict(self) -> dict:
         """Convert to dictionary for serialization."""
         return {
-            'step_id': self.step_id,
-            'status': self.status.value,
-            'success': self.success,
-            'findings_count': self.findings_count,
-            'duration': self.duration,
-            'error': self.error,
-            'stored_vars': self.stored_vars,
+            "step_id": self.step_id,
+            "status": self.status.value,
+            "success": self.success,
+            "findings_count": self.findings_count,
+            "duration": self.duration,
+            "error": self.error,
+            "stored_vars": self.stored_vars,
         }
 
 
@@ -85,6 +88,7 @@ class ChainContext:
     - Results from each executed step
     - Aggregated findings
     """
+
     target: str
     api_key: str | None = None
     variables: dict = field(default_factory=dict)
@@ -159,54 +163,55 @@ class ChainContext:
         Returns:
             Interpolated string
         """
-        if not template or '{{' not in template:
+        if not template or "{{" not in template:
             return template
 
         def replace_var(match: re.Match) -> str:
             var_expr = match.group(1).strip()
 
             # Check for pipe (transform or default)
-            if '|' in var_expr:
-                parts = var_expr.split('|', 1)
+            if "|" in var_expr:
+                parts = var_expr.split("|", 1)
                 var_name = parts[0].strip()
                 modifier = parts[1].strip()
 
                 value = self._resolve_path(var_name)
 
                 # Apply transform
-                if modifier == 'upper':
-                    return str(value).upper() if value else ''
-                elif modifier == 'lower':
-                    return str(value).lower() if value else ''
-                elif modifier == 'strip':
-                    return str(value).strip() if value else ''
-                elif modifier == 'first_line':
-                    return str(value).split('\n')[0] if value else ''
-                elif modifier == 'last_line':
-                    return str(value).split('\n')[-1] if value else ''
-                elif modifier == 'json':
+                if modifier == "upper":
+                    return str(value).upper() if value else ""
+                elif modifier == "lower":
+                    return str(value).lower() if value else ""
+                elif modifier == "strip":
+                    return str(value).strip() if value else ""
+                elif modifier == "first_line":
+                    return str(value).split("\n")[0] if value else ""
+                elif modifier == "last_line":
+                    return str(value).split("\n")[-1] if value else ""
+                elif modifier == "json":
                     import json
+
                     try:
                         return json.dumps(value)
                     except (TypeError, ValueError):
                         return str(value)
-                elif modifier.startswith('truncate_'):
+                elif modifier.startswith("truncate_"):
                     try:
-                        length = int(modifier.replace('truncate_', ''))
-                        return str(value)[:length] if value else ''
+                        length = int(modifier.replace("truncate_", ""))
+                        return str(value)[:length] if value else ""
                     except ValueError:
-                        return str(value) if value else ''
+                        return str(value) if value else ""
                 else:
                     # Treat as default value
                     return str(value) if value is not None else modifier
             else:
                 value = self._resolve_path(var_expr)
                 if value is None:
-                    return f'{{{{MISSING:{var_expr}}}}}'
+                    return f"{{{{MISSING:{var_expr}}}}}"
                 return str(value)
 
         # Match {{variable}} or {{variable|modifier}}
-        return re.sub(r'\{\{([^}]+)\}\}', replace_var, template)
+        return re.sub(r"\{\{([^}]+)\}\}", replace_var, template)
 
     def interpolate_dict(self, config: dict) -> dict:
         """
@@ -225,10 +230,7 @@ class ChainContext:
             elif isinstance(value, dict):
                 result[key] = self.interpolate_dict(value)
             elif isinstance(value, list):
-                result[key] = [
-                    self.interpolate(v) if isinstance(v, str) else v
-                    for v in value
-                ]
+                result[key] = [self.interpolate(v) if isinstance(v, str) else v for v in value]
             else:
                 result[key] = value
         return result
@@ -248,7 +250,7 @@ class ChainContext:
         Returns:
             Resolved value or None
         """
-        parts = path.split('.')
+        parts = path.split(".")
 
         # Check if first part is a step ID
         if parts[0] in self.results:
@@ -256,14 +258,14 @@ class ChainContext:
             return self._resolve_on_object(result, parts[1:])
 
         # Check for special aggregations
-        if parts[0] == 'findings':
+        if parts[0] == "findings":
             if len(parts) == 1:
                 return self.all_findings
-            if parts[1] == 'count':
+            if parts[1] == "count":
                 return len(self.all_findings)
-            if parts[1] == 'critical_count':
+            if parts[1] == "critical_count":
                 return sum(1 for f in self.all_findings if f.severity == Severity.CRITICAL)
-            if parts[1] == 'high_count':
+            if parts[1] == "high_count":
                 return sum(1 for f in self.all_findings if f.severity == Severity.HIGH)
 
         # Simple variable lookup
@@ -324,12 +326,12 @@ class ChainContext:
 
         # Check for comparison operators
         operators_map = {
-            '==': operator.eq,
-            '!=': operator.ne,
-            '>=': operator.ge,
-            '<=': operator.le,
-            '>': operator.gt,
-            '<': operator.lt,
+            "==": operator.eq,
+            "!=": operator.ne,
+            ">=": operator.ge,
+            "<=": operator.le,
+            ">": operator.gt,
+            "<": operator.lt,
         }
 
         # Try each operator
@@ -346,16 +348,16 @@ class ChainContext:
                         return op_func(str(left), str(right))
 
         # Check for 'contains'
-        if ' contains ' in interpolated.lower():
-            parts = re.split(r'\s+contains\s+', interpolated, flags=re.IGNORECASE)
+        if " contains " in interpolated.lower():
+            parts = re.split(r"\s+contains\s+", interpolated, flags=re.IGNORECASE)
             if len(parts) == 2:
                 haystack = str(self._parse_value(parts[0].strip()))
                 needle = str(self._parse_value(parts[1].strip()))
                 return needle.lower() in haystack.lower()
 
         # Check for 'in'
-        if ' in ' in interpolated:
-            parts = interpolated.split(' in ', 1)
+        if " in " in interpolated:
+            parts = interpolated.split(" in ", 1)
             if len(parts) == 2:
                 needle = self._parse_value(parts[0].strip())
                 haystack = self._parse_value(parts[1].strip())
@@ -379,16 +381,17 @@ class ChainContext:
         value_str = value_str.strip()
 
         # Remove quotes
-        if (value_str.startswith('"') and value_str.endswith('"')) or \
-           (value_str.startswith("'") and value_str.endswith("'")):
+        if (value_str.startswith('"') and value_str.endswith('"')) or (
+            value_str.startswith("'") and value_str.endswith("'")
+        ):
             return value_str[1:-1]
 
         # Boolean
-        if value_str.lower() == 'true':
+        if value_str.lower() == "true":
             return True
-        if value_str.lower() == 'false':
+        if value_str.lower() == "false":
             return False
-        if value_str.lower() == 'none' or value_str.lower() == 'null':
+        if value_str.lower() == "none" or value_str.lower() == "null":
             return None
 
         # Integer
@@ -433,11 +436,11 @@ class ChainContext:
     def to_dict(self) -> dict:
         """Convert context to dictionary for serialization."""
         return {
-            'target': self.target,
-            'variables': self.variables,
-            'execution_path': self.execution_path,
-            'total_findings': self.total_findings,
-            'critical_findings': self.critical_findings,
-            'high_findings': self.high_findings,
-            'results': {k: v.to_dict() for k, v in self.results.items()},
+            "target": self.target,
+            "variables": self.variables,
+            "execution_path": self.execution_path,
+            "total_findings": self.total_findings,
+            "critical_findings": self.critical_findings,
+            "high_findings": self.high_findings,
+            "results": {k: v.to_dict() for k, v in self.results.items()},
         }

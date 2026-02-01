@@ -20,10 +20,10 @@ from aix.core.scanner import AIXScanner
 from aix.db.database import AIXDatabase
 
 __all__ = [
-    'AIXScanner',
-    'Connector',
-    'APIConnector',
-    'WebSocketConnector',
-    'Reporter',
-    'AIXDatabase',
+    "AIXDatabase",
+    "AIXScanner",
+    "APIConnector",
+    "Connector",
+    "Reporter",
+    "WebSocketConnector",
 ]

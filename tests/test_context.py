@@ -1,11 +1,12 @@
 """
 Tests for AIX Context Gathering and AI Engine features
 """
+
+
 import pytest
-from datetime import datetime
 
 from aix.core.context import TargetContext
-from aix.core.owasp import OWASPCategory, parse_owasp_list, get_owasp_for_module
+from aix.core.owasp import OWASPCategory, get_owasp_for_module, parse_owasp_list
 
 
 class TestTargetContext:
@@ -28,7 +29,7 @@ class TestTargetContext:
             target="https://example.com",
             purpose="customer_support",
             domain="finance",
-            personality="formal"
+            personality="formal",
         )
 
         assert ctx.purpose == "customer_support"
@@ -38,8 +39,7 @@ class TestTargetContext:
     def test_init_with_expected_inputs(self):
         """Test initialization with expected_inputs"""
         ctx = TargetContext(
-            target="https://example.com",
-            expected_inputs=["questions", "documents", "code"]
+            target="https://example.com", expected_inputs=["questions", "documents", "code"]
         )
 
         assert ctx.expected_inputs == ["questions", "documents", "code"]
@@ -52,47 +52,31 @@ class TestTargetContext:
 
     def test_is_empty_false_with_purpose(self):
         """Test is_empty returns False when purpose is set"""
-        ctx = TargetContext(
-            target="https://example.com",
-            purpose="code_assistant"
-        )
+        ctx = TargetContext(target="https://example.com", purpose="code_assistant")
 
         assert ctx.is_empty() is False
 
     def test_is_empty_false_with_domain(self):
         """Test is_empty returns False when domain is set"""
-        ctx = TargetContext(
-            target="https://example.com",
-            domain="healthcare"
-        )
+        ctx = TargetContext(target="https://example.com", domain="healthcare")
 
         assert ctx.is_empty() is False
 
     def test_is_empty_false_with_model(self):
         """Test is_empty returns False when model_type is set"""
-        ctx = TargetContext(
-            target="https://example.com",
-            model_type="GPT-4"
-        )
+        ctx = TargetContext(target="https://example.com", model_type="GPT-4")
 
         assert ctx.is_empty() is False
 
     def test_is_empty_false_with_rag(self):
         """Test is_empty returns False when has_rag is True"""
-        ctx = TargetContext(
-            target="https://example.com",
-            has_rag=True
-        )
+        ctx = TargetContext(target="https://example.com", has_rag=True)
 
         assert ctx.is_empty() is False
 
     def test_to_prompt_basic(self):
         """Test to_prompt with basic context"""
-        ctx = TargetContext(
-            target="https://example.com",
-            model_type="GPT-4",
-            has_rag=True
-        )
+        ctx = TargetContext(target="https://example.com", model_type="GPT-4", has_rag=True)
 
         prompt = ctx.to_prompt()
 
@@ -102,9 +86,7 @@ class TestTargetContext:
     def test_to_prompt_with_purpose_domain(self):
         """Test to_prompt includes purpose and domain"""
         ctx = TargetContext(
-            target="https://example.com",
-            purpose="customer_support",
-            domain="finance"
+            target="https://example.com", purpose="customer_support", domain="finance"
         )
 
         prompt = ctx.to_prompt()
@@ -114,10 +96,7 @@ class TestTargetContext:
 
     def test_to_prompt_with_personality(self):
         """Test to_prompt includes personality"""
-        ctx = TargetContext(
-            target="https://example.com",
-            personality="formal"
-        )
+        ctx = TargetContext(target="https://example.com", personality="formal")
 
         prompt = ctx.to_prompt()
 
@@ -131,29 +110,29 @@ class TestTargetContext:
             domain="technology",
             model_type="Claude",
             has_rag=True,
-            expected_inputs=["code", "questions"]
+            expected_inputs=["code", "questions"],
         )
 
         data = ctx.to_dict()
 
-        assert data['target'] == "https://example.com"
-        assert data['purpose'] == "code_assistant"
-        assert data['domain'] == "technology"
-        assert data['model_type'] == "Claude"
-        assert data['has_rag'] is True
-        assert data['expected_inputs'] == ["code", "questions"]
+        assert data["target"] == "https://example.com"
+        assert data["purpose"] == "code_assistant"
+        assert data["domain"] == "technology"
+        assert data["model_type"] == "Claude"
+        assert data["has_rag"] is True
+        assert data["expected_inputs"] == ["code", "questions"]
 
     def test_from_dict(self):
         """Test from_dict deserialization"""
         data = {
-            'target': "https://example.com",
-            'purpose': "document_analyzer",
-            'domain': "legal",
-            'model_type': "GPT-4",
-            'has_rag': True,
-            'has_tools': False,
-            'expected_inputs': ["documents", "contracts"],
-            'personality': "professional"
+            "target": "https://example.com",
+            "purpose": "document_analyzer",
+            "domain": "legal",
+            "model_type": "GPT-4",
+            "has_rag": True,
+            "has_tools": False,
+            "expected_inputs": ["documents", "contracts"],
+            "personality": "professional",
         }
 
         ctx = TargetContext.from_dict(data)
@@ -178,7 +157,7 @@ class TestTargetContext:
             capabilities=["code_gen", "web_search"],
             restrictions=["no PII"],
             expected_inputs=["questions"],
-            personality="friendly"
+            personality="friendly",
         )
 
         data = original.to_dict()
@@ -255,10 +234,7 @@ class TestScannerContextIntegration:
         """Test scanner initializes generate_count"""
         from aix.modules.inject import InjectScanner
 
-        scanner = InjectScanner(
-            target="https://example.com",
-            generate=5
-        )
+        scanner = InjectScanner(target="https://example.com", generate=5)
 
         assert scanner.generate_count == 5
 
@@ -290,16 +266,9 @@ class TestScannerContextIntegration:
         """Test AI engine is created with config"""
         from aix.modules.inject import InjectScanner
 
-        ai_config = {
-            'provider': 'openai',
-            'api_key': 'test-key',
-            'model': 'gpt-4'
-        }
+        ai_config = {"provider": "openai", "api_key": "test-key", "model": "gpt-4"}
 
-        scanner = InjectScanner(
-            target="https://example.com",
-            ai_config=ai_config
-        )
+        scanner = InjectScanner(target="https://example.com", ai_config=ai_config)
 
         assert scanner.ai_engine is not None
 
@@ -313,8 +282,7 @@ class TestScanPayloadReasonPreservation:
         from aix.modules.inject import InjectScanner
 
         scanner = InjectScanner(
-            target="https://example.com",
-            verify_attempts=1  # Single attempt for simplicity
+            target="https://example.com", verify_attempts=1  # Single attempt for simplicity
         )
 
         # Manually set last_eval_reason to simulate successful eval

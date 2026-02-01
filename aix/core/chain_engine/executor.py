@@ -8,18 +8,20 @@ Handles:
 - Timeout and error handling
 - Result aggregation
 """
+
 import asyncio
 import importlib
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
 
-from .context import ChainContext, StepResult, StepStatus
-from .playbook import Playbook, StepConfig, StepType, StepAction
 from aix.core.reporting.base import Finding, Severity
+
+from .context import ChainContext, StepResult, StepStatus
+from .playbook import Playbook, StepConfig, StepType
 
 if TYPE_CHECKING:
     from aix.core.reporting.visualizer import LiveChainVisualizer
@@ -29,22 +31,26 @@ console = Console()
 
 class ChainError(Exception):
     """Base exception for chain execution errors."""
+
     pass
 
 
 class ChainTimeoutError(ChainError):
     """Chain execution timed out."""
+
     pass
 
 
 class ChainAbortError(ChainError):
     """Chain was aborted (by config or critical finding)."""
+
     pass
 
 
 @dataclass
 class ChainResult:
     """Final result of chain execution."""
+
     playbook_name: str
     success: bool
     target: str
@@ -76,23 +82,23 @@ class ChainResult:
     def to_dict(self) -> dict:
         """Convert to dictionary for serialization."""
         return {
-            'playbook_name': self.playbook_name,
-            'success': self.success,
-            'target': self.target,
-            'started_at': self.started_at.isoformat(),
-            'finished_at': self.finished_at.isoformat(),
-            'total_duration': self.total_duration,
-            'steps_executed': self.steps_executed,
-            'steps_successful': self.steps_successful,
-            'steps_failed': self.steps_failed,
-            'execution_path': self.execution_path,
-            'total_findings': self.total_findings,
-            'critical_count': self.critical_count,
-            'high_count': self.high_count,
-            'error': self.error,
-            'aborted': self.aborted,
-            'abort_reason': self.abort_reason,
-            'findings': [f.to_dict() for f in self.findings],
+            "playbook_name": self.playbook_name,
+            "success": self.success,
+            "target": self.target,
+            "started_at": self.started_at.isoformat(),
+            "finished_at": self.finished_at.isoformat(),
+            "total_duration": self.total_duration,
+            "steps_executed": self.steps_executed,
+            "steps_successful": self.steps_successful,
+            "steps_failed": self.steps_failed,
+            "execution_path": self.execution_path,
+            "total_findings": self.total_findings,
+            "critical_count": self.critical_count,
+            "high_count": self.high_count,
+            "error": self.error,
+            "aborted": self.aborted,
+            "abort_reason": self.abort_reason,
+            "findings": [f.to_dict() for f in self.findings],
         }
 
 
@@ -111,19 +117,19 @@ class ChainExecutor:
 
     # Module path mapping
     MODULE_MAP = {
-        'recon': 'aix.modules.recon',
-        'inject': 'aix.modules.inject',
-        'jailbreak': 'aix.modules.jailbreak',
-        'extract': 'aix.modules.extract',
-        'leak': 'aix.modules.leak',
-        'exfil': 'aix.modules.exfil',
-        'memory': 'aix.modules.memory',
-        'agent': 'aix.modules.agent',
-        'dos': 'aix.modules.dos',
-        'fuzz': 'aix.modules.fuzz',
-        'fingerprint': 'aix.modules.fingerprint',
-        'rag': 'aix.modules.rag',
-        'multiturn': 'aix.modules.multiturn',
+        "recon": "aix.modules.recon",
+        "inject": "aix.modules.inject",
+        "jailbreak": "aix.modules.jailbreak",
+        "extract": "aix.modules.extract",
+        "leak": "aix.modules.leak",
+        "exfil": "aix.modules.exfil",
+        "memory": "aix.modules.memory",
+        "agent": "aix.modules.agent",
+        "dos": "aix.modules.dos",
+        "fuzz": "aix.modules.fuzz",
+        "fingerprint": "aix.modules.fingerprint",
+        "rag": "aix.modules.rag",
+        "multiturn": "aix.modules.multiturn",
     }
 
     def __init__(
@@ -131,8 +137,8 @@ class ChainExecutor:
         target: str,
         api_key: str | None = None,
         verbose: int = 0,
-        visualizer: 'LiveChainVisualizer | None' = None,
-        **extra_config
+        visualizer: "LiveChainVisualizer | None" = None,
+        **extra_config,
     ):
         """
         Initialize chain executor.
@@ -150,7 +156,7 @@ class ChainExecutor:
         self.verbose = verbose
         self.visualizer = visualizer
         self.extra_config = extra_config
-        self.console = extra_config.pop('console', None) or Console()
+        self.console = extra_config.pop("console", None) or Console()
 
         # Execution state
         self._abort_requested = False
@@ -259,18 +265,24 @@ class ChainExecutor:
                 if result.success:
                     steps_successful += 1
                     if self.visualizer:
-                        self.visualizer.update_step(current_step.id, StepStatus.SUCCESS, result=result)
+                        self.visualizer.update_step(
+                            current_step.id, StepStatus.SUCCESS, result=result
+                        )
                 else:
                     steps_failed += 1
                     if self.visualizer:
-                        self.visualizer.update_step(current_step.id, StepStatus.FAILED, result=result)
+                        self.visualizer.update_step(
+                            current_step.id, StepStatus.FAILED, result=result
+                        )
 
                 # Check for critical findings
                 if playbook.config.stop_on_critical and result.has_critical:
                     self._abort_requested = True
                     self._abort_reason = "Critical finding detected"
                     if self.verbose >= 1:
-                        self.console.print("[bold red][!] CRITICAL finding - stopping chain[/bold red]")
+                        self.console.print(
+                            "[bold red][!] CRITICAL finding - stopping chain[/bold red]"
+                        )
                     break
 
                 # Determine next step
@@ -281,9 +293,10 @@ class ChainExecutor:
         except ChainAbortError as e:
             self._abort_reason = str(e)
         except Exception as e:
-            self._abort_reason = f"Error: {str(e)}"
+            self._abort_reason = f"Error: {e!s}"
             if self.verbose >= 2:
                 import traceback
+
                 traceback.print_exc()
 
         finished_at = datetime.now()
@@ -311,10 +324,7 @@ class ChainExecutor:
         )
 
     async def _execute_module_step(
-        self,
-        step: StepConfig,
-        context: ChainContext,
-        playbook: Playbook
+        self, step: StepConfig, context: ChainContext, playbook: Playbook
     ) -> StepResult:
         """Execute a MODULE type step."""
         step_start = time.time()
@@ -379,25 +389,18 @@ class ChainExecutor:
         module_config = {
             **self.extra_config,
             **step_config,
-            'verbose': self.verbose,
-            'quiet': True,  # Suppress individual module output in chain mode
-            'show_progress': True,  # Enable module progress bars in chain mode
-            'console': self.console, # Use shared console to prevent UI artifacts
+            "verbose": self.verbose,
+            "quiet": True,  # Suppress individual module output in chain mode
+            "show_progress": True,  # Enable module progress bars in chain mode
+            "console": self.console,  # Use shared console to prevent UI artifacts
         }
 
         # Execute module
         try:
-            scanner = scanner_class(
-                self.target,
-                api_key=self.api_key,
-                **module_config
-            )
+            scanner = scanner_class(self.target, api_key=self.api_key, **module_config)
 
             # Run with timeout
-            findings = await asyncio.wait_for(
-                scanner.run(),
-                timeout=step.timeout
-            )
+            findings = await asyncio.wait_for(scanner.run(), timeout=step.timeout)
 
             # Extract stored variables
             stored_vars = self._extract_stored_vars(step.store, findings, scanner, context)
@@ -422,7 +425,9 @@ class ChainExecutor:
         except asyncio.TimeoutError:
             duration = time.time() - step_start
             if self.verbose >= 1:
-                self.console.print(f"[yellow][!] Step '{step.id}' timed out after {step.timeout}s[/yellow]")
+                self.console.print(
+                    f"[yellow][!] Step '{step.id}' timed out after {step.timeout}s[/yellow]"
+                )
             return StepResult(
                 step_id=step.id,
                 status=StepStatus.TIMEOUT,
@@ -460,14 +465,14 @@ class ChainExecutor:
 
         if step.conditions:
             for cond in step.conditions:
-                if 'if' in cond:
-                    if context.evaluate_condition(cond['if']):
-                        next_step = cond.get('then')
-                        matched_condition = cond['if']
+                if "if" in cond:
+                    if context.evaluate_condition(cond["if"]):
+                        next_step = cond.get("then")
+                        matched_condition = cond["if"]
                         break
-                elif 'else' in cond:
-                    next_step = cond.get('else') or cond.get('then')
-                    matched_condition = 'else'
+                elif "else" in cond:
+                    next_step = cond.get("else") or cond.get("then")
+                    matched_condition = "else"
                     break
 
         if self.verbose >= 1 and matched_condition:
@@ -478,7 +483,7 @@ class ChainExecutor:
             step_id=step.id,
             status=StepStatus.SUCCESS,
             success=True,
-            output={'next_step': next_step, 'matched': matched_condition},
+            output={"next_step": next_step, "matched": matched_condition},
             started_at=started_at,
             finished_at=datetime.now(),
         )
@@ -488,32 +493,28 @@ class ChainExecutor:
         started_at = datetime.now()
 
         if self.verbose >= 1:
-            self.console.print(f"[dim]  ├─ Generating report[/dim]")
+            self.console.print("[dim]  ├─ Generating report[/dim]")
 
         # Report generation will be handled by the CLI
         return StepResult(
             step_id=step.id,
             status=StepStatus.SUCCESS,
             success=True,
-            output={'format': step.config.get('format', 'html')},
+            output={"format": step.config.get("format", "html")},
             started_at=started_at,
             finished_at=datetime.now(),
         )
 
     def _get_next_step(
-        self,
-        playbook: Playbook,
-        current: StepConfig,
-        success: bool,
-        context: ChainContext
+        self, playbook: Playbook, current: StepConfig, success: bool, context: ChainContext
     ) -> StepConfig | None:
         """Determine the next step based on current result."""
         # Check condition step output
         result = context.get_result(current.id)
         if result and current.type == StepType.CONDITION:
-            next_id = result.output.get('next_step')
+            next_id = result.output.get("next_step")
             if next_id:
-                if next_id == 'abort':
+                if next_id == "abort":
                     self._abort_requested = True
                     self._abort_reason = "Condition led to abort"
                     return None
@@ -537,11 +538,11 @@ class ChainExecutor:
             return None
 
         # Handle special actions
-        if next_id == 'abort':
+        if next_id == "abort":
             self._abort_requested = True
             self._abort_reason = "Step led to abort"
             return None
-        if next_id == 'continue':
+        if next_id == "continue":
             # Continue to next sequential step
             step_ids = playbook.get_step_ids()
             try:
@@ -551,7 +552,7 @@ class ChainExecutor:
             except ValueError:
                 pass
             return None
-        if next_id == 'report':
+        if next_id == "report":
             # Find report step if exists
             for step in playbook.steps:
                 if step.type == StepType.REPORT:
@@ -575,7 +576,7 @@ class ChainExecutor:
 
         # Fallback: find any class ending in Scanner
         for attr_name in dir(module):
-            if attr_name.endswith('Scanner') and not attr_name.startswith('_'):
+            if attr_name.endswith("Scanner") and not attr_name.startswith("_"):
                 attr = getattr(module, attr_name)
                 if isinstance(attr, type):
                     return attr
@@ -587,7 +588,7 @@ class ChainExecutor:
         store_config: dict,
         findings: list[Finding] | None,
         scanner: Any,
-        context: ChainContext
+        context: ChainContext,
     ) -> dict:
         """Extract variables to store from step results."""
         stored = {}
@@ -596,59 +597,70 @@ class ChainExecutor:
             return stored
 
         # Get scanner results dict if available (for recon module)
-        scanner_results = getattr(scanner, 'results', {}) if scanner else {}
+        scanner_results = getattr(scanner, "results", {}) if scanner else {}
 
         for var_name, source_path in store_config.items():
             value = None
 
             # Parse source path
-            if source_path.startswith('findings.'):
-                field = source_path.replace('findings.', '')
+            if source_path.startswith("findings."):
+                field = source_path.replace("findings.", "")
 
                 # Check scanner.results first for recon-specific fields
-                if field == 'model_type' and scanner_results.get('model'):
-                    value = scanner_results['model']
-                elif field == 'has_rag':
+                if field == "model_type" and scanner_results.get("model"):
+                    value = scanner_results["model"]
+                elif field == "has_rag":
                     # Check scanner results first
-                    if 'rag' in str(scanner_results.get('capabilities', [])).lower():
+                    if "rag" in str(scanner_results.get("capabilities", [])).lower():
                         value = True
                     elif findings:
                         for f in findings:
-                            if hasattr(f, 'technique') and ('rag' in f.technique.lower() or 'retrieval' in getattr(f, 'response', '').lower()):
+                            if hasattr(f, "technique") and (
+                                "rag" in f.technique.lower()
+                                or "retrieval" in getattr(f, "response", "").lower()
+                            ):
                                 value = True
                                 break
                     if value is None:
                         value = False
-                elif field == 'has_tools':
+                elif field == "has_tools":
                     # Check scanner results first
-                    caps = scanner_results.get('capabilities', [])
-                    if any('tool' in c.lower() or 'function' in c.lower() or 'code' in c.lower() for c in caps):
+                    caps = scanner_results.get("capabilities", [])
+                    if any(
+                        "tool" in c.lower() or "function" in c.lower() or "code" in c.lower()
+                        for c in caps
+                    ):
                         value = True
                     elif findings:
                         for f in findings:
-                            if hasattr(f, 'technique') and ('tool' in f.technique.lower() or 'function' in getattr(f, 'response', '').lower()):
+                            if hasattr(f, "technique") and (
+                                "tool" in f.technique.lower()
+                                or "function" in getattr(f, "response", "").lower()
+                            ):
                                 value = True
                                 break
                     if value is None:
                         value = False
                 elif findings:
-                    if field == 'count':
+                    if field == "count":
                         value = len(findings)
-                    elif field == 'any_success':
+                    elif field == "any_success":
                         value = len(findings) > 0
-                    elif field == 'first':
+                    elif field == "first":
                         value = findings[0] if findings else None
-                    elif field == 'extracted_prompt':
+                    elif field == "extracted_prompt":
                         # Special case for extract module
                         for f in findings:
-                            if hasattr(f, 'technique') and ('prompt' in f.technique.lower() or 'system' in f.technique.lower()):
-                                value = getattr(f, 'response', None)
+                            if hasattr(f, "technique") and (
+                                "prompt" in f.technique.lower() or "system" in f.technique.lower()
+                            ):
+                                value = getattr(f, "response", None)
                                 break
                 else:
                     # No findings
-                    if field in ('count', 'any_success'):
-                        value = 0 if field == 'count' else False
-                    elif field in ('has_rag', 'has_tools'):
+                    if field in ("count", "any_success"):
+                        value = 0 if field == "count" else False
+                    elif field in ("has_rag", "has_tools"):
                         value = False
 
             # Try scanner attributes
@@ -666,7 +678,9 @@ class ChainExecutor:
         module = step.module or step.type.value
         self.console.print(f"[bold cyan]▶[/bold cyan] {step.name} [dim]({module})[/dim]")
 
-    def _print_step_complete(self, step: StepConfig, success: bool, findings: int, duration: float) -> None:
+    def _print_step_complete(
+        self, step: StepConfig, success: bool, findings: int, duration: float
+    ) -> None:
         """Print step completion message."""
         status = "[green]✓[/green]" if success else "[red]✗[/red]"
         findings_str = f", {findings} findings" if findings > 0 else ""
@@ -688,7 +702,7 @@ def print_chain_summary(result: ChainResult, console: Console | None = None) -> 
         status = f"[yellow]ABORTED[/yellow] ({result.abort_reason})"
 
     console.print()
-    console.print(f"[bold]═══ Chain Summary ═══[/bold]")
+    console.print("[bold]═══ Chain Summary ═══[/bold]")
     console.print(f"Playbook: {result.playbook_name}")
     console.print(f"Target: {result.target}")
     console.print(f"Status: {status}")
@@ -696,8 +710,10 @@ def print_chain_summary(result: ChainResult, console: Console | None = None) -> 
     console.print()
 
     # Steps
-    console.print(f"[bold]Steps:[/bold] {result.steps_executed} executed, "
-                  f"{result.steps_successful} successful, {result.steps_failed} failed")
+    console.print(
+        f"[bold]Steps:[/bold] {result.steps_executed} executed, "
+        f"{result.steps_successful} successful, {result.steps_failed} failed"
+    )
 
     # Execution path
     if result.execution_path:

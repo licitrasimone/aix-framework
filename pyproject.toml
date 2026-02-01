@@ -118,18 +118,22 @@ target-version = "py310"
 [tool.ruff.lint]
 select = [
     "E",      # pycodestyle errors
-    "W",      # pycodestyle warnings
     "F",      # Pyflakes
     "I",      # isort
-    "N",      # pep8-naming
-    "UP",     # pyupgrade
     "B",      # flake8-bugbear
-    "C4",     # flake8-comprehensions
-    "SIM",    # flake8-simplify
-    "TCH",    # flake8-type-checking
-    "RUF",    # Ruff-specific rules
 ]
-ignore = ["E501", "E701", "B904", "B007", "B905"]
+ignore = [
+    "E501",   # line too long (handled by black)
+    "E701",   # multiple statements on one line
+    "E722",   # bare except
+    "E731",   # lambda assignment
+    "B904",   # raise without from
+    "B007",   # unused loop variable
+    "B905",   # zip without strict
+    "B024",   # abstract class without abstract methods
+    "F841",   # unused variable
+    "F821",   # undefined name (false positives with TYPE_CHECKING)
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["aix"]

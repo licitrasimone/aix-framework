@@ -2,4 +2,4 @@
 
 from aix.db.database import AIXDatabase
 
-__all__ = ['AIXDatabase']
+__all__ = ["AIXDatabase"]

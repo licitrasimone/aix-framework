@@ -6,67 +6,70 @@ Handles:
 - Validating playbook structure and step references
 - Playbook and step configuration models
 """
-import os
-import re
+
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
 import yaml
 
 
 class StepType(Enum):
     """Type of step in the playbook."""
-    MODULE = "module"          # Execute an attack module
-    CONDITION = "condition"    # Conditional branching
-    PARALLEL = "parallel"      # Parallel execution group
-    REPORT = "report"          # Generate report
-    WAIT = "wait"              # Wait/delay step
+
+    MODULE = "module"  # Execute an attack module
+    CONDITION = "condition"  # Conditional branching
+    PARALLEL = "parallel"  # Parallel execution group
+    REPORT = "report"  # Generate report
+    WAIT = "wait"  # Wait/delay step
 
 
 class StepAction(Enum):
     """Action to take after step completion."""
-    CONTINUE = "continue"      # Continue to next step
-    ABORT = "abort"            # Stop chain execution
-    GOTO = "goto"              # Jump to specific step
-    REPORT = "report"          # Go to report step
+
+    CONTINUE = "continue"  # Continue to next step
+    ABORT = "abort"  # Stop chain execution
+    GOTO = "goto"  # Jump to specific step
+    REPORT = "report"  # Go to report step
 
 
 @dataclass
 class StepConfig:
     """Configuration for a single step in the playbook."""
+
     id: str
     name: str = ""
     type: StepType = StepType.MODULE
     module: str | None = None
     config: dict = field(default_factory=dict)
     store: dict = field(default_factory=dict)
-    condition: str | None = None           # Pre-condition to run step
-    conditions: list[dict] | None = None   # For CONDITION type steps
-    on_success: str | None = None          # Next step on success
-    on_fail: str | None = None             # Next step on failure
-    timeout: int = 120                     # Step timeout in seconds
-    retry: int = 0                         # Number of retries on failure
+    condition: str | None = None  # Pre-condition to run step
+    conditions: list[dict] | None = None  # For CONDITION type steps
+    on_success: str | None = None  # Next step on success
+    on_fail: str | None = None  # Next step on failure
+    timeout: int = 120  # Step timeout in seconds
+    retry: int = 0  # Number of retries on failure
 
     def __post_init__(self):
         """Set default name from id if not provided."""
         if not self.name:
-            self.name = self.id.replace('_', ' ').title()
+            self.name = self.id.replace("_", " ").title()
 
 
 @dataclass
 class PlaybookConfig:
     """Global playbook configuration."""
+
     stop_on_critical: bool = True
     continue_on_module_fail: bool = False
-    max_duration: int = 600               # Max total chain duration in seconds
+    max_duration: int = 600  # Max total chain duration in seconds
     parallel_where_possible: bool = False
 
 
 @dataclass
 class Playbook:
     """Complete parsed playbook."""
+
     name: str
     description: str = ""
     author: str = ""
@@ -106,26 +109,29 @@ class Playbook:
                 referenced.add(step.on_fail)
             if step.conditions:
                 for cond in step.conditions:
-                    if cond.get('then'):
-                        referenced.add(cond['then'])
-                    if cond.get('include'):
-                        referenced.add(cond['include'])
+                    if cond.get("then"):
+                        referenced.add(cond["then"])
+                    if cond.get("include"):
+                        referenced.add(cond["include"])
 
         return [s.id for s in self.steps if s.id not in referenced]
 
 
 class PlaybookError(Exception):
     """Base exception for playbook errors."""
+
     pass
 
 
 class PlaybookParseError(PlaybookError):
     """Error parsing playbook YAML."""
+
     pass
 
 
 class PlaybookValidationError(PlaybookError):
     """Error validating playbook structure."""
+
     pass
 
 
@@ -141,13 +147,23 @@ class PlaybookParser:
 
     # Known AIX modules
     KNOWN_MODULES = {
-        'recon', 'inject', 'jailbreak', 'extract', 'leak',
-        'exfil', 'memory', 'agent', 'dos', 'fuzz',
-        'fingerprint', 'rag', 'multiturn'
+        "recon",
+        "inject",
+        "jailbreak",
+        "extract",
+        "leak",
+        "exfil",
+        "memory",
+        "agent",
+        "dos",
+        "fuzz",
+        "fingerprint",
+        "rag",
+        "multiturn",
     }
 
     # Special step IDs
-    SPECIAL_ACTIONS = {'abort', 'continue', 'report'}
+    SPECIAL_ACTIONS = {"abort", "continue", "report"}
 
     def __init__(self):
         self.errors: list[str] = []
@@ -217,21 +233,21 @@ class PlaybookParser:
         self.warnings = []
 
         # Required field
-        if 'name' not in data:
+        if "name" not in data:
             raise PlaybookParseError("Playbook must have a 'name' field")
 
         # Parse config
-        config_data = data.get('config', {})
+        config_data = data.get("config", {})
         config = PlaybookConfig(
-            stop_on_critical=config_data.get('stop_on_critical', True),
-            continue_on_module_fail=config_data.get('continue_on_module_fail', False),
-            max_duration=config_data.get('max_duration', 600),
-            parallel_where_possible=config_data.get('parallel_where_possible', False),
+            stop_on_critical=config_data.get("stop_on_critical", True),
+            continue_on_module_fail=config_data.get("continue_on_module_fail", False),
+            max_duration=config_data.get("max_duration", 600),
+            parallel_where_possible=config_data.get("parallel_where_possible", False),
         )
 
         # Parse steps
         steps = []
-        steps_data = data.get('steps', [])
+        steps_data = data.get("steps", [])
 
         if not steps_data:
             self.warnings.append("Playbook has no steps defined")
@@ -242,13 +258,13 @@ class PlaybookParser:
                 steps.append(step)
 
         return Playbook(
-            name=data['name'],
-            description=data.get('description', ''),
-            author=data.get('author', ''),
-            version=data.get('version', '1.0'),
-            tags=data.get('tags', []),
+            name=data["name"],
+            description=data.get("description", ""),
+            author=data.get("author", ""),
+            version=data.get("version", "1.0"),
+            tags=data.get("tags", []),
             config=config,
-            variables=data.get('variables', {}),
+            variables=data.get("variables", {}),
             steps=steps,
         )
 
@@ -259,51 +275,51 @@ class PlaybookParser:
             return None
 
         # ID is required
-        step_id = data.get('id')
+        step_id = data.get("id")
         if not step_id:
             self.errors.append(f"Step {index}: missing required 'id' field")
             return None
 
         # Determine step type
         step_type = StepType.MODULE
-        if data.get('type'):
+        if data.get("type"):
             try:
-                step_type = StepType(data['type'])
+                step_type = StepType(data["type"])
             except ValueError:
                 self.errors.append(f"Step '{step_id}': unknown type '{data['type']}'")
                 step_type = StepType.MODULE
-        elif data.get('conditions'):
+        elif data.get("conditions"):
             step_type = StepType.CONDITION
-        elif data.get('module') is None and step_id not in self.SPECIAL_ACTIONS:
+        elif data.get("module") is None and step_id not in self.SPECIAL_ACTIONS:
             # No module specified and not a condition - might be condition or report
-            if 'format' in data.get('config', {}):
+            if "format" in data.get("config", {}):
                 step_type = StepType.REPORT
 
         # Parse store mappings
-        store = data.get('store', {})
+        store = data.get("store", {})
         if not isinstance(store, dict):
             self.warnings.append(f"Step '{step_id}': 'store' should be a dict, ignoring")
             store = {}
 
         # Parse conditions for CONDITION type
-        conditions = data.get('conditions')
+        conditions = data.get("conditions")
         if conditions and not isinstance(conditions, list):
             self.errors.append(f"Step '{step_id}': 'conditions' must be a list")
             conditions = None
 
         return StepConfig(
             id=step_id,
-            name=data.get('name', ''),
+            name=data.get("name", ""),
             type=step_type,
-            module=data.get('module'),
-            config=data.get('config', {}),
+            module=data.get("module"),
+            config=data.get("config", {}),
             store=store,
-            condition=data.get('condition'),
+            condition=data.get("condition"),
             conditions=conditions,
-            on_success=data.get('on_success'),
-            on_fail=data.get('on_fail'),
-            timeout=data.get('timeout', 120),
-            retry=data.get('retry', 0),
+            on_success=data.get("on_success"),
+            on_fail=data.get("on_fail"),
+            timeout=data.get("timeout", 120),
+            retry=data.get("retry", 0),
         )
 
     def _validate(self, playbook: Playbook) -> None:
@@ -343,7 +359,7 @@ class PlaybookParser:
             # Validate condition references
             if step.conditions:
                 for cond in step.conditions:
-                    target = cond.get('then') or cond.get('include')
+                    target = cond.get("then") or cond.get("include")
                     if target and target not in step_ids:
                         if target not in self.SPECIAL_ACTIONS:
                             self.errors.append(
@@ -353,13 +369,13 @@ class PlaybookParser:
         # Raise if there are errors
         if self.errors:
             raise PlaybookValidationError(
-                f"Playbook validation failed:\n" + "\n".join(f"  - {e}" for e in self.errors)
+                "Playbook validation failed:\n" + "\n".join(f"  - {e}" for e in self.errors)
             )
 
 
 def get_builtin_playbooks_dir() -> Path:
     """Get the path to the built-in playbooks directory."""
-    return Path(__file__).parent.parent.parent / 'playbooks'
+    return Path(__file__).parent.parent.parent / "playbooks"
 
 
 def list_builtin_playbooks() -> list[dict]:
@@ -377,23 +393,25 @@ def list_builtin_playbooks() -> list[dict]:
 
     parser = PlaybookParser()
 
-    for path in playbooks_dir.glob('*.yaml'):
+    for path in playbooks_dir.glob("*.yaml"):
         try:
             pb = parser.parse(path)
-            playbooks.append({
-                'name': pb.name,
-                'path': str(path),
-                'filename': path.name,
-                'description': pb.description,
-                'author': pb.author,
-                'tags': pb.tags,
-                'step_count': len(pb.steps),
-            })
+            playbooks.append(
+                {
+                    "name": pb.name,
+                    "path": str(path),
+                    "filename": path.name,
+                    "description": pb.description,
+                    "author": pb.author,
+                    "tags": pb.tags,
+                    "step_count": len(pb.steps),
+                }
+            )
         except PlaybookError:
             # Skip invalid playbooks
             continue
 
-    return sorted(playbooks, key=lambda x: x['name'])
+    return sorted(playbooks, key=lambda x: x["name"])
 
 
 def find_playbook(name_or_path: str) -> Path | None:
@@ -412,8 +430,8 @@ def find_playbook(name_or_path: str) -> Path | None:
         return path
 
     # Try adding .yaml extension
-    if not name_or_path.endswith('.yaml'):
-        path = Path(name_or_path + '.yaml')
+    if not name_or_path.endswith(".yaml"):
+        path = Path(name_or_path + ".yaml")
         if path.exists():
             return path
 

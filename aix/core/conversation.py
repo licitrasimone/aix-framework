@@ -7,11 +7,12 @@ Handles:
 - Conditional branching logic
 - Attack sequence execution
 """
+
 import asyncio
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from rich.console import Console
 
@@ -25,16 +26,18 @@ console = Console()
 
 class TurnAction(Enum):
     """Action to take after a turn evaluation."""
-    CONTINUE = "continue"      # Proceed to next turn
-    ABORT = "abort"            # Stop sequence entirely
-    SKIP = "skip"              # Skip to next turn
-    RETRY = "retry"            # Retry current turn
-    REPHRASE = "rephrase"      # Rephrase and retry (requires AI)
-    BRANCH = "branch"          # Take alternative branch
+
+    CONTINUE = "continue"  # Proceed to next turn
+    ABORT = "abort"  # Stop sequence entirely
+    SKIP = "skip"  # Skip to next turn
+    RETRY = "retry"  # Retry current turn
+    REPHRASE = "rephrase"  # Rephrase and retry (requires AI)
+    BRANCH = "branch"  # Take alternative branch
 
 
 class ConversationStatus(Enum):
     """Overall conversation status."""
+
     IN_PROGRESS = "in_progress"
     SUCCESS = "success"
     FAILED = "failed"
@@ -44,18 +47,20 @@ class ConversationStatus(Enum):
 @dataclass
 class Turn:
     """Single turn in a conversation."""
-    role: str                    # "user" or "assistant"
-    content: str                 # Message content
-    turn_number: int             # Sequential turn number
-    timestamp: float = 0.0       # When the turn was executed
+
+    role: str  # "user" or "assistant"
+    content: str  # Message content
+    turn_number: int  # Sequential turn number
+    timestamp: float = 0.0  # When the turn was executed
     metadata: dict = field(default_factory=dict)
 
 
 @dataclass
 class ConversationState:
     """Tracks full conversation state."""
+
     history: list[Turn] = field(default_factory=list)
-    variables: dict = field(default_factory=dict)    # Extracted values from responses
+    variables: dict = field(default_factory=dict)  # Extracted values from responses
     current_turn: int = 0
     status: ConversationStatus = ConversationStatus.IN_PROGRESS
     retries: int = 0
@@ -66,6 +71,7 @@ class ConversationState:
 @dataclass
 class SequenceResult:
     """Result of executing a multi-turn sequence."""
+
     sequence_name: str
     success: bool
     status: ConversationStatus
@@ -90,8 +96,13 @@ class ConversationManager:
     - Handle retries and branching
     """
 
-    def __init__(self, connector: 'Connector', evaluator: TurnEvaluator | None = None,
-                 verbose: int = 0, delay: float = 0.5):
+    def __init__(
+        self,
+        connector: "Connector",
+        evaluator: TurnEvaluator | None = None,
+        verbose: int = 0,
+        delay: float = 0.5,
+    ):
         """
         Initialize conversation manager.
 
@@ -118,10 +129,7 @@ class ConversationManager:
         Returns:
             List of message dicts with role and content
         """
-        return [
-            {"role": turn.role, "content": turn.content}
-            for turn in self.state.history
-        ]
+        return [{"role": turn.role, "content": turn.content} for turn in self.state.history]
 
     def _interpolate_payload(self, payload: str) -> str:
         """
@@ -138,6 +146,7 @@ class ConversationManager:
         Returns:
             Interpolated string
         """
+
         def replace_var(match):
             var_expr = match.group(1)
 
@@ -191,19 +200,22 @@ class ConversationManager:
         """
         # Add current message to history
         import time
+
         self.state.current_turn += 1
-        self.state.history.append(Turn(
-            role="user",
-            content=payload,
-            turn_number=self.state.current_turn,
-            timestamp=time.time()
-        ))
+        self.state.history.append(
+            Turn(
+                role="user",
+                content=payload,
+                turn_number=self.state.current_turn,
+                timestamp=time.time(),
+            )
+        )
 
         # Build full conversation
         messages = self._build_messages()
 
         # Check if connector supports messages array
-        if hasattr(self.connector, 'send_with_messages'):
+        if hasattr(self.connector, "send_with_messages"):
             response = await self.connector.send_with_messages(messages)
         else:
             # Fallback: flatten messages to single prompt
@@ -211,12 +223,14 @@ class ConversationManager:
             response = await self.connector.send(flattened)
 
         # Add response to history
-        self.state.history.append(Turn(
-            role="assistant",
-            content=response,
-            turn_number=self.state.current_turn,
-            timestamp=time.time()
-        ))
+        self.state.history.append(
+            Turn(
+                role="assistant",
+                content=response,
+                turn_number=self.state.current_turn,
+                timestamp=time.time(),
+            )
+        )
 
         return response
 
@@ -299,7 +313,7 @@ class ConversationManager:
             final_response="",
             history=[],
             matched_indicators=[],
-            variables_extracted={}
+            variables_extracted={},
         )
 
         if self.verbose >= 1:
@@ -314,13 +328,15 @@ class ConversationManager:
                 result.final_response = response
 
                 # Record in history
-                result.history.append({
-                    "turn": turn_num,
-                    "payload": turn_config.get("payload", "")[:200],
-                    "response": response[:500],
-                    "success": success,
-                    "reason": reason
-                })
+                result.history.append(
+                    {
+                        "turn": turn_num,
+                        "payload": turn_config.get("payload", "")[:200],
+                        "response": response[:500],
+                        "success": success,
+                        "reason": reason,
+                    }
+                )
 
                 if success:
                     result.turns_successful += 1
@@ -345,7 +361,9 @@ class ConversationManager:
                     elif on_fail == "continue":
                         # Proceed anyway
                         if self.verbose >= 1:
-                            console.print(f"[yellow]Continuing despite failure at turn {turn_num}[/yellow]")
+                            console.print(
+                                f"[yellow]Continuing despite failure at turn {turn_num}[/yellow]"
+                            )
 
                     elif on_fail == "retry":
                         if self.state.retries < self.state.max_retries:
@@ -359,7 +377,9 @@ class ConversationManager:
                 # Check if final turn
                 if turn_config.get("is_final", False):
                     indicators = turn_config.get("indicators", [])
-                    indicator_success, matched = self.evaluator.check_final_indicators(response, indicators)
+                    indicator_success, matched = self.evaluator.check_final_indicators(
+                        response, indicators
+                    )
 
                     if indicator_success:
                         result.success = True
@@ -367,12 +387,14 @@ class ConversationManager:
                         self.state.status = ConversationStatus.SUCCESS
                         result.status = ConversationStatus.SUCCESS
                         if self.verbose >= 1:
-                            console.print(f"[bold green]SUCCESS: Matched indicators: {matched}[/bold green]")
+                            console.print(
+                                f"[bold green]SUCCESS: Matched indicators: {matched}[/bold green]"
+                            )
                     else:
                         self.state.status = ConversationStatus.FAILED
                         result.status = ConversationStatus.FAILED
                         if self.verbose >= 1:
-                            console.print(f"[red]FAILED: No indicators matched[/red]")
+                            console.print("[red]FAILED: No indicators matched[/red]")
                     break
 
                 # Delay between turns

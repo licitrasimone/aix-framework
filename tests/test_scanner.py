@@ -1,9 +1,10 @@
 """
 Tests for AIX Base Scanner Module
 """
+
 import pytest
 
-from aix.core.scanner import BaseScanner, TargetProfile, AttackResult, AttackResponse
+from aix.core.scanner import AttackResponse, AttackResult, TargetProfile
 
 
 class TestBaseScanner:
@@ -14,10 +15,7 @@ class TestBaseScanner:
         # BaseScanner is abstract but we can test through a subclass
         from aix.modules.inject import InjectScanner
 
-        scanner = InjectScanner(
-            target="https://api.example.com",
-            api_key="test-key"
-        )
+        scanner = InjectScanner(target="https://api.example.com", api_key="test-key")
 
         assert scanner.target == "https://api.example.com"
         assert scanner.api_key == "test-key"
@@ -27,20 +25,14 @@ class TestBaseScanner:
         from aix.modules.inject import InjectScanner
 
         for level in [0, 1, 2, 3]:
-            scanner = InjectScanner(
-                target="https://example.com",
-                verbose=level
-            )
+            scanner = InjectScanner(target="https://example.com", verbose=level)
             assert scanner.verbose == level
 
     def test_init_with_proxy(self):
         """Test initialization with proxy"""
         from aix.modules.inject import InjectScanner
 
-        scanner = InjectScanner(
-            target="https://example.com",
-            proxy="127.0.0.1:8080"
-        )
+        scanner = InjectScanner(target="https://example.com", proxy="127.0.0.1:8080")
 
         assert scanner.proxy == "127.0.0.1:8080"
 
@@ -49,10 +41,7 @@ class TestBaseScanner:
         from aix.modules.inject import InjectScanner
 
         cookies = {"session": "abc123", "token": "xyz"}
-        scanner = InjectScanner(
-            target="https://example.com",
-            cookies=cookies
-        )
+        scanner = InjectScanner(target="https://example.com", cookies=cookies)
 
         assert scanner.cookies == cookies
 
@@ -61,10 +50,7 @@ class TestBaseScanner:
         from aix.modules.inject import InjectScanner
 
         headers = {"X-Custom": "value", "Authorization": "Bearer token"}
-        scanner = InjectScanner(
-            target="https://example.com",
-            headers=headers
-        )
+        scanner = InjectScanner(target="https://example.com", headers=headers)
 
         assert scanner.headers == headers
 
@@ -72,11 +58,7 @@ class TestBaseScanner:
         """Test initialization with level and risk"""
         from aix.modules.inject import InjectScanner
 
-        scanner = InjectScanner(
-            target="https://example.com",
-            level=3,
-            risk=2
-        )
+        scanner = InjectScanner(target="https://example.com", level=3, risk=2)
 
         assert scanner.level == 3
         assert scanner.risk == 2
@@ -94,10 +76,7 @@ class TestBaseScanner:
         """Test initialization with timeout - uses default timeout"""
         from aix.modules.inject import InjectScanner
 
-        scanner = InjectScanner(
-            target="https://example.com",
-            timeout=60
-        )
+        scanner = InjectScanner(target="https://example.com", timeout=60)
 
         # Scanner uses default timeout (kwargs propagation is implementation-specific)
         assert scanner.timeout == 30  # Default timeout
@@ -116,12 +95,12 @@ class TestBaseScanner:
 
         scanner = InjectScanner(target="https://example.com")
 
-        assert 'total' in scanner.stats
-        assert 'success' in scanner.stats
-        assert 'blocked' in scanner.stats
-        assert scanner.stats['total'] == 0
-        assert scanner.stats['success'] == 0
-        assert scanner.stats['blocked'] == 0
+        assert "total" in scanner.stats
+        assert "success" in scanner.stats
+        assert "blocked" in scanner.stats
+        assert scanner.stats["total"] == 0
+        assert scanner.stats["success"] == 0
+        assert scanner.stats["blocked"] == 0
 
     def test_findings_initialization(self):
         """Test findings list is initialized"""
@@ -134,12 +113,12 @@ class TestBaseScanner:
 
     def test_database_initialization(self):
         """Test database is initialized"""
-        from aix.modules.inject import InjectScanner
         from aix.db.database import AIXDatabase
+        from aix.modules.inject import InjectScanner
 
         scanner = InjectScanner(target="https://example.com")
 
-        assert hasattr(scanner, 'db')
+        assert hasattr(scanner, "db")
         assert isinstance(scanner.db, AIXDatabase)
 
 
@@ -207,15 +186,15 @@ class TestScannerPayloadLoading:
 
     def test_load_payloads_reconstructs_severity(self):
         """Test severity strings are converted to enums"""
-        from aix.modules.inject import InjectScanner
         from aix.core.reporter import Severity
+        from aix.modules.inject import InjectScanner
 
         scanner = InjectScanner(target="https://example.com", level=5, risk=3)
         payloads = scanner.load_payloads("inject.json")
 
         for payload in payloads:
-            if 'severity' in payload:
-                assert isinstance(payload['severity'], Severity)
+            if "severity" in payload:
+                assert isinstance(payload["severity"], Severity)
 
     def test_load_nonexistent_payloads(self):
         """Test loading non-existent payload file"""
@@ -233,13 +212,10 @@ class TestScannerConnectorCreation:
 
     def test_create_api_connector(self):
         """Test creating API connector"""
-        from aix.modules.inject import InjectScanner
         from aix.core.connector import APIConnector
+        from aix.modules.inject import InjectScanner
 
-        scanner = InjectScanner(
-            target="https://api.example.com",
-            api_key="test-key"
-        )
+        scanner = InjectScanner(target="https://api.example.com", api_key="test-key")
 
         connector = scanner._create_connector()
 
@@ -247,21 +223,15 @@ class TestScannerConnectorCreation:
 
     def test_create_request_connector(self):
         """Test creating Request connector"""
-        from aix.modules.inject import InjectScanner
         from aix.core.connector import RequestConnector
         from aix.core.request_parser import ParsedRequest
+        from aix.modules.inject import InjectScanner
 
         request = ParsedRequest(
-            method="POST",
-            url="https://example.com",
-            headers={},
-            injection_param="message"
+            method="POST", url="https://example.com", headers={}, injection_param="message"
         )
 
-        scanner = InjectScanner(
-            target="https://example.com",
-            parsed_request=request
-        )
+        scanner = InjectScanner(target="https://example.com", parsed_request=request)
 
         connector = scanner._create_connector()
 
@@ -271,29 +241,23 @@ class TestScannerConnectorCreation:
         """Test connector inherits proxy setting"""
         from aix.modules.inject import InjectScanner
 
-        scanner = InjectScanner(
-            target="https://example.com",
-            proxy="127.0.0.1:8080"
-        )
+        scanner = InjectScanner(target="https://example.com", proxy="127.0.0.1:8080")
 
         connector = scanner._create_connector()
 
         # Proxy is stored in config
-        assert connector.config.get('proxy') == "127.0.0.1:8080"
+        assert connector.config.get("proxy") == "127.0.0.1:8080"
 
     def test_connector_inherits_timeout(self):
         """Test connector inherits default timeout"""
         from aix.modules.inject import InjectScanner
 
-        scanner = InjectScanner(
-            target="https://example.com",
-            timeout=120
-        )
+        scanner = InjectScanner(target="https://example.com", timeout=120)
 
         connector = scanner._create_connector()
 
         # Connector uses scanner's timeout (default 30)
-        assert connector.config.get('timeout') == 30  # Default timeout
+        assert connector.config.get("timeout") == 30  # Default timeout
 
 
 class TestScannerEvaluator:
@@ -311,16 +275,9 @@ class TestScannerEvaluator:
         """Test evaluator is created when config provided"""
         from aix.modules.inject import InjectScanner
 
-        eval_config = {
-            'provider': 'openai',
-            'api_key': 'test-key',
-            'model': 'gpt-4'
-        }
+        eval_config = {"provider": "openai", "api_key": "test-key", "model": "gpt-4"}
 
-        scanner = InjectScanner(
-            target="https://example.com",
-            eval_config=eval_config
-        )
+        scanner = InjectScanner(target="https://example.com", eval_config=eval_config)
 
         assert scanner.evaluator is not None
 
@@ -339,10 +296,7 @@ class TestScannerCheckSuccess:
         indicators = ["ignore", "previous instructions"]
 
         result = await scanner.check_success(
-            response=response,
-            indicators=indicators,
-            payload="test",
-            technique="test"
+            response=response, indicators=indicators, payload="test", technique="test"
         )
 
         assert result is True
@@ -358,10 +312,7 @@ class TestScannerCheckSuccess:
         indicators = ["vulnerable", "hacked"]
 
         result = await scanner.check_success(
-            response=response,
-            indicators=indicators,
-            payload="test",
-            technique="test"
+            response=response, indicators=indicators, payload="test", technique="test"
         )
 
         assert result is False
@@ -377,10 +328,7 @@ class TestScannerCheckSuccess:
         indicators = ["vulnerable"]
 
         result = await scanner.check_success(
-            response=response,
-            indicators=indicators,
-            payload="test",
-            technique="test"
+            response=response, indicators=indicators, payload="test", technique="test"
         )
 
         assert result is True
