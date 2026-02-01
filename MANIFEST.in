@@ -2,12 +2,24 @@ include LICENSE
 include README.md
 include CHANGELOG.md
 include CONTRIBUTING.md
+include SECURITY.md
+include pyproject.toml
 
 recursive-include aix/payloads *.json
 recursive-include aix/prompts *.txt
 recursive-include aix/playbooks *.yaml
 
+prune build
+prune dist
+prune .github
+prune tests
+prune .pytest_cache
+
 global-exclude *.pyc
+global-exclude *.pyo
 global-exclude __pycache__
 global-exclude *.so
 global-exclude .DS_Store
+global-exclude .git*
+global-exclude *.egg-info
+global-exclude .coverage

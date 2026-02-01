@@ -1,45 +1,73 @@
-name: Release to PyPI
+name: Release
 
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      publish_to:
+        description: "Publish destination"
+        required: true
+        default: "testpypi"
+        type: choice
+        options:
+          - testpypi
+          - pypi
+
+env:
+  PYTHON_VERSION: "3.11"
 
 jobs:
   build:
+    name: Build Distribution
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
 
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build
+          pip install build twine
 
       - name: Build package
         run: python -m build
 
-      - name: Upload artifacts
+      - name: Check package metadata
+        run: twine check dist/*
+
+      - name: List built packages
+        run: ls -la dist/
+
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
+          retention-days: 30
 
   publish-testpypi:
+    name: Publish to TestPyPI
     runs-on: ubuntu-latest
     needs: build
-    environment: testpypi
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_to == 'testpypi')
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/aix-framework/
 
     permissions:
       id-token: write
 
     steps:
-      - name: Download artifacts
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: dist
@@ -49,17 +77,22 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
 
   publish-pypi:
+    name: Publish to PyPI
     runs-on: ubuntu-latest
-    needs: publish-testpypi
-    environment: pypi
+    needs: [build, publish-testpypi]
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_to == 'pypi')
+    environment:
+      name: pypi
+      url: https://pypi.org/project/aix-framework/
 
     permissions:
       id-token: write
 
     steps:
-      - name: Download artifacts
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: dist
@@ -67,3 +100,26 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  create-github-release-assets:
+    name: Upload Release Assets
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'release'
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
