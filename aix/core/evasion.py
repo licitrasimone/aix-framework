@@ -9,9 +9,7 @@ Evasion Levels:
 
 import base64
 import random
-import string
 from enum import Enum
-from typing import Callable
 
 
 class EvasionLevel(Enum):
@@ -22,60 +20,60 @@ class EvasionLevel(Enum):
 
 # Unicode homoglyphs - visually similar characters from different alphabets
 HOMOGLYPHS = {
-    'a': ['а', 'ą', 'ă', 'ȧ', 'α'],  # Cyrillic а, Polish ą, etc.
-    'e': ['е', 'ę', 'ė', 'ē', 'ε'],  # Cyrillic е, Greek ε
-    'o': ['о', 'ο', 'ȯ', 'ø', 'ӧ'],  # Cyrillic о, Greek ο
-    'c': ['с', 'ç', 'ċ', 'ć'],        # Cyrillic с
-    'p': ['р', 'ρ'],                  # Cyrillic р, Greek ρ
-    'x': ['х', 'χ'],                  # Cyrillic х, Greek χ
-    'y': ['у', 'ý', 'ÿ'],             # Cyrillic у
-    'i': ['і', 'ı', 'ί', 'ι'],        # Cyrillic і, Greek ι
-    's': ['ѕ', 'ś', 'ș'],             # Cyrillic ѕ
-    'h': ['һ', 'ħ'],                  # Cyrillic һ
-    'k': ['κ', 'ķ'],                  # Greek κ
-    'n': ['ñ', 'ń', 'ņ'],
-    'u': ['ú', 'ü', 'ų', 'ū'],
-    'r': ['г', 'ŕ'],                  # Cyrillic г looks like r in some fonts
-    't': ['τ', 'ț'],                  # Greek τ
-    'w': ['ω', 'ẃ'],                  # Greek ω
-    'v': ['ν', 'ѵ'],                  # Greek ν
-    'm': ['м', 'ṁ'],                  # Cyrillic м
+    "a": ["а", "ą", "ă", "ȧ", "α"],  # Cyrillic а, Polish ą, etc.
+    "e": ["е", "ę", "ė", "ē", "ε"],  # Cyrillic е, Greek ε
+    "o": ["о", "ο", "ȯ", "ø", "ӧ"],  # Cyrillic о, Greek ο
+    "c": ["с", "ç", "ċ", "ć"],  # Cyrillic с
+    "p": ["р", "ρ"],  # Cyrillic р, Greek ρ
+    "x": ["х", "χ"],  # Cyrillic х, Greek χ
+    "y": ["у", "ý", "ÿ"],  # Cyrillic у
+    "i": ["і", "ı", "ί", "ι"],  # Cyrillic і, Greek ι
+    "s": ["ѕ", "ś", "ș"],  # Cyrillic ѕ
+    "h": ["һ", "ħ"],  # Cyrillic һ
+    "k": ["κ", "ķ"],  # Greek κ
+    "n": ["ñ", "ń", "ņ"],
+    "u": ["ú", "ü", "ų", "ū"],
+    "r": ["г", "ŕ"],  # Cyrillic г looks like r in some fonts
+    "t": ["τ", "ț"],  # Greek τ
+    "w": ["ω", "ẃ"],  # Greek ω
+    "v": ["ν", "ѵ"],  # Greek ν
+    "m": ["м", "ṁ"],  # Cyrillic м
 }
 
 # Leetspeak substitutions
 LEETSPEAK = {
-    'a': ['4', '@', '/\\'],
-    'e': ['3', '€'],
-    'i': ['1', '!', '|'],
-    'o': ['0', '()'],
-    's': ['5', '$'],
-    't': ['7', '+'],
-    'l': ['1', '|'],
-    'b': ['8', '|3'],
-    'g': ['9', '6'],
+    "a": ["4", "@", "/\\"],
+    "e": ["3", "€"],
+    "i": ["1", "!", "|"],
+    "o": ["0", "()"],
+    "s": ["5", "$"],
+    "t": ["7", "+"],
+    "l": ["1", "|"],
+    "b": ["8", "|3"],
+    "g": ["9", "6"],
 }
 
 # Zero-width and invisible characters
 INVISIBLE_CHARS = [
-    '\u200b',  # Zero-width space
-    '\u200c',  # Zero-width non-joiner
-    '\u200d',  # Zero-width joiner
-    '\ufeff',  # Zero-width no-break space
-    '\u2060',  # Word joiner
+    "\u200b",  # Zero-width space
+    "\u200c",  # Zero-width non-joiner
+    "\u200d",  # Zero-width joiner
+    "\ufeff",  # Zero-width no-break space
+    "\u2060",  # Word joiner
 ]
 
 # Whitespace variations
 WHITESPACE_CHARS = [
-    ' ',       # Regular space
-    '\t',      # Tab
-    '\u00a0',  # Non-breaking space
-    '\u2000',  # En quad
-    '\u2001',  # Em quad
-    '\u2002',  # En space
-    '\u2003',  # Em space
-    '\u2004',  # Three-per-em space
-    '\u2009',  # Thin space
-    '\u200a',  # Hair space
+    " ",  # Regular space
+    "\t",  # Tab
+    "\u00a0",  # Non-breaking space
+    "\u2000",  # En quad
+    "\u2001",  # Em quad
+    "\u2002",  # En space
+    "\u2003",  # Em space
+    "\u2004",  # Three-per-em space
+    "\u2009",  # Thin space
+    "\u200a",  # Hair space
 ]
 
 
@@ -165,17 +163,17 @@ class PayloadEvasion:
                 result.append(char.swapcase())
             else:
                 result.append(char)
-        return ''.join(result)
+        return "".join(result)
 
     def _unicode_whitespace(self, payload: str) -> str:
         """Replace some spaces with unicode whitespace variants."""
         result = []
         for char in payload:
-            if char == ' ' and random.random() < 0.4:
+            if char == " " and random.random() < 0.4:
                 result.append(random.choice(WHITESPACE_CHARS))
             else:
                 result.append(char)
-        return ''.join(result)
+        return "".join(result)
 
     def _insert_invisible(self, payload: str) -> str:
         """Insert zero-width characters at random positions."""
@@ -185,7 +183,7 @@ class PayloadEvasion:
         for _ in range(num_inserts):
             pos = random.randint(0, len(result))
             result.insert(pos, random.choice(INVISIBLE_CHARS))
-        return ''.join(result)
+        return "".join(result)
 
     # =========================================================================
     # AGGRESSIVE EVASION TECHNIQUES
@@ -204,7 +202,7 @@ class PayloadEvasion:
                 result.append(replacement)
             else:
                 result.append(char)
-        return ''.join(result)
+        return "".join(result)
 
     def _leetspeak_partial(self, payload: str) -> str:
         """Apply leetspeak substitutions to some characters."""
@@ -215,11 +213,11 @@ class PayloadEvasion:
                 result.append(random.choice(LEETSPEAK[lower_char]))
             else:
                 result.append(char)
-        return ''.join(result)
+        return "".join(result)
 
     def _token_split(self, payload: str) -> str:
         """Split tokens with special characters that LLMs often ignore."""
-        separators = ['\u200b', '­', '᠎', '⁠']  # Zero-width, soft hyphen, etc.
+        separators = ["\u200b", "­", "᠎", "⁠"]  # Zero-width, soft hyphen, etc.
         words = payload.split()
         result = []
 
@@ -231,7 +229,7 @@ class PayloadEvasion:
                 word = word[:split_pos] + sep + word[split_pos:]
             result.append(word)
 
-        return ' '.join(result)
+        return " ".join(result)
 
     def _base64_segment(self, payload: str) -> str:
         """Encode a segment of the payload in base64 with decode hint."""
@@ -242,7 +240,7 @@ class PayloadEvasion:
         # Select 1-3 consecutive words to encode
         start = random.randint(0, max(0, len(words) - 3))
         end = min(start + random.randint(1, 3), len(words))
-        segment = ' '.join(words[start:end])
+        segment = " ".join(words[start:end])
 
         encoded = base64.b64encode(segment.encode()).decode()
 
@@ -254,15 +252,15 @@ class PayloadEvasion:
         ]
 
         words[start:end] = [random.choice(decode_hints)]
-        return ' '.join(words)
+        return " ".join(words)
 
     def _markdown_comment_inject(self, payload: str) -> str:
         """Inject markdown/HTML comments that might be stripped by processors."""
         comments = [
-            '<!-- -->',
-            '[//]: # ()',
-            '<!------>',
-            '<!-- ignore -->',
+            "<!-- -->",
+            "[//]: # ()",
+            "<!------>",
+            "<!-- ignore -->",
         ]
 
         words = payload.split()
@@ -274,7 +272,7 @@ class PayloadEvasion:
             pos = random.randint(1, len(words) - 1)
             words.insert(pos, random.choice(comments))
 
-        return ' '.join(words)
+        return " ".join(words)
 
     def _mixed_encoding(self, payload: str) -> str:
         """Apply multiple encoding techniques to different parts."""
@@ -292,12 +290,13 @@ class PayloadEvasion:
                 result.append(payload[i])
             i += 1
 
-        return ''.join(result)
+        return "".join(result)
 
 
 # =========================================================================
 # UTILITY FUNCTIONS
 # =========================================================================
+
 
 def get_evasion(level: str) -> PayloadEvasion:
     """Factory function to create PayloadEvasion instance."""
@@ -320,8 +319,8 @@ def evade_payloads(payloads: list[dict], level: str = "none") -> list[dict]:
     for p in payloads:
         # Create a copy to avoid mutating original
         new_p = p.copy()
-        if 'payload' in new_p:
-            new_p['payload'] = evasion.evade(new_p['payload'])
+        if "payload" in new_p:
+            new_p["payload"] = evasion.evade(new_p["payload"])
         evaded.append(new_p)
 
     return evaded

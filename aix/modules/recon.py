@@ -1,4 +1,5 @@
 """AIX Recon Module - Reconnaissance and fingerprinting"""
+
 import asyncio
 import json
 import os
@@ -6,9 +7,8 @@ import re
 from typing import TYPE_CHECKING, Any, Optional
 from urllib.parse import urlparse
 
-from rich.console import Console
-from rich.table import Table
 from rich.progress import track
+from rich.table import Table
 
 from aix.core.reporter import Finding, Severity
 from aix.core.scanner import BaseScanner, CircuitBreakerError, run_scanner
@@ -18,14 +18,23 @@ if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
 
 
-
 class ReconScanner(BaseScanner):
-    def __init__(self, target: str, api_key: str | None = None, verbose: bool = False,
-                 parsed_request: Optional['ParsedRequest'] = None, timeout: int = 30, browser: bool = False, **kwargs):
-        super().__init__(target, api_key, verbose, parsed_request, timeout=timeout, browser=browser, **kwargs)
+    def __init__(
+        self,
+        target: str,
+        api_key: str | None = None,
+        verbose: bool = False,
+        parsed_request: Optional["ParsedRequest"] = None,
+        timeout: int = 30,
+        browser: bool = False,
+        **kwargs,
+    ):
+        super().__init__(
+            target, api_key, verbose, parsed_request, timeout=timeout, browser=browser, **kwargs
+        )
         self.module_name = "RECON"
         self.console_color = "cyan"
-        self.output = kwargs.get('output')
+        self.output = kwargs.get("output")
 
         # Load payloads via loading mechanism (but recon has special structure?)
         # Base scanner load_payloads handles severity format. Recon payloads might differ?
@@ -36,85 +45,95 @@ class ReconScanner(BaseScanner):
         # But wait, lines 37-43 show just json.load.
         # So I can use BaseScanner.load_payloads but it adds severity reconstruction which is harmless if severity key is missing or string.
         # It returns list of dicts.
-        self.payloads = self.load_payloads('recon.json')
+        self.payloads = self.load_payloads("recon.json")
 
         # Load config from JSON
-        config_path = os.path.join(os.path.dirname(__file__), '..', 'payloads', 'recon_config.json')
+        config_path = os.path.join(os.path.dirname(__file__), "..", "payloads", "recon_config.json")
         try:
             with open(config_path) as f:
                 self.config = json.load(f)
         except Exception as e:
             if not self.quiet:
-                self.console.print(f"[yellow][!] Could not load config from {config_path}: {e}[/yellow]")
+                self.console.print(
+                    f"[yellow][!] Could not load config from {config_path}: {e}[/yellow]"
+                )
             self.config = {
-                "model_signatures": {}, "negative_signatures": {},
-                "version_patterns": {}, "waf_signatures": {}
+                "model_signatures": {},
+                "negative_signatures": {},
+                "version_patterns": {},
+                "waf_signatures": {},
             }
 
         self.results = {
-            'target': target,
-            'model': None,
-            'version': None,
-            'model_confidence': 0,
-            'waf_detected': None,
-            'rate_limit': None,
-            'auth_type': None,
-            'tech_stack': [],
-            'supported_params': [],
-            'capabilities': [],
-            'filters_detected': [],
-            'response_times': [],
-            'errors': [],
-            'discovered_endpoints': [],
+            "target": target,
+            "model": None,
+            "version": None,
+            "model_confidence": 0,
+            "waf_detected": None,
+            "rate_limit": None,
+            "auth_type": None,
+            "tech_stack": [],
+            "supported_params": [],
+            "capabilities": [],
+            "filters_detected": [],
+            "response_times": [],
+            "errors": [],
+            "discovered_endpoints": [],
             # Enhanced detection fields
-            'rag_detected': False,
-            'rag_confidence': 0,
-            'rag_indicators': [],
-            'system_prompt_indicators': {},
-            'temperature_estimate': None,
-            'is_deterministic': None,
-            'response_variance': None,
-            'context_window_estimate': None,
-            'truncation_detected': False,
-            'tools': {
-                'code_execution': False,
-                'web_browsing': False,
-                'file_access': False,
-                'function_calling': False,
-                'database_access': False
+            "rag_detected": False,
+            "rag_confidence": 0,
+            "rag_indicators": [],
+            "system_prompt_indicators": {},
+            "temperature_estimate": None,
+            "is_deterministic": None,
+            "response_variance": None,
+            "context_window_estimate": None,
+            "truncation_detected": False,
+            "tools": {
+                "code_execution": False,
+                "web_browsing": False,
+                "file_access": False,
+                "function_calling": False,
+                "database_access": False,
             },
-            'modalities': {'input': ['text'], 'output': ['text']},
-            'input_processing': {
-                'supported_formats': [],
-                'sanitization_detected': False
-            }
+            "modalities": {"input": ["text"], "output": ["text"]},
+            "input_processing": {"supported_formats": [], "sanitization_detected": False},
         }
-        
+
         # Load discovery paths
         try:
-            paths_file = os.path.join(os.path.dirname(__file__), '..', 'payloads', 'discovery_paths.json')
+            paths_file = os.path.join(
+                os.path.dirname(__file__), "..", "payloads", "discovery_paths.json"
+            )
             with open(paths_file) as f:
                 self.discovery_paths = json.load(f)
         except Exception:
             self.discovery_paths = ["/v1/chat/completions", "/api/chat", "/api/generate"]
 
-
-    def _print(self, status: str, msg: str, tech: str = '', response: str = None):
+    def _print(self, status: str, msg: str, tech: str = "", response: str = None):
         if self.quiet:
             return
-        t = self.target[:28] + '...' if len(self.target) > 30 else self.target
+        t = self.target[:28] + "..." if len(self.target) > 30 else self.target
         name = self.module_name[:7].upper()
-        if status == 'info':
-            self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [cyan][*][/cyan] {msg}")
-        elif status == 'success':
-            self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [green][+][/green] {msg}") # Different format than base
+        if status == "info":
+            self.console.print(
+                f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [cyan][*][/cyan] {msg}"
+            )
+        elif status == "success":
+            self.console.print(
+                f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [green][+][/green] {msg}"
+            )  # Different format than base
             if self.show_response and response:
-                clean_response = response[:500].replace('[', r'\[')
+                clean_response = response[:500].replace("[", r"\[")
                 self.console.print(f"    [dim]Response: {clean_response}[/dim]")
-        elif status == 'warning':
-            self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [yellow][!][/yellow] {msg}")
-        elif status == 'error':
-            self.console.print(f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [red][-][/red] {msg}")
+        elif status == "warning":
+            self.console.print(
+                f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [yellow][!][/yellow] {msg}"
+            )
+        elif status == "error":
+            self.console.print(
+                f"[{self.console_color}]{name:<7}[/{self.console_color}] {t:30} [red][-][/red] {msg}"
+            )
         # Note: BaseScanner has generic _print but Recon likes its own format slightly (no 'tech' usually in msg for success).
 
     def _detect_model(self, response: str) -> tuple:
@@ -122,7 +141,7 @@ class ReconScanner(BaseScanner):
         response_lower = response.lower()
         model_scores = {}
 
-        for model, patterns in self.config.get('model_signatures', {}).items():
+        for model, patterns in self.config.get("model_signatures", {}).items():
             score = 0
             # Add score for positive matches
             for pattern, weight in patterns:
@@ -130,8 +149,8 @@ class ReconScanner(BaseScanner):
                     score += weight
 
             # Subtract score for negative matches (exclusions)
-            if model in self.config.get('negative_signatures', {}):
-                for neg_pattern in self.config['negative_signatures'][model]:
+            if model in self.config.get("negative_signatures", {}):
+                for neg_pattern in self.config["negative_signatures"][model]:
                     if neg_pattern in response_lower:
                         score -= 5  # Reduced penalty for conflicting identity
 
@@ -151,7 +170,7 @@ class ReconScanner(BaseScanner):
 
     def _detect_version(self, model: str, response: str) -> str | None:
         """Extract specific version string from response"""
-        version_patterns = self.config.get('version_patterns', {})
+        version_patterns = self.config.get("version_patterns", {})
         if not model:
             return None
 
@@ -168,7 +187,7 @@ class ReconScanner(BaseScanner):
                 if model.startswith(key) or key in model:
                     target_patterns = version_patterns[key]
                     break
-        
+
         if not target_patterns:
             return None
 
@@ -184,7 +203,7 @@ class ReconScanner(BaseScanner):
         response_lower = response.lower()
         headers_str = str(headers).lower() if headers else ""
 
-        for waf, patterns in self.config.get('waf_signatures', {}).items():
+        for waf, patterns in self.config.get("waf_signatures", {}).items():
             if any(p in response_lower or p in headers_str for p in patterns):
                 return waf
         return None
@@ -192,92 +211,98 @@ class ReconScanner(BaseScanner):
     def _detect_auth_type(self) -> str:
         """Detect authentication type from request"""
         auth_types = []
-        
+
         # Check Parsed Request headers (most accurate)
         if self.parsed_request:
             headers = {k.lower(): v for k, v in self.parsed_request.headers.items()}
-            
-            if 'authorization' in headers:
-                val = headers['authorization']
-                if val.lower().startswith('bearer'):
+
+            if "authorization" in headers:
+                val = headers["authorization"]
+                if val.lower().startswith("bearer"):
                     auth_types.append("Bearer Token")
-                elif val.lower().startswith('basic'):
+                elif val.lower().startswith("basic"):
                     auth_types.append("Basic Auth")
                 else:
                     auth_types.append("Custom Authorization")
-            
+
             # Check for API Key headers
-            api_keys = [k for k in headers.keys() if 'api-key' in k or 'x-api-key' in k or 'apikey' in k]
+            api_keys = [
+                k for k in headers if "api-key" in k or "x-api-key" in k or "apikey" in k
+            ]
             if api_keys:
                 auth_types.append(f"Header API Key ({api_keys[0]})")
-                
+
             # Check for Session Cookies
-            if 'cookie' in headers:
+            if "cookie" in headers:
                 auth_types.append("Session Cookie")
-                
+
         # Check CLI args
         elif self.api_key:
             auth_types.append("Bearer Token (CLI)")
-        
+
         # Check if auth passed via kwargs (cookies/headers)
-        if hasattr(self, 'cookies') and self.cookies:
+        if hasattr(self, "cookies") and self.cookies:
             auth_types.append("Cookies (CLI)")
-            
+
         if not auth_types:
             return "None / Unknown"
-            
+
         return ", ".join(list(set(auth_types)))
 
     def _detect_rag(self, responses: list) -> dict:
         """Detect RAG (Retrieval-Augmented Generation) usage"""
-        all_text = " ".join(r.get('response', '') for r in responses if r.get('response')).lower()
+        all_text = " ".join(r.get("response", "") for r in responses if r.get("response")).lower()
 
         rag_score = 0
         indicators = []
 
         # Check citation patterns
-        citation_patterns = self.config.get('rag_indicators', {}).get('citation_patterns', [])
+        citation_patterns = self.config.get("rag_indicators", {}).get("citation_patterns", [])
         for pattern, weight in citation_patterns:
             if pattern in all_text:
                 rag_score += weight
                 indicators.append(pattern)
 
         # Check retrieval keywords
-        retrieval_keywords = self.config.get('rag_indicators', {}).get('retrieval_keywords', [])
+        retrieval_keywords = self.config.get("rag_indicators", {}).get("retrieval_keywords", [])
         for keyword in retrieval_keywords:
             if keyword in all_text:
                 rag_score += 3
                 indicators.append(keyword)
 
         # Check for structured citation patterns (e.g., [1], [Source])
-        citation_refs = re.findall(r'\[(?:Source|Doc|Ref|\d+)\]', all_text, re.IGNORECASE)
+        citation_refs = re.findall(r"\[(?:Source|Doc|Ref|\d+)\]", all_text, re.IGNORECASE)
         if citation_refs:
             rag_score += len(citation_refs) * 2
             indicators.extend(citation_refs[:3])
 
         return {
-            'detected': rag_score >= 10,
-            'confidence': min(rag_score * 5, 100),
-            'indicators': list(set(indicators))[:5]
+            "detected": rag_score >= 10,
+            "confidence": min(rag_score * 5, 100),
+            "indicators": list(set(indicators))[:5],
         }
 
     def _detect_system_prompt_indicators(self, responses: list) -> dict:
         """Detect system prompt leakage and behavioral constraints"""
-        all_text = " ".join(r.get('response', '') for r in responses if r.get('response')).lower()
+        all_text = " ".join(r.get("response", "") for r in responses if r.get("response")).lower()
 
         score = 0
         indicators = []
         leaked_hints = []
 
         # Check instruction patterns
-        instruction_patterns = self.config.get('system_prompt_indicators', {}).get('instruction_patterns', [])
+        instruction_patterns = self.config.get("system_prompt_indicators", {}).get(
+            "instruction_patterns", []
+        )
         for pattern, weight in instruction_patterns:
             if pattern in all_text:
                 score += weight
                 indicators.append(pattern)
 
         # Check behavioral constraints
-        constraints = self.config.get('system_prompt_indicators', {}).get('behavioral_constraints', [])
+        constraints = self.config.get("system_prompt_indicators", {}).get(
+            "behavioral_constraints", []
+        )
         for constraint in constraints:
             if constraint in all_text:
                 score += 4
@@ -285,19 +310,19 @@ class ReconScanner(BaseScanner):
 
         # Extract potential leaked hints (sentences containing "you are" or "your role")
         hint_patterns = [
-            r'(?:you are|i am)[^.!?]{5,100}[.!?]',
-            r'(?:my role|your role)[^.!?]{5,100}[.!?]',
-            r'(?:instructed to|told to)[^.!?]{5,100}[.!?]'
+            r"(?:you are|i am)[^.!?]{5,100}[.!?]",
+            r"(?:my role|your role)[^.!?]{5,100}[.!?]",
+            r"(?:instructed to|told to)[^.!?]{5,100}[.!?]",
         ]
         for pattern in hint_patterns:
             matches = re.findall(pattern, all_text)
             leaked_hints.extend(matches[:2])
 
         return {
-            'detected': score >= 15,
-            'confidence': min(score * 4, 100),
-            'indicators': list(set(indicators))[:5],
-            'leaked_hints': leaked_hints[:3]
+            "detected": score >= 15,
+            "confidence": min(score * 4, 100),
+            "indicators": list(set(indicators))[:5],
+            "leaked_hints": leaked_hints[:3],
         }
 
     async def _detect_temperature(self, connector) -> dict:
@@ -305,7 +330,7 @@ class ReconScanner(BaseScanner):
         test_prompts = [
             "Complete: 1, 2, 3, 4,",
             "What is the capital of Japan? Answer in one word.",
-            "Say 'hello' exactly as written."
+            "Say 'hello' exactly as written.",
         ]
 
         results = []
@@ -324,18 +349,20 @@ class ReconScanner(BaseScanner):
                 # Calculate variance
                 unique_responses = len(set(responses))
                 variance = unique_responses / len(responses)
-                results.append({
-                    'prompt': prompt[:30],
-                    'unique': unique_responses,
-                    'total': len(responses),
-                    'variance': variance
-                })
+                results.append(
+                    {
+                        "prompt": prompt[:30],
+                        "unique": unique_responses,
+                        "total": len(responses),
+                        "variance": variance,
+                    }
+                )
 
         if not results:
-            return {'detected': False, 'temperature_estimate': None, 'is_deterministic': None}
+            return {"detected": False, "temperature_estimate": None, "is_deterministic": None}
 
         # Aggregate variance
-        avg_variance = sum(r['variance'] for r in results) / len(results)
+        avg_variance = sum(r["variance"] for r in results) / len(results)
 
         # Estimate temperature
         if avg_variance <= 0.1:
@@ -352,11 +379,11 @@ class ReconScanner(BaseScanner):
             is_deterministic = False
 
         return {
-            'detected': True,
-            'temperature_estimate': temp_estimate,
-            'is_deterministic': is_deterministic,
-            'variance': round(avg_variance, 2),
-            'samples': results
+            "detected": True,
+            "temperature_estimate": temp_estimate,
+            "is_deterministic": is_deterministic,
+            "variance": round(avg_variance, 2),
+            "samples": results,
         }
 
     async def _detect_context_window(self, connector) -> dict:
@@ -403,18 +430,18 @@ class ReconScanner(BaseScanner):
             estimate = None
 
         return {
-            'detected': estimate is not None,
-            'context_window_estimate': estimate,
-            'last_successful_tokens': last_successful,
-            'truncation_detected_at': truncation_detected
+            "detected": estimate is not None,
+            "context_window_estimate": estimate,
+            "last_successful_tokens": last_successful,
+            "truncation_detected_at": truncation_detected,
         }
 
     def _detect_tools(self, responses: list) -> dict:
         """Detect specific tool capabilities"""
-        all_text = " ".join(r.get('response', '') for r in responses if r.get('response')).lower()
+        all_text = " ".join(r.get("response", "") for r in responses if r.get("response")).lower()
 
         detected_tools = {}
-        tool_sigs = self.config.get('tool_signatures', {})
+        tool_sigs = self.config.get("tool_signatures", {})
 
         for tool_type, patterns in tool_sigs.items():
             score = 0
@@ -426,26 +453,26 @@ class ReconScanner(BaseScanner):
 
             if score >= 5:
                 detected_tools[tool_type] = {
-                    'detected': True,
-                    'confidence': min(score * 10, 100),
-                    'indicators': matches[:3]
+                    "detected": True,
+                    "confidence": min(score * 10, 100),
+                    "indicators": matches[:3],
                 }
 
         return {
-            'tools_detected': list(detected_tools.keys()),
-            'tool_details': detected_tools,
-            'has_tools': len(detected_tools) > 0
+            "tools_detected": list(detected_tools.keys()),
+            "tool_details": detected_tools,
+            "has_tools": len(detected_tools) > 0,
         }
 
     def _detect_capabilities_extended(self, responses: list) -> dict:
         """Detect extended capabilities and modalities"""
-        all_text = " ".join(r.get('response', '') for r in responses if r.get('response')).lower()
+        all_text = " ".join(r.get("response", "") for r in responses if r.get("response")).lower()
 
         capabilities = []
-        modalities = {'input': ['text'], 'output': ['text']}
+        modalities = {"input": ["text"], "output": ["text"]}
 
         # Check capability signatures
-        cap_sigs = self.config.get('capability_signatures', {})
+        cap_sigs = self.config.get("capability_signatures", {})
         for cap_type, patterns in cap_sigs.items():
             score = 0
             for pattern, weight in patterns:
@@ -455,29 +482,26 @@ class ReconScanner(BaseScanner):
                 capabilities.append(cap_type)
 
         # Detect input modalities
-        if 'image' in all_text or 'vision' in all_text or 'picture' in all_text:
-            modalities['input'].append('image')
-        if 'audio' in all_text or 'speech' in all_text or 'voice' in all_text:
-            modalities['input'].append('audio')
+        if "image" in all_text or "vision" in all_text or "picture" in all_text:
+            modalities["input"].append("image")
+        if "audio" in all_text or "speech" in all_text or "voice" in all_text:
+            modalities["input"].append("audio")
 
         # Detect output modalities
-        if 'json' in all_text or 'structured' in all_text:
-            modalities['output'].append('structured')
-        if 'code' in all_text or 'python' in all_text:
-            modalities['output'].append('code')
+        if "json" in all_text or "structured" in all_text:
+            modalities["output"].append("structured")
+        if "code" in all_text or "python" in all_text:
+            modalities["output"].append("code")
 
-        return {
-            'capabilities': capabilities,
-            'modalities': modalities
-        }
+        return {"capabilities": capabilities, "modalities": modalities}
 
     async def _detect_input_processing(self, connector) -> dict:
         """Detect input processing and sanitization behavior"""
         tests = {
-            'json': ('{"test": "value"}', ['test', 'value', 'json']),
-            'xml': ('<tag>content</tag>', ['tag', 'content', 'xml']),
-            'markdown': ('# Header\n**bold**', ['header', 'bold', 'markdown']),
-            'special_chars': ('Test: <>&"\'', ['<', '>', '&'])
+            "json": ('{"test": "value"}', ["test", "value", "json"]),
+            "xml": ("<tag>content</tag>", ["tag", "content", "xml"]),
+            "markdown": ("# Header\n**bold**", ["header", "bold", "markdown"]),
+            "special_chars": ("Test: <>&\"'", ["<", ">", "&"]),
         }
 
         processing_detected = {}
@@ -492,24 +516,24 @@ class ReconScanner(BaseScanner):
                 processed = any(ind in resp_lower for ind in indicators)
 
                 # Check if sanitization occurred (special chars removed/escaped)
-                if format_type == 'special_chars':
-                    if '&lt;' in resp or '&gt;' in resp:
+                if format_type == "special_chars":
+                    if "&lt;" in resp or "&gt;" in resp:
                         sanitization_detected = True
 
                 processing_detected[format_type] = {
-                    'recognized': processed,
-                    'echo_match': payload in resp
+                    "recognized": processed,
+                    "echo_match": payload in resp,
                 }
 
             except Exception:
-                processing_detected[format_type] = {'recognized': False, 'error': True}
+                processing_detected[format_type] = {"recognized": False, "error": True}
 
             await asyncio.sleep(0.2)
 
         return {
-            'formats_detected': processing_detected,
-            'sanitization_detected': sanitization_detected,
-            'supported_formats': [k for k, v in processing_detected.items() if v.get('recognized')]
+            "formats_detected": processing_detected,
+            "sanitization_detected": sanitization_detected,
+            "supported_formats": [k for k, v in processing_detected.items() if v.get("recognized")],
         }
 
     async def _probe_rate_limit(self, connector) -> tuple:
@@ -523,7 +547,7 @@ class ReconScanner(BaseScanner):
                 await connector.send("ping")
                 count += 1
             except Exception as e:
-                if '429' in str(e) or 'rate' in str(e).lower():
+                if "429" in str(e) or "rate" in str(e).lower():
                     limit_hit = True
                     break
 
@@ -531,62 +555,66 @@ class ReconScanner(BaseScanner):
 
     async def _discover_endpoint(self, connector) -> str | None:
         """Attempt to discover the correct chat endpoint if the base URL fails"""
-        self._print('info', 'Target appears to be a base URL/frontend. Scanning for API endpoints...')
-        
+        self._print(
+            "info", "Target appears to be a base URL/frontend. Scanning for API endpoints..."
+        )
+
         found_endpoint = None
-        
+
         # We'll use a semaphore to limit concurrent checks
         sem = asyncio.Semaphore(10)
-        
+
         async def check_path(base_url, path):
             # Ensure proper joining of base and path
-            if base_url.endswith('/'): base_url = base_url[:-1]
-            if not path.startswith('/'): path = '/' + path
+            if base_url.endswith("/"):
+                base_url = base_url[:-1]
+            if not path.startswith("/"):
+                path = "/" + path
             full_url = base_url + path
-            
+
             async with sem:
                 try:
                     # Send a distinct probe that might trigger "Method Not Allowed" or "Bad Request"
                     # Sending an empty POST is often a good way to find an API
-                    # But the connector.send() method is designed for the target URL. 
+                    # But the connector.send() method is designed for the target URL.
                     # We need to temporarily use the connector or create raw requests?
-                    # Since connector is tied to self.target, we might need a low-level fetch or 
+                    # Since connector is tied to self.target, we might need a low-level fetch or
                     # temporarily update connector target if it supports it.
                     # Looking at BaseScanner, connector usually takes url in send() or uses initialized url.
                     # Most connectors (AiohttpConnector) use the initialized session but url is passed in send()??
-                    # Let's check BaseScanner/Connector implementation logic if needed. 
+                    # Let's check BaseScanner/Connector implementation logic if needed.
                     # Assuming we can request relative paths or absolute URLs.
-                    
+
                     # NOTE: A simple way is to use the existing connector if it allows overriding URL
-                    # or just use a raw request if available. 
+                    # or just use a raw request if available.
                     # Since I can't see connector.py, I will assume I can update the target or pass a full URL.
                     # If connector.send takes a payload, it posts TO the target.
-                    # We might need a raw "check_url" method. 
-                    # For now, I'll attempt to use internal _session of AiohttpConnector if possible, 
+                    # We might need a raw "check_url" method.
+                    # For now, I'll attempt to use internal _session of AiohttpConnector if possible,
                     # OR (safer) instantiate a new connector for the probe? No, that's heavy.
-                    
-                    # Let's hope the connector allows changing URL or we can hack it. 
-                    # Actually, we can just fetch the URL using standard aiohttp if we import it, 
+
+                    # Let's hope the connector allows changing URL or we can hack it.
+                    # Actually, we can just fetch the URL using standard aiohttp if we import it,
                     # but we want to use the same proxy/headers context.
-                    
+
                     # Heuristic: Check HTTP status
                     # We want 405 (Method Not Allowed), 400 (Bad Request - missing params), or 200 (OK)
                     # We want to avoid 404.
-                    
+
                     # To do this cleanly, let's assume we can try to re-use the connector logic.
                     # If not, I'll use a simple aiohttp request here since we are in `recon`.
                     pass
                 except:
                     pass
-        
+
         # Simplification: We will try to update the connector's target or create a quick probe.
-        # Since I can't easily see connector.py, I'll assume we can use `connector.session.request` 
-        # if it's an AiohttpConnector. 
-        
+        # Since I can't easily see connector.py, I'll assume we can use `connector.session.request`
+        # if it's an AiohttpConnector.
+
         # Let's just implement a robust probe using the connector's internal session if available
         # or fall back to known behavior.
-        
-        # ACTUALLY, usually scanners allow probing other paths. 
+
+        # ACTUALLY, usually scanners allow probing other paths.
         # I'll implement a `_probe_path` in ReconScanner utilizing the connector.
         pass
 
@@ -595,20 +623,21 @@ class ReconScanner(BaseScanner):
         try:
             # Construct full URL
             from urllib.parse import urljoin
+
             full_url = urljoin(self.target, path)
-            
+
             # Use the existing connector's client
-            if hasattr(connector, 'client') and connector.client:
+            if hasattr(connector, "client") and connector.client:
                 # We need headers. APIConnector has _build_headers but it's internal.
-                # We can try to access it or just use minimal headers. 
+                # We can try to access it or just use minimal headers.
                 headers = {}
-                if hasattr(connector, '_build_headers'):
-                     headers = connector._build_headers()
-                
+                if hasattr(connector, "_build_headers"):
+                    headers = connector._build_headers()
+
                 # Try POST with empty JSON
                 try:
                     resp = await connector.client.post(full_url, json={}, headers=headers)
-                    
+
                     # 405 = Method Not Allowed (Great! It exists but wants other method)
                     # 400 = Bad Request (Great! It exists but wants body)
                     # 415 = Unsupported Media Type
@@ -616,10 +645,15 @@ class ReconScanner(BaseScanner):
                     # 200 = OK
                     if resp.status_code in [200, 400, 405, 415, 422]:
                         return True
-                        
+
                     # Also check content for "error" related to LLMs
                     text = resp.text.lower()
-                    if 'message' in text or 'model' in text or 'instruction' in text or 'missing' in text:
+                    if (
+                        "message" in text
+                        or "model" in text
+                        or "instruction" in text
+                        or "missing" in text
+                    ):
                         return True
                 except:
                     pass
@@ -629,36 +663,49 @@ class ReconScanner(BaseScanner):
 
     async def _extract_apis_from_js(self, connector, html: str) -> list[str]:
         """Extract potential API URLs from JavaScript files"""
-        self._print('info', 'Analyzing JavaScript for API endpoints...')
+        self._print("info", "Analyzing JavaScript for API endpoints...")
         found_urls = set()
-        
+
         # 1. Find script sources
         # Simple regex for <script src="...">
         script_srcs = re.findall(r'<script[^>]+src=["\']([^"\']+)["\']', html)
-        
+
         # 2. Extract full URLs from inline HTML/Scripts
         # Pattern for http/https URLs
-        url_pattern = r'https?://[a-zA-Z0-9.-]+(?:/[a-zA-Z0-9._~:/?#\[\]@!$&\'()*+,;=-]*)?'
+        url_pattern = r"https?://[a-zA-Z0-9.-]+(?:/[a-zA-Z0-9._~:/?#\[\]@!$&\'()*+,;=-]*)?"
         matches = re.findall(url_pattern, html)
         found_urls.update(matches)
-        
+
         # Filter for external scripts to fetch
         scripts_to_fetch = []
         for src in script_srcs:
             # Ignore common 3rd party libs to save time
             lower_src = src.lower()
-            if any(x in lower_src for x in ['jquery', 'analytics', 'gtm', 'ads', 'doubleclick', 'facebook', 'twitter', 'fontawesome']):
+            if any(
+                x in lower_src
+                for x in [
+                    "jquery",
+                    "analytics",
+                    "gtm",
+                    "ads",
+                    "doubleclick",
+                    "facebook",
+                    "twitter",
+                    "fontawesome",
+                ]
+            ):
                 continue
-                
+
             # Handle relative URLs
             from urllib.parse import urljoin
+
             full_src = urljoin(self.target, src)
             scripts_to_fetch.append(full_src)
-            
+
         # 3. Fetch and scan JS files
         async def fetch_and_scan(url):
             try:
-                if hasattr(connector, 'client') and connector.client:
+                if hasattr(connector, "client") and connector.client:
                     r = await connector.client.get(url, timeout=5)
                     if r.status_code == 200:
                         content = r.text
@@ -670,8 +717,8 @@ class ReconScanner(BaseScanner):
             return []
 
         if scripts_to_fetch:
-            self._print('info', f'Scanning {len(scripts_to_fetch)} JS files...')
-            tasks = [fetch_and_scan(url) for url in scripts_to_fetch[:10]] # Limit to 10 scripts
+            self._print("info", f"Scanning {len(scripts_to_fetch)} JS files...")
+            tasks = [fetch_and_scan(url) for url in scripts_to_fetch[:10]]  # Limit to 10 scripts
             results = await asyncio.gather(*tasks)
             for r in results:
                 if r:
@@ -679,70 +726,87 @@ class ReconScanner(BaseScanner):
 
         # 4. Filter for relevant API-like URLs
         api_candidates = []
-        keywords = ['api', 'chat', 'v1', 'openai', 'azure', 'anthropic', 'cohere', 'completions', 'generate', 'invoke', 'graphql', 'model']
-        
+        keywords = [
+            "api",
+            "chat",
+            "v1",
+            "openai",
+            "azure",
+            "anthropic",
+            "cohere",
+            "completions",
+            "generate",
+            "invoke",
+            "graphql",
+            "model",
+        ]
+
         for url in found_urls:
             lower_url = url.lower()
             # Must contain at least one AI/API keyword
             if any(k in lower_url for k in keywords):
                 # Exclude the target itself if it's just the base URL
-                if url.rstrip('/') == self.target.rstrip('/'):
+                if url.rstrip("/") == self.target.rstrip("/"):
                     continue
                 # Exclude common noisy URLs
-                if any(x in lower_url for x in ['schema.org', 'w3.org', 'github.com/facebook', 'twitter.com']):
+                if any(
+                    x in lower_url
+                    for x in ["schema.org", "w3.org", "github.com/facebook", "twitter.com"]
+                ):
                     continue
-                    
+
                 api_candidates.append(url)
-                
+
         return list(set(api_candidates))
 
     async def _run_discovery(self, connector):
-
         """Run the full discovery process"""
         found = []
-        
+
         async def worker(path):
             if await self._probe_path(connector, path):
                 return path
             return None
-            
+
         # Phase 1: Probe common paths on current domain
-        self._print('info', 'Phase 1: Probing common API paths...')
+        self._print("info", "Phase 1: Probing common API paths...")
         tasks = [worker(p) for p in self.discovery_paths]
         results = await asyncio.gather(*tasks)
-        
+
         for r in results:
             if r:
                 found.append(r)
-        
+
         # Phase 2: Static Analysis (JS Extraction)
         # We need the HTML content first.
         try:
-            if hasattr(connector, 'client') and connector.client:
+            if hasattr(connector, "client") and connector.client:
                 resp = await connector.client.get(self.target)
                 if resp.status_code == 200:
                     js_apis = await self._extract_apis_from_js(connector, resp.text)
                     if js_apis:
-                        self._print('success', f"Found {len(js_apis)} potential APIs in JS: {', '.join(js_apis[:3])}...")
+                        self._print(
+                            "success",
+                            f"Found {len(js_apis)} potential APIs in JS: {', '.join(js_apis[:3])}...",
+                        )
                         found.extend(js_apis)
         except Exception as e:
-            self._print('warning', f"JS Analysis failed: {e}")
+            self._print("warning", f"JS Analysis failed: {e}")
 
         return list(set(found))
 
-
     async def run(self) -> dict[str, Any]:
         """Run reconnaissance scan"""
-        self._print('info', 'Starting reconnaissance scan...')
+        self._print("info", "Starting reconnaissance scan...")
 
         # Detect auth type
-        self.results['auth_type'] = self._detect_auth_type()
-        self._print('info', f'Auth type: {self.results["auth_type"]}')
+        self.results["auth_type"] = self._detect_auth_type()
+        self._print("info", f'Auth type: {self.results["auth_type"]}')
 
         # Parse URL info
         parsed_url = urlparse(self.target)
-        self._print('info', f'Host: {parsed_url.netloc}')
-        self._print('info', f'Endpoint: {parsed_url.path or "/"}')
+        self._print("info", f"Host: {parsed_url.netloc}")
+        self._print("info", f'Endpoint: {parsed_url.path or "/"}')
 
         connector = self._create_connector()
 
@@ -757,295 +821,370 @@ class ReconScanner(BaseScanner):
             initial_check = False
             try:
                 # Quick check of the base URL
-                # We interpret "success" or "valid" response? 
-                # Actually, let's just trigger discovery if the user provided a root URL 
+                # We interpret "success" or "valid" response?
+                # Actually, let's just trigger discovery if the user provided a root URL
                 # and explicitly asked for it OR if we suspect it.
                 # For now: Auto-trigger if root path '/'
-                
+
                 should_discover = False
-                if parsed_url.path in ['', '/']:
+                if parsed_url.path in ["", "/"]:
                     should_discover = True
-                
+
                 # Or verify response content type?
                 # Let's run discovery concurrently with probes? No, better before.
-                
+
                 if should_discover:
-                    self._print('info', "Root URL detected. Attempting to discover API endpoints...")
+                    self._print(
+                        "info", "Root URL detected. Attempting to discover API endpoints..."
+                    )
                     found_paths = await self._run_discovery(connector)
                     if found_paths:
-                        best_path = found_paths[0] # Take first for now
-                        self._print('success', f"Discovered API endpoint: {best_path}")
-                        
+                        best_path = found_paths[0]  # Take first for now
+                        self._print("success", f"Discovered API endpoint: {best_path}")
+
                         # Update target to point to the API
                         from urllib.parse import urljoin
+
                         # If best_path is absolute, urljoin handles it correctly (ignores base)
                         self.target = urljoin(self.target, best_path)
-                        self._print('info', f"Switched target to {self.target}")
-                        self.results['discovered_endpoints'] = found_paths
+                        self._print("info", f"Switched target to {self.target}")
+                        self.results["discovered_endpoints"] = found_paths
 
                         # Re-initialize connector with new target so subsequent probes use the correct URL
                         await connector.close()
                         connector = self._create_connector()
                         await connector.connect()
                     else:
-                        self._print('warning', "No specific API endpoints found. Continuing with base URL.")
-            
+                        self._print(
+                            "warning", "No specific API endpoints found. Continuing with base URL."
+                        )
+
             except Exception as e:
-                self._print('warning', f"Discovery failed: {e}")
+                self._print("warning", f"Discovery failed: {e}")
 
             # --- END DISCOVERY ---
 
             # Run probing payloads
-            self._print('info', f'Running {len(self.payloads)} probe tests...')
+            self._print("info", f"Running {len(self.payloads)} probe tests...")
 
             responses = []
-            for probe in track(self.payloads, description="[bold white]🔍 Mapping Surface...  [/]", console=self.console, disable=not self.show_progress):
+            for probe in track(
+                self.payloads,
+                description="[bold white]🔍 Mapping Surface...  [/]",
+                console=self.console,
+                disable=not self.show_progress,
+            ):
                 try:
                     import time
-                    start = time.time()
-                    resp = await connector.send(probe['payload'])
-                    elapsed = time.time() - start
-                    self.results['response_times'].append(elapsed)
 
+                    start = time.time()
+                    resp = await connector.send(probe["payload"])
+                    elapsed = time.time() - start
+                    self.results["response_times"].append(elapsed)
 
                     # Validate if probe was successful (answered vs refused)
                     # We pass empty indicators because recon.json doesn't have them, relying on LLM or simple pass
-                    is_valid = await self.check_success(resp, [], probe['payload'], 'recon')
+                    is_valid = await self.check_success(resp, [], probe["payload"], "recon")
 
                     if is_valid:
-                        self.findings.append(Finding(
-                            title=f"Recon - {probe['name']}",
-                            severity=probe.get('severity', Severity.INFO),
-                            technique=probe['name'],
-                            payload=probe['payload'],
-                            response=resp[:2000],
-                            target=self.target,
-                            reason=self.last_eval_reason,
-                            owasp=probe.get('owasp', [])
-                        ))
-                        self.db.add_result(
-                            self.target, 'recon', probe['name'], 'success',
-                            probe['payload'], resp[:2000],
-                            probe.get('severity', Severity.INFO).value,
-                            reason=self.last_eval_reason,
-                            owasp=probe.get('owasp', [])
+                        self.findings.append(
+                            Finding(
+                                title=f"Recon - {probe['name']}",
+                                severity=probe.get("severity", Severity.INFO),
+                                technique=probe["name"],
+                                payload=probe["payload"],
+                                response=resp[:2000],
+                                target=self.target,
+                                reason=self.last_eval_reason,
+                                owasp=probe.get("owasp", []),
+                            )
                         )
-                        
-                        if self.show_response:
-                            self._print('success', f"Probe {probe['name']}", response=resp)
+                        self.db.add_result(
+                            self.target,
+                            "recon",
+                            probe["name"],
+                            "success",
+                            probe["payload"],
+                            resp[:2000],
+                            probe.get("severity", Severity.INFO).value,
+                            reason=self.last_eval_reason,
+                            owasp=probe.get("owasp", []),
+                        )
 
-                    responses.append({
-                        'probe': probe['name'],
-                        'response': resp,
-                        'time': elapsed,
-                        'valid': is_valid
-                    })
+                        if self.show_response:
+                            self._print("success", f"Probe {probe['name']}", response=resp)
+
+                    responses.append(
+                        {
+                            "probe": probe["name"],
+                            "response": resp,
+                            "time": elapsed,
+                            "valid": is_valid,
+                        }
+                    )
 
                     if self.verbose:
                         status_icon = "[green]✓[/green]" if is_valid else "[red]✗[/red]"
-                        self._print('info', f'Probe {probe["name"]}: {elapsed:.2f}s {status_icon}')
+                        self._print("info", f'Probe {probe["name"]}: {elapsed:.2f}s {status_icon}')
 
                 except Exception as e:
-                    self.results['errors'].append(str(e))
-                    
+                    self.results["errors"].append(str(e))
+
                     # Clean error printing
                     error_str = str(e)
                     if "Authentication Failed" in error_str:
-                         # Only print auth failure once to avoid spam
-                         if not any("Authentication Failed" in err for err in self.results['errors'][:-1]):
-                             self._print('error', f"Authentication failed: Target requires valid credentials (401/403)")
-                             self._update_error_state(error_str)
+                        # Only print auth failure once to avoid spam
+                        if not any(
+                            "Authentication Failed" in err for err in self.results["errors"][:-1]
+                        ):
+                            self._print(
+                                "error",
+                                "Authentication failed: Target requires valid credentials (401/403)",
+                            )
+                            self._update_error_state(error_str)
                     elif "403" in error_str:
-                         self._print('error', f"Target returned 403 Forbidden ({probe['name']})")
-                         self._update_error_state(error_str)
+                        self._print("error", f"Target returned 403 Forbidden ({probe['name']})")
+                        self._update_error_state(error_str)
                     elif "500" in error_str:
-                         self._print('error', f"Target returned 500 Server Error ({probe['name']})")
-                         self._update_error_state(error_str)
+                        self._print("error", f"Target returned 500 Server Error ({probe['name']})")
+                        self._update_error_state(error_str)
                     elif self.verbose and not self.quiet:
                         import traceback
+
                         self.console.print(f"[red]Error probing {probe['name']}: {e}[/red]")
                         self.console.print(traceback.format_exc())
                         self._update_error_state(None)
                     else:
                         # Print generic error concisely if not Auth (which is handled above)
-                        if "Authentication Failed" not in error_str and "Rate Limit" not in error_str:
-                             self._print('error', f"Probe {probe['name']} failed: {error_str.split(':')[0]}")
-                             self._update_error_state(None)
+                        if (
+                            "Authentication Failed" not in error_str
+                            and "Rate Limit" not in error_str
+                        ):
+                            self._print(
+                                "error", f"Probe {probe['name']} failed: {error_str.split(':')[0]}"
+                            )
+                            self._update_error_state(None)
 
                     waf = self._detect_waf(str(e))
                     if waf:
-                        self.results['waf_detected'] = waf
+                        self.results["waf_detected"] = waf
 
                 except CircuitBreakerError:
-                    break # Stop scan
+                    break  # Stop scan
 
                 await asyncio.sleep(0.3)
 
             # Analyze responses for model detection
-            all_responses = " ".join(r['response'] for r in responses if r.get('response'))
+            all_responses = " ".join(r["response"] for r in responses if r.get("response"))
             model, confidence = self._detect_model(all_responses)
             version = self._detect_version(model, all_responses)
 
-            self.results['model'] = model
-            self.results['version'] = version
-            self.results['model_confidence'] = confidence
+            self.results["model"] = model
+            self.results["version"] = version
+            self.results["model_confidence"] = confidence
 
             if model:
-                self._print('success', f'Model detected: {model} (confidence: {confidence}%)')
+                self._print("success", f"Model detected: {model} (confidence: {confidence}%)")
                 # Add finding for model detection
-                self.findings.append(Finding(
-                    title=f"Model Detected: {model}",
-                    severity=Severity.INFO,
-                    technique="model_detection",
-                    payload="Recon probes",
-                    response=f"Model: {model}, Version: {version or 'unknown'}, Confidence: {confidence}%",
-                    target=self.target,
-                    reason=f"Model identified with {confidence}% confidence"
-                ))
-                self.db.add_result(self.target, 'recon', 'model_detection', 'success',
-                                   'recon_probes', model, 'info', reason=f"Confidence: {confidence}%")
+                self.findings.append(
+                    Finding(
+                        title=f"Model Detected: {model}",
+                        severity=Severity.INFO,
+                        technique="model_detection",
+                        payload="Recon probes",
+                        response=f"Model: {model}, Version: {version or 'unknown'}, Confidence: {confidence}%",
+                        target=self.target,
+                        reason=f"Model identified with {confidence}% confidence",
+                    )
+                )
+                self.db.add_result(
+                    self.target,
+                    "recon",
+                    "model_detection",
+                    "success",
+                    "recon_probes",
+                    model,
+                    "info",
+                    reason=f"Confidence: {confidence}%",
+                )
             else:
-                self._print('warning', 'Could not identify model')
+                self._print("warning", "Could not identify model")
 
             # Check for WAF in responses
             for r in responses:
-                waf = self._detect_waf(r.get('response', ''))
+                waf = self._detect_waf(r.get("response", ""))
                 if waf:
-                    self.results['waf_detected'] = waf
-                    self._print('warning', f'WAF detected: {waf}')
+                    self.results["waf_detected"] = waf
+                    self._print("warning", f"WAF detected: {waf}")
                     break
 
             # Analyze capabilities
-            if any('code' in r.get('response', '').lower() for r in responses):
-                self.results['capabilities'].append('code_generation')
-            if any('search' in r.get('response', '').lower() for r in responses):
-                self.results['capabilities'].append('web_search')
-            if any('image' in r.get('response', '').lower() for r in responses):
-                self.results['capabilities'].append('image_handling')
+            if any("code" in r.get("response", "").lower() for r in responses):
+                self.results["capabilities"].append("code_generation")
+            if any("search" in r.get("response", "").lower() for r in responses):
+                self.results["capabilities"].append("web_search")
+            if any("image" in r.get("response", "").lower() for r in responses):
+                self.results["capabilities"].append("image_handling")
 
-            if self.results['capabilities']:
-                self._print('info', f'Capabilities: {", ".join(self.results["capabilities"])}')
+            if self.results["capabilities"]:
+                self._print("info", f'Capabilities: {", ".join(self.results["capabilities"])}')
 
             # --- ENHANCED DETECTION PHASE ---
-            self._print('info', 'Running enhanced detection probes...')
+            self._print("info", "Running enhanced detection probes...")
 
             # 1. RAG Detection
             rag_result = self._detect_rag(responses)
-            self.results['rag_detected'] = rag_result['detected']
-            self.results['rag_confidence'] = rag_result.get('confidence', 0)
-            self.results['rag_indicators'] = rag_result.get('indicators', [])
-            if rag_result['detected']:
-                self._print('success', f'RAG system detected (confidence: {rag_result["confidence"]}%)')
-                self.findings.append(Finding(
-                    title="RAG System Detected",
-                    severity=Severity.INFO,
-                    technique="rag_detection",
-                    payload="RAG detection probes",
-                    response=f"Indicators: {', '.join(rag_result.get('indicators', []))}",
-                    target=self.target,
-                    reason=f"RAG detected with {rag_result['confidence']}% confidence"
-                ))
+            self.results["rag_detected"] = rag_result["detected"]
+            self.results["rag_confidence"] = rag_result.get("confidence", 0)
+            self.results["rag_indicators"] = rag_result.get("indicators", [])
+            if rag_result["detected"]:
+                self._print(
+                    "success", f'RAG system detected (confidence: {rag_result["confidence"]}%)'
+                )
+                self.findings.append(
+                    Finding(
+                        title="RAG System Detected",
+                        severity=Severity.INFO,
+                        technique="rag_detection",
+                        payload="RAG detection probes",
+                        response=f"Indicators: {', '.join(rag_result.get('indicators', []))}",
+                        target=self.target,
+                        reason=f"RAG detected with {rag_result['confidence']}% confidence",
+                    )
+                )
 
             # 2. System Prompt Detection
             system_prompt_result = self._detect_system_prompt_indicators(responses)
-            self.results['system_prompt_indicators'] = system_prompt_result
-            if system_prompt_result['detected']:
-                self._print('warning', f'System prompt indicators detected (confidence: {system_prompt_result["confidence"]}%)')
-                self.findings.append(Finding(
-                    title="System Prompt Indicators",
-                    severity=Severity.MEDIUM,
-                    technique="system_prompt_detection",
-                    payload="System prompt probes",
-                    response=f"Hints: {system_prompt_result.get('leaked_hints', [])}",
-                    target=self.target,
-                    reason="Potential system prompt leakage detected"
-                ))
+            self.results["system_prompt_indicators"] = system_prompt_result
+            if system_prompt_result["detected"]:
+                self._print(
+                    "warning",
+                    f'System prompt indicators detected (confidence: {system_prompt_result["confidence"]}%)',
+                )
+                self.findings.append(
+                    Finding(
+                        title="System Prompt Indicators",
+                        severity=Severity.MEDIUM,
+                        technique="system_prompt_detection",
+                        payload="System prompt probes",
+                        response=f"Hints: {system_prompt_result.get('leaked_hints', [])}",
+                        target=self.target,
+                        reason="Potential system prompt leakage detected",
+                    )
+                )
 
             # 3. Temperature/Determinism Detection
-            self._print('info', 'Testing response determinism...')
+            self._print("info", "Testing response determinism...")
             temp_result = await self._detect_temperature(connector)
-            self.results['temperature_estimate'] = temp_result.get('temperature_estimate')
-            self.results['is_deterministic'] = temp_result.get('is_deterministic')
-            self.results['response_variance'] = temp_result.get('variance')
-            if temp_result['detected']:
-                det_str = "Yes" if temp_result['is_deterministic'] else "No"
-                self._print('info', f'Temperature estimate: {temp_result["temperature_estimate"]}, Deterministic: {det_str}')
+            self.results["temperature_estimate"] = temp_result.get("temperature_estimate")
+            self.results["is_deterministic"] = temp_result.get("is_deterministic")
+            self.results["response_variance"] = temp_result.get("variance")
+            if temp_result["detected"]:
+                det_str = "Yes" if temp_result["is_deterministic"] else "No"
+                self._print(
+                    "info",
+                    f'Temperature estimate: {temp_result["temperature_estimate"]}, Deterministic: {det_str}',
+                )
 
             # 4. Context Window Detection
-            self._print('info', 'Probing context window...')
+            self._print("info", "Probing context window...")
             ctx_result = await self._detect_context_window(connector)
-            self.results['context_window_estimate'] = ctx_result.get('context_window_estimate')
-            self.results['truncation_detected'] = ctx_result.get('truncation_detected_at') is not None
-            if ctx_result['detected']:
-                self._print('info', f'Context window estimate: ~{ctx_result["context_window_estimate"]} tokens')
+            self.results["context_window_estimate"] = ctx_result.get("context_window_estimate")
+            self.results["truncation_detected"] = (
+                ctx_result.get("truncation_detected_at") is not None
+            )
+            if ctx_result["detected"]:
+                self._print(
+                    "info",
+                    f'Context window estimate: ~{ctx_result["context_window_estimate"]} tokens',
+                )
 
             # 5. Tools Detection (Enhanced)
             tools_result = self._detect_tools(responses)
-            self.results['tools'] = {
-                tool: details.get('detected', False)
-                for tool, details in tools_result.get('tool_details', {}).items()
+            self.results["tools"] = {
+                tool: details.get("detected", False)
+                for tool, details in tools_result.get("tool_details", {}).items()
             }
             # Merge with existing tools dict
-            for tool_type in ['code_execution', 'web_browsing', 'file_access', 'function_calling', 'database_access']:
-                if tool_type not in self.results['tools']:
-                    self.results['tools'][tool_type] = False
-            if tools_result['has_tools']:
-                self._print('success', f'Tools detected: {", ".join(tools_result["tools_detected"])}')
-                self.results['capabilities'].extend(tools_result['tools_detected'])
+            for tool_type in [
+                "code_execution",
+                "web_browsing",
+                "file_access",
+                "function_calling",
+                "database_access",
+            ]:
+                if tool_type not in self.results["tools"]:
+                    self.results["tools"][tool_type] = False
+            if tools_result["has_tools"]:
+                self._print(
+                    "success", f'Tools detected: {", ".join(tools_result["tools_detected"])}'
+                )
+                self.results["capabilities"].extend(tools_result["tools_detected"])
 
             # 6. Capabilities Detection (Enhanced)
             cap_result = self._detect_capabilities_extended(responses)
-            self.results['capabilities'] = list(set(self.results['capabilities'] + cap_result.get('capabilities', [])))
-            self.results['modalities'] = cap_result.get('modalities', {'input': ['text'], 'output': ['text']})
-            if cap_result['capabilities']:
-                self._print('info', f'Extended capabilities: {", ".join(cap_result["capabilities"])}')
+            self.results["capabilities"] = list(
+                set(self.results["capabilities"] + cap_result.get("capabilities", []))
+            )
+            self.results["modalities"] = cap_result.get(
+                "modalities", {"input": ["text"], "output": ["text"]}
+            )
+            if cap_result["capabilities"]:
+                self._print(
+                    "info", f'Extended capabilities: {", ".join(cap_result["capabilities"])}'
+                )
 
             # 7. Input Processing Detection
-            self._print('info', 'Testing input processing...')
+            self._print("info", "Testing input processing...")
             input_result = await self._detect_input_processing(connector)
-            self.results['input_processing'] = input_result
-            if input_result['supported_formats']:
-                self._print('info', f'Supported input formats: {", ".join(input_result["supported_formats"])}')
+            self.results["input_processing"] = input_result
+            if input_result["supported_formats"]:
+                self._print(
+                    "info",
+                    f'Supported input formats: {", ".join(input_result["supported_formats"])}',
+                )
 
             # --- END ENHANCED DETECTION PHASE ---
 
             # Calculate average response time
-            if self.results['response_times']:
-                avg_time = sum(self.results['response_times']) / len(self.results['response_times'])
-                self._print('info', f'Avg response time: {avg_time:.2f}s')
+            if self.results["response_times"]:
+                avg_time = sum(self.results["response_times"]) / len(self.results["response_times"])
+                self._print("info", f"Avg response time: {avg_time:.2f}s")
 
             # Rate Limit Probing
-            self._print('info', 'Probing rate limits...')
+            self._print("info", "Probing rate limits...")
             req_count, hit_limit = await self._probe_rate_limit(connector)
             if hit_limit:
-                self.results['rate_limit'] = f"Detected (blocked after {req_count} reqs)"
-                self._print('warning', f"Rate limit hit after {req_count} requests")
+                self.results["rate_limit"] = f"Detected (blocked after {req_count} reqs)"
+                self._print("warning", f"Rate limit hit after {req_count} requests")
             else:
-                 self.results['rate_limit'] = "Not detected (burst allowed)"
+                self.results["rate_limit"] = "Not detected (burst allowed)"
 
             # Save to database
             self.db.add_result(
-                self.target, 'recon', 'fingerprint',
-                'success' if model else 'partial',
-                json.dumps({'probes': len(self.payloads)}),
+                self.target,
+                "recon",
+                "fingerprint",
+                "success" if model else "partial",
+                json.dumps({"probes": len(self.payloads)}),
                 json.dumps(self.results),
-                'info'
+                "info",
             )
 
         except Exception as e:
-            self._print('error', f'Scan failed: {str(e)}')
-            self.results['errors'].append(str(e))
+            self._print("error", f"Scan failed: {e!s}")
+            self.results["errors"].append(str(e))
 
         finally:
             await connector.close()
 
         # Run probabilistic fingerprinting if confidence is low
-        if self.results['model_confidence'] < 80:
+        if self.results["model_confidence"] < 80:
             self.console.print()
-            self._print('info', f"Standard confidence <80%. Initiating Advanced Fingerprinting...")
+            self._print("info", "Standard confidence <80%. Initiating Advanced Fingerprinting...")
             await self._run_advanced_fingerprint()
-            
-            # Re-print summary if we updated something? 
+
+            # Re-print summary if we updated something?
             # Ideally we print summary AFTER everything.
             # Moving _print_summary call to end of run() is already correct.
 
@@ -1055,11 +1194,11 @@ class ReconScanner(BaseScanner):
         # Save results if output file specified
         if self.output:
             try:
-                with open(self.output, 'w') as f:
+                with open(self.output, "w") as f:
                     json.dump(self.results, f, indent=2)
                 self.console.print(f"[green][+][/green] Results saved to {self.output}")
             except Exception as e:
-                self._print('error', f"Failed to save results to {self.output}: {e}")
+                self._print("error", f"Failed to save results to {self.output}: {e}")
 
         return self.findings
 
@@ -1070,80 +1209,96 @@ class ReconScanner(BaseScanner):
         self.console.print()
         from rich.box import ROUNDED
         from rich.panel import Panel
-        from rich.table import Table
 
         # Main Results Table
-        table = Table(title="🎯 Reconnaissance Report", box=ROUNDED, show_header=True, header_style="bold cyan")
+        table = Table(
+            title="🎯 Reconnaissance Report",
+            box=ROUNDED,
+            show_header=True,
+            header_style="bold cyan",
+        )
         table.add_column("Property", style="bold white", width=20)
         table.add_column("Value", style="green")
 
         # Helper for color-coding confidence
-        conf_style = "green" if self.results['model_confidence'] > 70 else "yellow" if self.results['model_confidence'] > 30 else "red"
+        conf_style = (
+            "green"
+            if self.results["model_confidence"] > 70
+            else "yellow" if self.results["model_confidence"] > 30 else "red"
+        )
 
         # Add basic info
         table.add_row("Target URL", f"[link={self.target}]{self.target}[/link]")
-        table.add_row("Model Detected", f"[bold {conf_style}]{self.results['model'] or 'Unknown'}[/]")
-        table.add_row("Version", self.results['version'] or "Unknown")
+        table.add_row(
+            "Model Detected", f"[bold {conf_style}]{self.results['model'] or 'Unknown'}[/]"
+        )
+        table.add_row("Version", self.results["version"] or "Unknown")
         table.add_row("Confidence Score", f"[{conf_style}]{self.results['model_confidence']}%[/]")
-        table.add_row("Authentication", self.results['auth_type'])
+        table.add_row("Authentication", self.results["auth_type"])
 
         # WAF Status
-        waf = self.results['waf_detected']
+        waf = self.results["waf_detected"]
         table.add_row("WAF / Protection", f"[red]{waf}[/]" if waf else "[green]None Detected[/]")
 
         # Capabilities
-        caps = self.results['capabilities']
+        caps = self.results["capabilities"]
         if caps:
             table.add_row("Agent Capabilities", f"[cyan]{', '.join(caps)}[/]")
         else:
-             table.add_row("Agent Capabilities", "[dim]No tools detected[/]")
+            table.add_row("Agent Capabilities", "[dim]No tools detected[/]")
 
         # Performance
-        if self.results['response_times']:
-            avg = sum(self.results['response_times']) / len(self.results['response_times'])
+        if self.results["response_times"]:
+            avg = sum(self.results["response_times"]) / len(self.results["response_times"])
             color = "green" if avg < 1.0 else "yellow" if avg < 3.0 else "red"
             table.add_row("Avg Latency", f"[{color}]{avg:.2f}s[/]")
 
         # RAG Detection
-        if self.results.get('rag_detected'):
-            table.add_row("RAG System", f"[green]Detected ({self.results.get('rag_confidence', 0)}% confidence)[/]")
+        if self.results.get("rag_detected"):
+            table.add_row(
+                "RAG System",
+                f"[green]Detected ({self.results.get('rag_confidence', 0)}% confidence)[/]",
+            )
         else:
             table.add_row("RAG System", "[dim]Not detected[/]")
 
         # Temperature
-        if self.results.get('temperature_estimate') is not None:
-            temp = self.results['temperature_estimate']
-            det = "Yes" if self.results.get('is_deterministic') else "No"
+        if self.results.get("temperature_estimate") is not None:
+            temp = self.results["temperature_estimate"]
+            det = "Yes" if self.results.get("is_deterministic") else "No"
             table.add_row("Temperature", f"~{temp} (Deterministic: {det})")
 
         # Context Window
-        if self.results.get('context_window_estimate'):
-            ctx = self.results['context_window_estimate']
+        if self.results.get("context_window_estimate"):
+            ctx = self.results["context_window_estimate"]
             table.add_row("Context Window", f"~{ctx:,} tokens")
 
         # System Prompt Indicators
-        sys_prompt = self.results.get('system_prompt_indicators', {})
-        if sys_prompt.get('detected'):
-            table.add_row("System Prompt", f"[yellow]Indicators detected ({sys_prompt.get('confidence', 0)}%)[/]")
+        sys_prompt = self.results.get("system_prompt_indicators", {})
+        if sys_prompt.get("detected"):
+            table.add_row(
+                "System Prompt",
+                f"[yellow]Indicators detected ({sys_prompt.get('confidence', 0)}%)[/]",
+            )
 
         # Tools
-        tools = self.results.get('tools', {})
-        active_tools = [k.replace('_', ' ').title() for k, v in tools.items() if v]
+        tools = self.results.get("tools", {})
+        active_tools = [k.replace("_", " ").title() for k, v in tools.items() if v]
         if active_tools:
             table.add_row("Tools/Agency", f"[cyan]{', '.join(active_tools)}[/]")
 
         # Modalities
-        modalities = self.results.get('modalities', {})
-        if modalities.get('input') or modalities.get('output'):
-            in_mod = ", ".join(modalities.get('input', ['text']))
-            out_mod = ", ".join(modalities.get('output', ['text']))
+        modalities = self.results.get("modalities", {})
+        if modalities.get("input") or modalities.get("output"):
+            in_mod = ", ".join(modalities.get("input", ["text"]))
+            out_mod = ", ".join(modalities.get("output", ["text"]))
             table.add_row("Input Modalities", in_mod)
             table.add_row("Output Modalities", out_mod)
 
         # Input Processing
-        input_proc = self.results.get('input_processing', {})
-        if input_proc.get('supported_formats'):
-            table.add_row("Input Formats", ", ".join(input_proc['supported_formats']))
+        input_proc = self.results.get("input_processing", {})
+        if input_proc.get("supported_formats"):
+            table.add_row("Input Formats", ", ".join(input_proc["supported_formats"]))
 
         self.console.print(table)
 
@@ -1167,11 +1322,13 @@ class ReconScanner(BaseScanner):
                 vectors = ", ".join(self.context.suggested_vectors[:5])
                 ctx_table.add_row("Attack Vectors", f"[bold red]{vectors}[/bold red]")
 
-            self.console.print(Panel(ctx_table, title="🤖 AI Context Analysis", border_style="yellow"))
+            self.console.print(
+                Panel(ctx_table, title="🤖 AI Context Analysis", border_style="yellow")
+            )
 
         # Discovered Endpoints Panel
-        if self.results.get('discovered_endpoints'):
-            eps = "\n".join([f"[green]✓[/] {ep}" for ep in self.results['discovered_endpoints']])
+        if self.results.get("discovered_endpoints"):
+            eps = "\n".join([f"[green]✓[/] {ep}" for ep in self.results["discovered_endpoints"]])
             self.console.print(Panel(eps, title="🔍 Discovered API Endpoints", border_style="cyan"))
 
     async def _run_advanced_fingerprint(self):
@@ -1179,12 +1336,12 @@ class ReconScanner(BaseScanner):
         try:
             # Pass cookies explicitly if auth is cookie-based
             # Also pass parsed_request if we are using it (for -r mode) to ensure correct headers/body
-            
+
             # Print start message in standard format
             # accessing 'db' is hard here without loading it, so we just say "Running probes..."
-            # or we can ask fp how many Qs it has. 
+            # or we can ask fp how many Qs it has.
             # Simplified:
-            self._print('info', "Running advanced fingerprint probes...")
+            self._print("info", "Running advanced fingerprint probes...")
 
             fp = FingerprintScanner(
                 self.target,
@@ -1197,37 +1354,48 @@ class ReconScanner(BaseScanner):
                 verbose=self.verbose,
                 console=self.console,
                 quiet=self.quiet,
-                show_progress=self.show_progress
+                show_progress=self.show_progress,
             )
-            
+
             # Using the same connector session would be ideal but for now we let it manage its own
             winner = await fp.run()
-            
+
             if winner:
                 # Update our main results if fingerprinting found a winner
                 # Always overwrite because fingerprinting is more granular/accurate
-                self.results['model'] = winner
-                self.results['model_confidence'] = 90 # High confidence if fingerprint logic matches
+                self.results["model"] = winner
+                self.results["model_confidence"] = (
+                    90  # High confidence if fingerprint logic matches
+                )
                 # Simplified update:
-                self.results['fingerprint_winner'] = winner
+                self.results["fingerprint_winner"] = winner
 
                 # Add a Finding for fingerprint success so chain knows recon succeeded
-                self.findings.append(Finding(
-                    title=f"Model Fingerprint: {winner}",
-                    severity=Severity.INFO,
-                    technique="fingerprint",
-                    payload="Advanced fingerprinting probes",
-                    response=f"Identified model: {winner}",
-                    target=self.target,
-                    reason="Model identified via behavioral fingerprinting"
-                ))
-                self.db.add_result(self.target, 'recon', 'fingerprint', 'success',
-                                   'fingerprint_probes', winner, 'info', reason="Model identified")
+                self.findings.append(
+                    Finding(
+                        title=f"Model Fingerprint: {winner}",
+                        severity=Severity.INFO,
+                        technique="fingerprint",
+                        payload="Advanced fingerprinting probes",
+                        response=f"Identified model: {winner}",
+                        target=self.target,
+                        reason="Model identified via behavioral fingerprinting",
+                    )
+                )
+                self.db.add_result(
+                    self.target,
+                    "recon",
+                    "fingerprint",
+                    "success",
+                    "fingerprint_probes",
+                    winner,
+                    "info",
+                    reason="Model identified",
+                )
 
         except Exception as e:
             if not self.quiet:
                 self.console.print(f"[yellow][!] Advanced fingerprinting failed: {e}[/yellow]")
-
 
 
 def run(target: str = None, api_key: str = None, **kwargs):

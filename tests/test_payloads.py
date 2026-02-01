@@ -1,8 +1,8 @@
 """
 Tests for AIX Payload Loading and Validation
 """
+
 import json
-import os
 from pathlib import Path
 
 import pytest
@@ -64,16 +64,18 @@ class TestPayloadFiles:
 
         for i, payload in enumerate(payloads):
             # Required fields - name is always required
-            assert 'name' in payload, f"{filename}[{i}]: missing 'name'"
+            assert "name" in payload, f"{filename}[{i}]: missing 'name'"
 
             # Name should be a non-empty string
-            assert isinstance(payload['name'], str), f"{filename}[{i}]: 'name' should be string"
-            assert len(payload['name']) > 0, f"{filename}[{i}]: 'name' should not be empty"
+            assert isinstance(payload["name"], str), f"{filename}[{i}]: 'name' should be string"
+            assert len(payload["name"]) > 0, f"{filename}[{i}]: 'name' should not be empty"
 
             # Payload field is required for most files, but some may use other formats
             # fuzz.json may have template-based entries
-            if 'payload' in payload:
-                assert isinstance(payload['payload'], str), f"{filename}[{i}]: 'payload' should be string"
+            if "payload" in payload:
+                assert isinstance(
+                    payload["payload"], str
+                ), f"{filename}[{i}]: 'payload' should be string"
 
     @pytest.mark.parametrize("filename", PAYLOAD_FILES)
     def test_payload_severity_valid(self, filename):
@@ -83,14 +85,23 @@ class TestPayloadFiles:
         with open(filepath) as f:
             payloads = json.load(f)
 
-        valid_severities = {'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO',
-                           'critical', 'high', 'medium', 'low', 'info'}
+        valid_severities = {
+            "CRITICAL",
+            "HIGH",
+            "MEDIUM",
+            "LOW",
+            "INFO",
+            "critical",
+            "high",
+            "medium",
+            "low",
+            "info",
+        }
 
         for i, payload in enumerate(payloads):
-            if 'severity' in payload:
-                sev = payload['severity']
-                assert sev in valid_severities, \
-                    f"{filename}[{i}]: invalid severity '{sev}'"
+            if "severity" in payload:
+                sev = payload["severity"]
+                assert sev in valid_severities, f"{filename}[{i}]: invalid severity '{sev}'"
 
     @pytest.mark.parametrize("filename", PAYLOAD_FILES)
     def test_payload_level_valid(self, filename):
@@ -101,12 +112,10 @@ class TestPayloadFiles:
             payloads = json.load(f)
 
         for i, payload in enumerate(payloads):
-            if 'level' in payload:
-                level = payload['level']
-                assert isinstance(level, int), \
-                    f"{filename}[{i}]: 'level' should be int"
-                assert 1 <= level <= 5, \
-                    f"{filename}[{i}]: 'level' should be 1-5, got {level}"
+            if "level" in payload:
+                level = payload["level"]
+                assert isinstance(level, int), f"{filename}[{i}]: 'level' should be int"
+                assert 1 <= level <= 5, f"{filename}[{i}]: 'level' should be 1-5, got {level}"
 
     @pytest.mark.parametrize("filename", PAYLOAD_FILES)
     def test_payload_risk_valid(self, filename):
@@ -117,12 +126,10 @@ class TestPayloadFiles:
             payloads = json.load(f)
 
         for i, payload in enumerate(payloads):
-            if 'risk' in payload:
-                risk = payload['risk']
-                assert isinstance(risk, int), \
-                    f"{filename}[{i}]: 'risk' should be int"
-                assert 1 <= risk <= 3, \
-                    f"{filename}[{i}]: 'risk' should be 1-3, got {risk}"
+            if "risk" in payload:
+                risk = payload["risk"]
+                assert isinstance(risk, int), f"{filename}[{i}]: 'risk' should be int"
+                assert 1 <= risk <= 3, f"{filename}[{i}]: 'risk' should be 1-3, got {risk}"
 
     @pytest.mark.parametrize("filename", CONFIG_FILES)
     def test_config_file_exists(self, filename):
@@ -155,13 +162,12 @@ class TestPayloadIndicators:
         with open(filepath) as f:
             payloads = json.load(f)
 
-        payloads_with_indicators = sum(1 for p in payloads if p.get('indicators'))
+        payloads_with_indicators = sum(1 for p in payloads if p.get("indicators"))
         total = len(payloads)
 
         # At least some payloads should have indicators
         # Allow some without indicators as they may use LLM evaluation
-        assert payloads_with_indicators >= 0, \
-            f"{filename}: no payloads have indicators"
+        assert payloads_with_indicators >= 0, f"{filename}: no payloads have indicators"
 
 
 class TestPayloadContent:
@@ -177,13 +183,14 @@ class TestPayloadContent:
             payloads = json.load(f)
 
         # Check some payloads contain typical injection keywords
-        all_payloads = " ".join(p['payload'].lower() for p in payloads)
+        all_payloads = " ".join(p["payload"].lower() for p in payloads)
 
-        injection_patterns = ['ignore', 'instruction', 'system', 'override', 'forget']
+        injection_patterns = ["ignore", "instruction", "system", "override", "forget"]
         found_patterns = [p for p in injection_patterns if p in all_payloads]
 
-        assert len(found_patterns) > 0, \
-            "Injection payloads should contain injection-related keywords"
+        assert (
+            len(found_patterns) > 0
+        ), "Injection payloads should contain injection-related keywords"
 
     def test_jailbreak_payloads_variety(self):
         """Test jailbreak payloads have variety"""
@@ -193,14 +200,19 @@ class TestPayloadContent:
             payloads = json.load(f)
 
         # Should have multiple unique payloads
-        unique_payloads = set(p['payload'] for p in payloads)
-        assert len(unique_payloads) >= 10, \
-            "Should have at least 10 unique jailbreak payloads"
+        unique_payloads = set(p["payload"] for p in payloads)
+        assert len(unique_payloads) >= 10, "Should have at least 10 unique jailbreak payloads"
 
     def test_no_duplicate_names(self):
         """Test payload names are unique within each file"""
-        for filename in ["inject.json", "jailbreak.json", "extract.json",
-                        "leak.json", "dos.json", "fuzz.json"]:
+        for filename in [
+            "inject.json",
+            "jailbreak.json",
+            "extract.json",
+            "leak.json",
+            "dos.json",
+            "fuzz.json",
+        ]:
             filepath = self.PAYLOAD_DIR / filename
 
             if not filepath.exists():
@@ -209,11 +221,10 @@ class TestPayloadContent:
             with open(filepath) as f:
                 payloads = json.load(f)
 
-            names = [p['name'] for p in payloads]
+            names = [p["name"] for p in payloads]
             duplicates = [n for n in names if names.count(n) > 1]
 
-            assert len(duplicates) == 0, \
-                f"{filename}: duplicate names found: {set(duplicates)}"
+            assert len(duplicates) == 0, f"{filename}: duplicate names found: {set(duplicates)}"
 
 
 class TestPayloadLoading:
@@ -264,8 +275,9 @@ class TestPayloadCoverage:
             with open(filepath) as f:
                 payloads = json.load(f)
 
-            assert len(payloads) >= minimum, \
-                f"{filename}: expected at least {minimum} payloads, got {len(payloads)}"
+            assert (
+                len(payloads) >= minimum
+            ), f"{filename}: expected at least {minimum} payloads, got {len(payloads)}"
 
     def test_level_distribution(self):
         """Test payloads are distributed across levels"""
@@ -274,8 +286,7 @@ class TestPayloadCoverage:
         with open(filepath) as f:
             payloads = json.load(f)
 
-        levels = set(p.get('level', 1) for p in payloads)
+        levels = set(p.get("level", 1) for p in payloads)
 
         # Should have payloads at multiple levels
-        assert len(levels) >= 1, \
-            "Payloads should be distributed across multiple levels"
+        assert len(levels) >= 1, "Payloads should be distributed across multiple levels"

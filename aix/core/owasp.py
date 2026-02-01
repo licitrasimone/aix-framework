@@ -3,11 +3,13 @@ OWASP LLM Top 10 (2025) Mapping
 
 Maps AIX findings to OWASP LLM Top 10 vulnerability categories.
 """
+
 from enum import Enum
 
 
 class OWASPCategory(Enum):
     """OWASP Top 10 for LLMs (2025)"""
+
     LLM01 = ("LLM01", "Prompt Injection")
     LLM02 = ("LLM02", "Insecure Output Handling")
     LLM03 = ("LLM03", "Training Data Poisoning")
@@ -35,19 +37,19 @@ class OWASPCategory(Enum):
 
 # Module to OWASP category mapping
 MODULE_OWASP_MAPPING: dict[str, list[OWASPCategory]] = {
-    'inject': [OWASPCategory.LLM01],
-    'jailbreak': [OWASPCategory.LLM01],
-    'extract': [OWASPCategory.LLM06],
-    'leak': [OWASPCategory.LLM06],
-    'exfil': [OWASPCategory.LLM02, OWASPCategory.LLM06],
-    'agent': [OWASPCategory.LLM08],
-    'dos': [OWASPCategory.LLM04],
-    'fuzz': [OWASPCategory.LLM01, OWASPCategory.LLM04],
-    'memory': [OWASPCategory.LLM01],
-    'rag': [OWASPCategory.LLM01, OWASPCategory.LLM07],
-    'multiturn': [OWASPCategory.LLM01, OWASPCategory.LLM08],
-    'recon': [],
-    'chain': [],
+    "inject": [OWASPCategory.LLM01],
+    "jailbreak": [OWASPCategory.LLM01],
+    "extract": [OWASPCategory.LLM06],
+    "leak": [OWASPCategory.LLM06],
+    "exfil": [OWASPCategory.LLM02, OWASPCategory.LLM06],
+    "agent": [OWASPCategory.LLM08],
+    "dos": [OWASPCategory.LLM04],
+    "fuzz": [OWASPCategory.LLM01, OWASPCategory.LLM04],
+    "memory": [OWASPCategory.LLM01],
+    "rag": [OWASPCategory.LLM01, OWASPCategory.LLM07],
+    "multiturn": [OWASPCategory.LLM01, OWASPCategory.LLM08],
+    "recon": [],
+    "chain": [],
 }
 
 

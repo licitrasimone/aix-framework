@@ -1,9 +1,8 @@
 """
 Tests for AIX Attack Modules
 """
-import pytest
 
-from aix.core.reporter import Severity
+
 
 
 class TestModuleImports:
@@ -12,62 +11,72 @@ class TestModuleImports:
     def test_import_inject(self):
         """Test inject module imports"""
         from aix.modules import inject
-        assert hasattr(inject, 'run')
-        assert hasattr(inject, 'InjectScanner')
+
+        assert hasattr(inject, "run")
+        assert hasattr(inject, "InjectScanner")
 
     def test_import_jailbreak(self):
         """Test jailbreak module imports"""
         from aix.modules import jailbreak
-        assert hasattr(jailbreak, 'run')
-        assert hasattr(jailbreak, 'JailbreakScanner')
+
+        assert hasattr(jailbreak, "run")
+        assert hasattr(jailbreak, "JailbreakScanner")
 
     def test_import_extract(self):
         """Test extract module imports"""
         from aix.modules import extract
-        assert hasattr(extract, 'run')
-        assert hasattr(extract, 'ExtractScanner')
+
+        assert hasattr(extract, "run")
+        assert hasattr(extract, "ExtractScanner")
 
     def test_import_leak(self):
         """Test leak module imports"""
         from aix.modules import leak
-        assert hasattr(leak, 'run')
-        assert hasattr(leak, 'LeakScanner')
+
+        assert hasattr(leak, "run")
+        assert hasattr(leak, "LeakScanner")
 
     def test_import_exfil(self):
         """Test exfil module imports"""
         from aix.modules import exfil
-        assert hasattr(exfil, 'run')
-        assert hasattr(exfil, 'ExfilScanner')
+
+        assert hasattr(exfil, "run")
+        assert hasattr(exfil, "ExfilScanner")
 
     def test_import_agent(self):
         """Test agent module imports"""
         from aix.modules import agent
-        assert hasattr(agent, 'run')
-        assert hasattr(agent, 'AgentScanner')
+
+        assert hasattr(agent, "run")
+        assert hasattr(agent, "AgentScanner")
 
     def test_import_dos(self):
         """Test dos module imports"""
         from aix.modules import dos
-        assert hasattr(dos, 'run')
-        assert hasattr(dos, 'DoSScanner')
+
+        assert hasattr(dos, "run")
+        assert hasattr(dos, "DoSScanner")
 
     def test_import_fuzz(self):
         """Test fuzz module imports"""
         from aix.modules import fuzz
-        assert hasattr(fuzz, 'run')
-        assert hasattr(fuzz, 'FuzzScanner')
+
+        assert hasattr(fuzz, "run")
+        assert hasattr(fuzz, "FuzzScanner")
 
     def test_import_recon(self):
         """Test recon module imports"""
         from aix.modules import recon
-        assert hasattr(recon, 'run')
-        assert hasattr(recon, 'ReconScanner')
+
+        assert hasattr(recon, "run")
+        assert hasattr(recon, "ReconScanner")
 
     def test_import_memory(self):
         """Test memory module imports"""
         from aix.modules import memory
-        assert hasattr(memory, 'run')
-        assert hasattr(memory, 'MemoryScanner')
+
+        assert hasattr(memory, "run")
+        assert hasattr(memory, "MemoryScanner")
 
 
 class TestInjectScanner:
@@ -77,11 +86,7 @@ class TestInjectScanner:
         """Test scanner initialization"""
         from aix.modules.inject import InjectScanner
 
-        scanner = InjectScanner(
-            target="https://api.example.com",
-            api_key="test-key",
-            verbose=1
-        )
+        scanner = InjectScanner(target="https://api.example.com", api_key="test-key", verbose=1)
 
         assert scanner.target == "https://api.example.com"
         assert scanner.api_key == "test-key"
@@ -92,30 +97,18 @@ class TestInjectScanner:
         """Test scanner loads payloads"""
         from aix.modules.inject import InjectScanner
 
-        scanner = InjectScanner(
-            target="https://example.com",
-            level=5,
-            risk=3
-        )
+        scanner = InjectScanner(target="https://example.com", level=5, risk=3)
 
         # Should load payloads (may be filtered by default_payloads attribute)
-        assert hasattr(scanner, 'payloads') or hasattr(scanner, 'default_payloads')
+        assert hasattr(scanner, "payloads") or hasattr(scanner, "default_payloads")
 
     def test_scanner_filters_by_level(self):
         """Test scanner filters payloads by level"""
         from aix.modules.inject import InjectScanner
 
-        scanner_low = InjectScanner(
-            target="https://example.com",
-            level=1,
-            risk=1
-        )
+        scanner_low = InjectScanner(target="https://example.com", level=1, risk=1)
 
-        scanner_high = InjectScanner(
-            target="https://example.com",
-            level=5,
-            risk=3
-        )
+        scanner_high = InjectScanner(target="https://example.com", level=5, risk=3)
 
         # Higher level should have more or equal payloads
         assert len(scanner_high.payloads) >= len(scanner_low.payloads)
@@ -128,10 +121,7 @@ class TestJailbreakScanner:
         """Test scanner initialization"""
         from aix.modules.jailbreak import JailbreakScanner
 
-        scanner = JailbreakScanner(
-            target="https://api.example.com",
-            verbose=0
-        )
+        scanner = JailbreakScanner(target="https://api.example.com", verbose=0)
 
         assert scanner.target == "https://api.example.com"
         assert scanner.module_name == "JAILBRK"
@@ -140,14 +130,10 @@ class TestJailbreakScanner:
         """Test scanner has jailbreak payloads"""
         from aix.modules.jailbreak import JailbreakScanner
 
-        scanner = JailbreakScanner(
-            target="https://example.com",
-            level=5,
-            risk=3
-        )
+        scanner = JailbreakScanner(target="https://example.com", level=5, risk=3)
 
         # Should have payloads or default_jailbreaks
-        assert hasattr(scanner, 'payloads') or hasattr(scanner, 'default_jailbreaks')
+        assert hasattr(scanner, "payloads") or hasattr(scanner, "default_jailbreaks")
 
 
 class TestExtractScanner:
@@ -157,9 +143,7 @@ class TestExtractScanner:
         """Test scanner initialization"""
         from aix.modules.extract import ExtractScanner
 
-        scanner = ExtractScanner(
-            target="https://api.example.com"
-        )
+        scanner = ExtractScanner(target="https://api.example.com")
 
         assert scanner.target == "https://api.example.com"
         assert scanner.module_name == "EXTRACT"
@@ -172,9 +156,7 @@ class TestDoSScanner:
         """Test scanner initialization"""
         from aix.modules.dos import DoSScanner
 
-        scanner = DoSScanner(
-            target="https://api.example.com"
-        )
+        scanner = DoSScanner(target="https://api.example.com")
 
         assert scanner.target == "https://api.example.com"
         assert scanner.module_name == "DOS"
@@ -187,10 +169,7 @@ class TestFuzzScanner:
         """Test scanner initialization"""
         from aix.modules.fuzz import FuzzScanner
 
-        scanner = FuzzScanner(
-            target="https://api.example.com",
-            iterations=50
-        )
+        scanner = FuzzScanner(target="https://api.example.com", iterations=50)
 
         assert scanner.target == "https://api.example.com"
         assert scanner.module_name == "FUZZ"
@@ -204,9 +183,7 @@ class TestReconScanner:
         """Test scanner initialization"""
         from aix.modules.recon import ReconScanner
 
-        scanner = ReconScanner(
-            target="https://api.example.com"
-        )
+        scanner = ReconScanner(target="https://api.example.com")
 
         assert scanner.target == "https://api.example.com"
         assert scanner.module_name == "RECON"
@@ -215,13 +192,11 @@ class TestReconScanner:
         """Test scanner loads config"""
         from aix.modules.recon import ReconScanner
 
-        scanner = ReconScanner(
-            target="https://example.com"
-        )
+        scanner = ReconScanner(target="https://example.com")
 
         # Should have config with model signatures
-        assert hasattr(scanner, 'config')
-        assert 'model_signatures' in scanner.config or scanner.config == {}
+        assert hasattr(scanner, "config")
+        assert "model_signatures" in scanner.config or scanner.config == {}
 
 
 class TestMemoryScanner:
@@ -231,9 +206,7 @@ class TestMemoryScanner:
         """Test scanner initialization"""
         from aix.modules.memory import MemoryScanner
 
-        scanner = MemoryScanner(
-            target="https://api.example.com"
-        )
+        scanner = MemoryScanner(target="https://api.example.com")
 
         assert scanner.target == "https://api.example.com"
         assert scanner.module_name == "MEMORY"
@@ -243,30 +216,31 @@ class TestMemoryScanner:
         """Test scanner loads memory payloads"""
         from aix.modules.memory import MemoryScanner
 
-        scanner = MemoryScanner(
-            target="https://example.com",
-            level=5,
-            risk=3
-        )
+        scanner = MemoryScanner(target="https://example.com", level=5, risk=3)
 
         # Should have payloads or default_payloads
-        assert hasattr(scanner, 'payloads') or hasattr(scanner, 'default_payloads')
+        assert hasattr(scanner, "payloads") or hasattr(scanner, "default_payloads")
 
     def test_scanner_payload_categories(self):
         """Test scanner payloads have correct categories"""
         from aix.modules.memory import MemoryScanner
 
-        scanner = MemoryScanner(
-            target="https://example.com",
-            level=5,
-            risk=3
-        )
+        scanner = MemoryScanner(target="https://example.com", level=5, risk=3)
 
-        payloads = scanner.default_payloads if hasattr(scanner, 'default_payloads') else scanner.payloads
-        categories = {p.get('category') for p in payloads if p.get('category')}
+        payloads = (
+            scanner.default_payloads if hasattr(scanner, "default_payloads") else scanner.payloads
+        )
+        categories = {p.get("category") for p in payloads if p.get("category")}
 
         # Should have the expected memory attack categories
-        expected_categories = {'overflow', 'poisoning', 'persistent', 'bleeding', 'recursive', 'extraction'}
+        expected_categories = {
+            "overflow",
+            "poisoning",
+            "persistent",
+            "bleeding",
+            "recursive",
+            "extraction",
+        }
         assert categories.issubset(expected_categories)
 
 
@@ -275,14 +249,14 @@ class TestBaseScannerInheritance:
 
     def test_all_scanners_have_run_method(self):
         """Test all scanners have run method"""
+        from aix.modules.dos import DoSScanner
+        from aix.modules.extract import ExtractScanner
+        from aix.modules.fuzz import FuzzScanner
         from aix.modules.inject import InjectScanner
         from aix.modules.jailbreak import JailbreakScanner
-        from aix.modules.extract import ExtractScanner
         from aix.modules.leak import LeakScanner
-        from aix.modules.dos import DoSScanner
-        from aix.modules.fuzz import FuzzScanner
-        from aix.modules.recon import ReconScanner
         from aix.modules.memory import MemoryScanner
+        from aix.modules.recon import ReconScanner
 
         scanners = [
             InjectScanner("https://example.com"),
@@ -296,7 +270,7 @@ class TestBaseScannerInheritance:
         ]
 
         for scanner in scanners:
-            assert hasattr(scanner, 'run')
+            assert hasattr(scanner, "run")
             assert callable(scanner.run)
 
     def test_all_scanners_have_stats(self):
@@ -310,7 +284,7 @@ class TestBaseScannerInheritance:
         ]
 
         for scanner in scanners:
-            assert hasattr(scanner, 'stats')
+            assert hasattr(scanner, "stats")
             assert isinstance(scanner.stats, dict)
 
     def test_all_scanners_have_findings(self):
@@ -324,7 +298,7 @@ class TestBaseScannerInheritance:
         ]
 
         for scanner in scanners:
-            assert hasattr(scanner, 'findings')
+            assert hasattr(scanner, "findings")
             assert isinstance(scanner.findings, list)
 
 
@@ -361,20 +335,18 @@ class TestScannerConnectorCreation:
         """Test API connector is created for URL target"""
         from aix.modules.inject import InjectScanner
 
-        scanner = InjectScanner(
-            target="https://api.example.com",
-            api_key="test-key"
-        )
+        scanner = InjectScanner(target="https://api.example.com", api_key="test-key")
 
         connector = scanner._create_connector()
 
         from aix.core.connector import APIConnector
+
         assert isinstance(connector, APIConnector)
 
     def test_creates_request_connector_for_parsed_request(self):
         """Test Request connector is created for parsed request"""
-        from aix.modules.inject import InjectScanner
         from aix.core.request_parser import ParsedRequest
+        from aix.modules.inject import InjectScanner
 
         request = ParsedRequest(
             method="POST",
@@ -382,15 +354,13 @@ class TestScannerConnectorCreation:
             headers={"Content-Type": "application/json"},
             body='{"message": "test"}',
             body_json={"message": "test"},
-            injection_param="message"
+            injection_param="message",
         )
 
-        scanner = InjectScanner(
-            target="https://example.com",
-            parsed_request=request
-        )
+        scanner = InjectScanner(target="https://example.com", parsed_request=request)
 
         connector = scanner._create_connector()
 
         from aix.core.connector import RequestConnector
+
         assert isinstance(connector, RequestConnector)

@@ -12,16 +12,16 @@ Advanced multi-turn conversation attacks including:
 These attacks exploit the stateful nature of conversations
 to bypass safety measures that work well against single-shot attacks.
 """
+
 import asyncio
 import json
 import os
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
-from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 from rich.table import Table
 
-from aix.core.conversation import ConversationManager, ConversationStatus
+from aix.core.conversation import ConversationManager
 from aix.core.reporter import Finding, Severity
 from aix.core.scanner import BaseScanner, CircuitBreakerError, run_scanner
 from aix.core.turn_evaluator import TurnEvaluator
@@ -50,16 +50,22 @@ class MultiTurnScanner(BaseScanner):
         "authority_transfer": "Transfer perceived authority across turns",
     }
 
-    def __init__(self, target: str, api_key: str | None = None, verbose: bool = False,
-                 parsed_request: Optional['ParsedRequest'] = None, **kwargs):
+    def __init__(
+        self,
+        target: str,
+        api_key: str | None = None,
+        verbose: bool = False,
+        parsed_request: Optional["ParsedRequest"] = None,
+        **kwargs,
+    ):
         super().__init__(target, api_key, verbose, parsed_request, **kwargs)
         self.module_name = "MULTI"
         self.console_color = "magenta"
 
         # Multi-turn specific config
-        self.category = kwargs.get('category', 'all')
-        self.max_turns = kwargs.get('max_turns', 10)
-        self.turn_delay = kwargs.get('turn_delay', 0.5)
+        self.category = kwargs.get("category", "all")
+        self.max_turns = kwargs.get("max_turns", 10)
+        self.turn_delay = kwargs.get("turn_delay", 0.5)
 
         # Load sequences
         self.sequences = self._load_sequences()
@@ -69,7 +75,7 @@ class MultiTurnScanner(BaseScanner):
 
     def _load_sequences(self) -> list[dict]:
         """Load multi-turn attack sequences from JSON file."""
-        payload_path = os.path.join(os.path.dirname(__file__), '..', 'payloads', 'multiturn.json')
+        payload_path = os.path.join(os.path.dirname(__file__), "..", "payloads", "multiturn.json")
 
         try:
             with open(payload_path) as f:
@@ -97,7 +103,7 @@ class MultiTurnScanner(BaseScanner):
                     continue
 
                 # Apply evasion to payloads if enabled
-                if self.evasion_level != 'none':
+                if self.evasion_level != "none":
                     for turn in seq.get("turns", []):
                         if "payload" in turn:
                             turn["original_payload"] = turn["payload"]
@@ -105,14 +111,17 @@ class MultiTurnScanner(BaseScanner):
 
                 filtered.append(seq)
 
-            self._print('info', f"Loaded {len(filtered)}/{len(sequences)} sequences (Level={self.level}, Risk={self.risk})")
+            self._print(
+                "info",
+                f"Loaded {len(filtered)}/{len(sequences)} sequences (Level={self.level}, Risk={self.risk})",
+            )
             return filtered
 
         except FileNotFoundError:
-            self._print('error', f"Sequences file not found: {payload_path}")
+            self._print("error", f"Sequences file not found: {payload_path}")
             return []
         except json.JSONDecodeError as e:
-            self._print('error', f"Invalid JSON in sequences file: {e}")
+            self._print("error", f"Invalid JSON in sequences file: {e}")
             return []
 
     async def run(self, sequences: list[dict] = None):
@@ -129,7 +138,7 @@ class MultiTurnScanner(BaseScanner):
             sequences = self.sequences
 
         if not sequences:
-            self._print('warning', "No sequences to execute")
+            self._print("warning", "No sequences to execute")
             return self.findings
 
         # Create connector
@@ -143,23 +152,27 @@ class MultiTurnScanner(BaseScanner):
             if generated:
                 # Convert generated payloads to simple sequences
                 for g in generated:
-                    sequences.append({
-                        "name": g.get('name', 'Generated Attack'),
-                        "category": "generated",
-                        "description": "AI-generated context-aware attack",
-                        "severity": "HIGH",
-                        "turns": [{"payload": g['payload'], "indicators": g.get('indicators', [])}],
-                        "owasp": g.get('owasp', [])
-                    })
+                    sequences.append(
+                        {
+                            "name": g.get("name", "Generated Attack"),
+                            "category": "generated",
+                            "description": "AI-generated context-aware attack",
+                            "severity": "HIGH",
+                            "turns": [
+                                {"payload": g["payload"], "indicators": g.get("indicators", [])}
+                            ],
+                            "owasp": g.get("owasp", []),
+                        }
+                    )
 
-        self._print('info', f"Testing {len(sequences)} multi-turn sequences...")
+        self._print("info", f"Testing {len(sequences)} multi-turn sequences...")
 
         # Create conversation manager
         conv_manager = ConversationManager(
             connector=connector,
             evaluator=self.turn_evaluator,
             verbose=self.verbose,
-            delay=self.turn_delay
+            delay=self.turn_delay,
         )
 
         # Track stats by category
@@ -172,16 +185,15 @@ class MultiTurnScanner(BaseScanner):
                 BarColumn(),
                 TaskProgressColumn(),
                 console=self.console,
-                disable=not self.show_progress
+                disable=not self.show_progress,
             ) as progress:
 
                 task = progress.add_task(
-                    "[bold magenta]🔄 Multi-Turn Attacks...[/]",
-                    total=len(sequences)
+                    "[bold magenta]🔄 Multi-Turn Attacks...[/]", total=len(sequences)
                 )
 
                 for seq in sequences:
-                    self.stats['total'] += 1
+                    self.stats["total"] += 1
                     seq_name = seq.get("name", "unnamed")
                     seq_category = seq.get("category", "unknown")
 
@@ -195,7 +207,7 @@ class MultiTurnScanner(BaseScanner):
                         result = await conv_manager.execute_sequence(seq)
 
                         if result.success:
-                            self.stats['success'] += 1
+                            self.stats["success"] += 1
                             category_stats[seq_category]["success"] += 1
 
                             # Create finding
@@ -208,44 +220,57 @@ class MultiTurnScanner(BaseScanner):
                                 response=result.final_response[:2000],
                                 target=self.target,
                                 reason=f"Matched: {result.matched_indicators}",
-                                owasp=seq.get('owasp', [])
+                                owasp=seq.get("owasp", []),
                             )
                             self.findings.append(finding)
 
                             # Save to DB
                             self.db.add_result(
                                 self.target,
-                                'multiturn',
+                                "multiturn",
                                 seq_name,
-                                'success',
+                                "success",
                                 f"Sequence: {seq_name} ({result.turns_executed} turns)",
                                 result.final_response[:2000],
                                 severity.value,
                                 reason=f"Category: {seq_category}, Indicators: {result.matched_indicators}",
-                                owasp=seq.get('owasp', [])
+                                owasp=seq.get("owasp", []),
                             )
 
-                            self._print('success', f"[{result.turns_executed} turns]", seq_name,
-                                       response=result.final_response)
+                            self._print(
+                                "success",
+                                f"[{result.turns_executed} turns]",
+                                seq_name,
+                                response=result.final_response,
+                            )
 
                             # Show additional details if verbose
                             if self.verbose >= 1:
-                                self._print('detail', f"Category: {seq_category}")
-                                self._print('detail', f"Indicators matched: {result.matched_indicators}")
+                                self._print("detail", f"Category: {seq_category}")
+                                self._print(
+                                    "detail", f"Indicators matched: {result.matched_indicators}"
+                                )
                                 if result.variables_extracted:
-                                    self._print('detail', f"Extracted: {list(result.variables_extracted.keys())}")
+                                    self._print(
+                                        "detail",
+                                        f"Extracted: {list(result.variables_extracted.keys())}",
+                                    )
 
                         else:
-                            self.stats['blocked'] += 1
-                            self._print('blocked', f"[{result.turns_executed} turns] {result.status.value}", seq_name)
+                            self.stats["blocked"] += 1
+                            self._print(
+                                "blocked",
+                                f"[{result.turns_executed} turns] {result.status.value}",
+                                seq_name,
+                            )
 
                     except CircuitBreakerError:
-                        self._print('error', "Circuit breaker triggered - too many errors")
+                        self._print("error", "Circuit breaker triggered - too many errors")
                         break
 
                     except Exception as e:
-                        self.stats['blocked'] += 1
-                        self._print('error', f"Error executing {seq_name}: {e}")
+                        self.stats["blocked"] += 1
+                        self._print("error", f"Error executing {seq_name}: {e}")
 
                     progress.update(task, advance=1)
 
@@ -263,7 +288,9 @@ class MultiTurnScanner(BaseScanner):
     def _print_summary(self, category_stats: dict):
         """Print attack summary with category breakdown."""
         self.console.print()
-        self._print('info', f"Summary: {self.stats['success']} successful, {self.stats['blocked']} blocked")
+        self._print(
+            "info", f"Summary: {self.stats['success']} successful, {self.stats['blocked']} blocked"
+        )
 
         if self.verbose >= 1 and category_stats:
             table = Table(title="Results by Category", show_header=True)
@@ -278,7 +305,7 @@ class MultiTurnScanner(BaseScanner):
                     cat.replace("_", " ").title(),
                     str(stats["success"]),
                     str(stats["total"]),
-                    f"{rate:.1f}%"
+                    f"{rate:.1f}%",
                 )
 
             self.console.print(table)

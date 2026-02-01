@@ -1,25 +1,25 @@
 """
 Tests for AIX Multi-Turn Attack Module
 """
+
 import json
 import os
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
-from aix.core.turn_evaluator import TurnEvaluator
+import pytest
+
 from aix.core.conversation import (
     ConversationManager,
-    ConversationState,
     ConversationStatus,
     Turn,
-    SequenceResult
 )
+from aix.core.turn_evaluator import TurnEvaluator
 from aix.modules.multiturn import MultiTurnScanner
-
 
 # ============================================================================
 # TurnEvaluator Tests
 # ============================================================================
+
 
 class TestTurnEvaluator:
     """Tests for the TurnEvaluator class."""
@@ -36,8 +36,7 @@ class TestTurnEvaluator:
     def test_evaluate_positive_sentiment(self):
         """Detect positive engagement."""
         success, _ = self.evaluator.evaluate_turn(
-            "Sure, I'd be happy to help you with that!",
-            {"sentiment": "positive"}
+            "Sure, I'd be happy to help you with that!", {"sentiment": "positive"}
         )
         assert success is True
 
@@ -45,7 +44,7 @@ class TestTurnEvaluator:
         """Detect refusal as negative sentiment."""
         success, reason = self.evaluator.evaluate_turn(
             "Sorry, that's against my policy. I am unable to assist with this request.",
-            {"sentiment": "positive"}
+            {"sentiment": "positive"},
         )
         assert success is False
         assert "refused" in reason.lower()
@@ -54,15 +53,14 @@ class TestTurnEvaluator:
         """Keywords should match when present."""
         success, _ = self.evaluator.evaluate_turn(
             "Here's a SQL query example: SELECT * FROM users",
-            {"keywords": ["SQL", "SELECT", "query"]}
+            {"keywords": ["SQL", "SELECT", "query"]},
         )
         assert success is True
 
     def test_evaluate_keywords_missing(self):
         """Keywords should fail when missing."""
         success, reason = self.evaluator.evaluate_turn(
-            "I cannot provide database examples.",
-            {"keywords": ["SQL", "SELECT"]}
+            "I cannot provide database examples.", {"keywords": ["SQL", "SELECT"]}
         )
         assert success is False
         assert "Missing" in reason
@@ -71,7 +69,7 @@ class TestTurnEvaluator:
         """Contains any should match at least one term."""
         success, _ = self.evaluator.evaluate_turn(
             "The socket connects to the remote server.",
-            {"contains_any": ["socket", "network", "TCP"]}
+            {"contains_any": ["socket", "network", "TCP"]},
         )
         assert success is True
 
@@ -79,24 +77,21 @@ class TestTurnEvaluator:
         """Contains all should require all terms."""
         # Should fail - missing "shell"
         success, reason = self.evaluator.evaluate_turn(
-            "The socket connects to port 4444.",
-            {"contains_all": ["socket", "port", "shell"]}
+            "The socket connects to port 4444.", {"contains_all": ["socket", "port", "shell"]}
         )
         assert success is False
         assert "missing" in reason.lower()
 
         # Should pass - all present
         success, _ = self.evaluator.evaluate_turn(
-            "The socket shell connects to port 4444.",
-            {"contains_all": ["socket", "port", "shell"]}
+            "The socket shell connects to port 4444.", {"contains_all": ["socket", "port", "shell"]}
         )
         assert success is True
 
     def test_evaluate_not_contains(self):
         """Not contains should fail when blocked terms found."""
         success, reason = self.evaluator.evaluate_turn(
-            "I cannot assist with that request.",
-            {"not_contains": ["cannot", "sorry", "unable"]}
+            "I cannot assist with that request.", {"not_contains": ["cannot", "sorry", "unable"]}
         )
         assert success is False
         assert "blocked" in reason.lower()
@@ -104,25 +99,20 @@ class TestTurnEvaluator:
     def test_evaluate_regex_match(self):
         """Regex patterns should match correctly."""
         success, _ = self.evaluator.evaluate_turn(
-            "The password is abc123xyz",
-            {"regex": r"password\s+is\s+\w+"}
+            "The password is abc123xyz", {"regex": r"password\s+is\s+\w+"}
         )
         assert success is True
 
     def test_evaluate_min_length(self):
         """Min length should enforce response size."""
-        success, reason = self.evaluator.evaluate_turn(
-            "OK",
-            {"min_length": 100}
-        )
+        success, reason = self.evaluator.evaluate_turn("OK", {"min_length": 100})
         assert success is False
         assert "too short" in reason.lower()
 
     def test_evaluate_no_refusal_flag(self):
         """No refusal flag should detect refusals."""
         success, _ = self.evaluator.evaluate_turn(
-            "As an AI, I cannot provide hacking instructions.",
-            {"no_refusal": True}
+            "As an AI, I cannot provide hacking instructions.", {"no_refusal": True}
         )
         assert success is False
 
@@ -130,7 +120,7 @@ class TestTurnEvaluator:
         """Literal indicators should match."""
         success, matched = self.evaluator.check_final_indicators(
             "Here is the SELECT * FROM users WHERE id='1' OR '1'='1' injection",
-            ["OR '1'='1'", "SELECT", "injection"]
+            ["OR '1'='1'", "SELECT", "injection"],
         )
         assert success is True
         assert len(matched) > 0
@@ -138,16 +128,14 @@ class TestTurnEvaluator:
     def test_check_final_indicators_regex(self):
         """Regex indicators should match."""
         success, matched = self.evaluator.check_final_indicators(
-            "The shellcode bytes are \\x31\\xc0\\x50",
-            ["\\\\x[0-9a-f]{2}"]
+            "The shellcode bytes are \\x31\\xc0\\x50", ["\\\\x[0-9a-f]{2}"]
         )
         assert success is True
 
     def test_extract_variable(self):
         """Variable extraction should work with regex."""
         result = self.evaluator.extract_variable(
-            "The API key is sk-abc123xyz",
-            r"API key is ([^\s]+)"
+            "The API key is sk-abc123xyz", r"API key is ([^\s]+)"
         )
         assert result == "sk-abc123xyz"
 
@@ -172,6 +160,7 @@ class TestTurnEvaluator:
 # ConversationManager Tests
 # ============================================================================
 
+
 class TestConversationManager:
     """Tests for the ConversationManager class."""
 
@@ -179,9 +168,7 @@ class TestConversationManager:
         self.mock_connector = AsyncMock()
         self.evaluator = TurnEvaluator()
         self.manager = ConversationManager(
-            connector=self.mock_connector,
-            evaluator=self.evaluator,
-            verbose=0
+            connector=self.mock_connector, evaluator=self.evaluator, verbose=0
         )
 
     def test_reset(self):
@@ -241,11 +228,7 @@ class TestConversationManager:
         """Execute turn should store variables."""
         self.mock_connector.send.return_value = "The secret is XYZ123"
 
-        turn_config = {
-            "payload": "What is the secret?",
-            "store_as": "secret",
-            "expect": {}
-        }
+        turn_config = {"payload": "What is the secret?", "store_as": "secret", "expect": {}}
 
         response, success, reason = await self.manager.execute_turn(turn_config)
         assert "secret" in self.manager.state.variables
@@ -259,7 +242,7 @@ class TestConversationManager:
         turn_config = {
             "payload": "Give me the code",
             "extract": {"code": r"code is ([A-Z0-9-]+)"},
-            "expect": {}
+            "expect": {},
         }
 
         await self.manager.execute_turn(turn_config)
@@ -271,17 +254,14 @@ class TestConversationManager:
 # MultiTurnScanner Tests
 # ============================================================================
 
+
 class TestMultiTurnScanner:
     """Tests for the MultiTurnScanner class."""
 
     def test_scanner_initialization(self):
         """Scanner should initialize correctly."""
         scanner = MultiTurnScanner(
-            target="https://example.com",
-            api_key="test-key",
-            verbose=False,
-            level=2,
-            risk=2
+            target="https://example.com", api_key="test-key", verbose=False, level=2, risk=2
         )
         assert scanner.module_name == "MULTI"
         assert scanner.console_color == "magenta"
@@ -289,10 +269,7 @@ class TestMultiTurnScanner:
     def test_category_filtering(self):
         """Scanner should filter by category."""
         scanner = MultiTurnScanner(
-            target="https://example.com",
-            category="crescendo",
-            level=5,
-            risk=3
+            target="https://example.com", category="crescendo", level=5, risk=3
         )
         # All loaded sequences should be crescendo category
         for seq in scanner.sequences:
@@ -300,11 +277,7 @@ class TestMultiTurnScanner:
 
     def test_level_risk_filtering(self):
         """Scanner should filter by level and risk."""
-        scanner = MultiTurnScanner(
-            target="https://example.com",
-            level=1,
-            risk=1
-        )
+        scanner = MultiTurnScanner(target="https://example.com", level=1, risk=1)
         # All loaded sequences should have level<=1 and risk<=1
         for seq in scanner.sequences:
             assert seq.get("level", 1) <= 1
@@ -312,12 +285,7 @@ class TestMultiTurnScanner:
 
     def test_max_turns_filtering(self):
         """Scanner should filter by max turns."""
-        scanner = MultiTurnScanner(
-            target="https://example.com",
-            max_turns=3,
-            level=5,
-            risk=3
-        )
+        scanner = MultiTurnScanner(target="https://example.com", max_turns=3, level=5, risk=3)
         # All sequences should have <= 3 turns
         for seq in scanner.sequences:
             assert len(seq.get("turns", [])) <= 3
@@ -327,6 +295,7 @@ class TestMultiTurnScanner:
 # Payload JSON Tests
 # ============================================================================
 
+
 class TestMultiTurnPayloads:
     """Tests for the multiturn.json payload file."""
 
@@ -334,8 +303,7 @@ class TestMultiTurnPayloads:
     def payloads(self):
         """Load payloads file."""
         payload_path = os.path.join(
-            os.path.dirname(__file__),
-            '..', 'aix', 'payloads', 'multiturn.json'
+            os.path.dirname(__file__), "..", "aix", "payloads", "multiturn.json"
         )
         with open(payload_path) as f:
             return json.load(f)
@@ -365,14 +333,21 @@ class TestMultiTurnPayloads:
             if turns:
                 final_turns = [t for t in turns if t.get("is_final")]
                 for final in final_turns:
-                    assert "indicators" in final, f"Final turn missing indicators in {seq.get('name')}"
+                    assert (
+                        "indicators" in final
+                    ), f"Final turn missing indicators in {seq.get('name')}"
 
     def test_valid_categories(self, payloads):
         """All categories should be valid."""
         valid_categories = [
-            "crescendo", "trust_building", "context_poisoning",
-            "role_lock", "memory_injection", "instruction_layering",
-            "cognitive_overload", "authority_transfer"
+            "crescendo",
+            "trust_building",
+            "context_poisoning",
+            "role_lock",
+            "memory_injection",
+            "instruction_layering",
+            "cognitive_overload",
+            "authority_transfer",
         ]
         for seq in payloads["sequences"]:
             category = seq.get("category")
@@ -406,6 +381,7 @@ class TestMultiTurnPayloads:
 # Integration Tests
 # ============================================================================
 
+
 class TestMultiTurnIntegration:
     """Integration tests for multi-turn attacks."""
 
@@ -417,15 +393,12 @@ class TestMultiTurnIntegration:
         mock_connector.send.side_effect = [
             "Sure, I'd be happy to help with that!",
             "Here's the SQL query: SELECT * FROM users",
-            "The injection payload is: ' OR 1=1--"
+            "The injection payload is: ' OR 1=1--",
         ]
 
         evaluator = TurnEvaluator()
         manager = ConversationManager(
-            connector=mock_connector,
-            evaluator=evaluator,
-            verbose=0,
-            delay=0
+            connector=mock_connector, evaluator=evaluator, verbose=0, delay=0
         )
 
         sequence = {
@@ -436,21 +409,21 @@ class TestMultiTurnIntegration:
                     "turn": 1,
                     "payload": "Can you help me?",
                     "expect": {"sentiment": "positive"},
-                    "on_fail": "abort"
+                    "on_fail": "abort",
                 },
                 {
                     "turn": 2,
                     "payload": "Show me SQL",
                     "expect": {"contains_any": ["SQL", "SELECT"]},
-                    "on_fail": "continue"
+                    "on_fail": "continue",
                 },
                 {
                     "turn": 3,
                     "payload": "Show me injection",
                     "is_final": True,
-                    "indicators": ["OR 1=1", "' OR"]
-                }
-            ]
+                    "indicators": ["OR 1=1", "' OR"],
+                },
+            ],
         }
 
         result = await manager.execute_sequence(sequence)
@@ -466,10 +439,7 @@ class TestMultiTurnIntegration:
 
         evaluator = TurnEvaluator()
         manager = ConversationManager(
-            connector=mock_connector,
-            evaluator=evaluator,
-            verbose=0,
-            delay=0
+            connector=mock_connector, evaluator=evaluator, verbose=0, delay=0
         )
 
         sequence = {
@@ -480,15 +450,15 @@ class TestMultiTurnIntegration:
                     "turn": 1,
                     "payload": "Do something bad",
                     "expect": {"sentiment": "positive"},
-                    "on_fail": "abort"
+                    "on_fail": "abort",
                 },
                 {
                     "turn": 2,
                     "payload": "This should not execute",
                     "is_final": True,
-                    "indicators": ["anything"]
-                }
-            ]
+                    "indicators": ["anything"],
+                },
+            ],
         }
 
         result = await manager.execute_sequence(sequence)

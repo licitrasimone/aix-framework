@@ -1,6 +1,7 @@
 """
 AIX Core Tests - Basic Functionality Tests
 """
+
 import os
 import tempfile
 
@@ -18,7 +19,7 @@ class TestVersion:
 
     def test_version_format(self):
         """Test version follows semver format"""
-        parts = __version__.split('.')
+        parts = __version__.split(".")
         assert len(parts) == 3
         for part in parts:
             assert part.isdigit()
@@ -32,10 +33,7 @@ class TestAPIConnector:
         """Test API connector initialization"""
         from aix.core.connector import APIConnector
 
-        connector = APIConnector(
-            url="https://api.openai.com",
-            api_key="test-key"
-        )
+        connector = APIConnector(url="https://api.openai.com", api_key="test-key")
 
         assert connector.url == "https://api.openai.com"
         assert connector.api_key == "test-key"
@@ -50,13 +48,13 @@ class TestAPIConnector:
             api_key="key",
             proxy="127.0.0.1:8080",
             timeout=60,
-            verbose=2
+            verbose=2,
         )
 
         # Options are stored in config dict
-        assert connector.config.get('proxy') == "127.0.0.1:8080"
-        assert connector.config.get('timeout') == 60
-        assert connector.config.get('verbose') == 2
+        assert connector.config.get("proxy") == "127.0.0.1:8080"
+        assert connector.config.get("timeout") == 60
+        assert connector.config.get("verbose") == 2
 
 
 class TestDatabase:
@@ -78,7 +76,7 @@ class TestDatabase:
                 result="success",
                 payload="test payload",
                 response="test response",
-                severity="high"
+                severity="high",
             )
 
             assert result_id > 0
@@ -86,7 +84,7 @@ class TestDatabase:
             # Test retrieving results
             results = db.get_results(target="test.com")
             assert len(results) == 1
-            assert results[0]['technique'] == "test_technique"
+            assert results[0]["technique"] == "test_technique"
 
             db.close()
 
@@ -107,7 +105,7 @@ class TestDatabase:
                     result="success",
                     payload="p",
                     response="r",
-                    severity="low"
+                    severity="low",
                 )
 
             assert len(db.get_results()) == 5
@@ -134,7 +132,7 @@ class TestReporter:
             technique="test",
             payload="test payload",
             response="test response",
-            target="https://test.com"
+            target="https://test.com",
         )
 
         reporter.add_finding(finding)
@@ -154,7 +152,7 @@ class TestReporter:
                 severity=severity,
                 technique="test",
                 payload="p",
-                response="r"
+                response="r",
             )
             reporter.add_finding(finding)
 
@@ -167,21 +165,21 @@ class TestModuleImports:
     def test_import_main_module(self):
         """Test main aix module imports"""
         import aix
-        assert hasattr(aix, '__version__')
+
+        assert hasattr(aix, "__version__")
 
     def test_import_core_modules(self):
         """Test core modules import"""
         from aix.core import connector, reporter, scanner
+
         assert connector is not None
         assert reporter is not None
         assert scanner is not None
 
     def test_import_attack_modules(self):
         """Test attack modules import"""
-        from aix.modules import (
-            inject, jailbreak, extract, leak,
-            exfil, agent, dos, fuzz, recon
-        )
+        from aix.modules import agent, dos, exfil, extract, fuzz, inject, jailbreak, leak, recon
+
         assert inject is not None
         assert jailbreak is not None
         assert extract is not None

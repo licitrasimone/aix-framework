@@ -24,7 +24,7 @@ def _serialize_owasp(owasp: list | None) -> str | None:
     # Convert OWASPCategory enums to their ID strings if needed
     serialized = []
     for item in owasp:
-        if hasattr(item, 'id'):  # OWASPCategory enum
+        if hasattr(item, "id"):  # OWASPCategory enum
             serialized.append(item.id)
         elif isinstance(item, str):
             serialized.append(item)
@@ -41,9 +41,9 @@ class AIXDatabase:
     def __init__(self, db_path: str | None = None):
         if db_path is None:
             # Default to ~/.aix/aix.db
-            aix_dir = Path.home() / '.aix'
+            aix_dir = Path.home() / ".aix"
             aix_dir.mkdir(exist_ok=True)
-            db_path = str(aix_dir / 'aix.db')
+            db_path = str(aix_dir / "aix.db")
 
         self.db_path = db_path
         self.conn = sqlite3.connect(db_path)
@@ -72,19 +72,23 @@ class AIXDatabase:
 
         # Migration: Check if reason column exists
         try:
-             cursor.execute("SELECT reason FROM results LIMIT 1")
+            cursor.execute("SELECT reason FROM results LIMIT 1")
         except sqlite3.OperationalError:
-             # Column missing, add it
-             console.print("[yellow][*] Migrating database: Adding 'reason' column to results table[/yellow]")
-             cursor.execute("ALTER TABLE results ADD COLUMN reason TEXT")
+            # Column missing, add it
+            console.print(
+                "[yellow][*] Migrating database: Adding 'reason' column to results table[/yellow]"
+            )
+            cursor.execute("ALTER TABLE results ADD COLUMN reason TEXT")
 
         # Migration: Check if owasp column exists
         try:
-             cursor.execute("SELECT owasp FROM results LIMIT 1")
+            cursor.execute("SELECT owasp FROM results LIMIT 1")
         except sqlite3.OperationalError:
-             # Column missing, add it
-             console.print("[yellow][*] Migrating database: Adding 'owasp' column to results table[/yellow]")
-             cursor.execute("ALTER TABLE results ADD COLUMN owasp TEXT")
+            # Column missing, add it
+            console.print(
+                "[yellow][*] Migrating database: Adding 'owasp' column to results table[/yellow]"
+            )
+            cursor.execute("ALTER TABLE results ADD COLUMN owasp TEXT")
 
         # Profiles table
         cursor.execute("""
@@ -160,39 +164,60 @@ class AIXDatabase:
         if dedup_payload:
             # Randomized evasion active: Dedup by technique name only.
             # We want to update the latest entry for this technique.
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT id FROM results
                 WHERE target = ? AND module = ? AND technique = ?
                 ORDER BY timestamp DESC LIMIT 1
-            """, (target, module, technique))
+            """,
+                (target, module, technique),
+            )
             existing = cursor.fetchone()
         else:
             # Standard Strict Dedup: Payload must match exactly
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT id FROM results
                 WHERE target = ? AND module = ? AND technique = ? AND payload = ?
-            """, (target, module, technique, payload))
+            """,
+                (target, module, technique, payload),
+            )
             existing = cursor.fetchone()
 
         if existing:
             # Update existing result
             row_id = existing[0]
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE results
                 SET result = ?, payload = ?, response = ?, severity = ?, reason = ?, owasp = ?, timestamp = CURRENT_TIMESTAMP
                 WHERE id = ?
-            """, (result, payload, response, severity, reason, owasp_json, row_id))
+            """,
+                (result, payload, response, severity, reason, owasp_json, row_id),
+            )
             self.conn.commit()
             return row_id
         else:
             # Insert new result
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO results (target, module, technique, result, payload, response, severity, reason, owasp)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (target, module, technique, result, payload, response, severity, reason, owasp_json))
+            """,
+                (
+                    target,
+                    module,
+                    technique,
+                    result,
+                    payload,
+                    response,
+                    severity,
+                    reason,
+                    owasp_json,
+                ),
+            )
             self.conn.commit()
             return cursor.lastrowid
-
 
     def get_results(
         self,
@@ -243,28 +268,28 @@ class AIXDatabase:
 
         for r in results:
             # Color result
-            result_str = r['result']
-            if result_str == 'success':
+            result_str = r["result"]
+            if result_str == "success":
                 result_str = "[green]Pwn3d![/green]"
-            elif result_str == 'partial':
+            elif result_str == "partial":
                 result_str = "[yellow]Partial[/yellow]"
-            elif result_str == 'blocked':
+            elif result_str == "blocked":
                 result_str = "[red]Blocked[/red]"
 
             # Color severity
-            severity_str = r.get('severity', 'unknown')
+            severity_str = r.get("severity", "unknown")
             severity_colors = {
-                'critical': 'red',
-                'high': 'yellow',
-                'medium': 'blue',
-                'low': 'dim',
+                "critical": "red",
+                "high": "yellow",
+                "medium": "blue",
+                "low": "dim",
             }
-            severity_color = severity_colors.get(severity_str, 'white')
+            severity_color = severity_colors.get(severity_str, "white")
             severity_str = f"[{severity_color}]{severity_str}[/{severity_color}]"
 
             # Parse OWASP
             owasp_str = ""
-            owasp_raw = r.get('owasp')
+            owasp_raw = r.get("owasp")
             if owasp_raw:
                 try:
                     owasp_list = json.loads(owasp_raw) if isinstance(owasp_raw, str) else owasp_raw
@@ -273,19 +298,19 @@ class AIXDatabase:
                     owasp_str = str(owasp_raw)
 
             # Truncate target
-            target = r['target']
+            target = r["target"]
             if len(target) > 28:
                 target = target[:25] + "..."
 
             table.add_row(
-                str(r['id']),
+                str(r["id"]),
                 target,
-                r['module'],
-                r['technique'],
+                r["module"],
+                r["technique"],
                 result_str,
                 severity_str,
                 owasp_str,
-                r['timestamp'][:10] if r['timestamp'] else "",
+                r["timestamp"][:10] if r["timestamp"] else "",
             )
 
         console.print(table)
@@ -305,29 +330,32 @@ class AIXDatabase:
         cursor = self.conn.cursor()
 
         # Convert lists/dicts to JSON
-        filters_json = json.dumps(profile_data.get('filters', []))
-        template_json = json.dumps(profile_data.get('request_template', {}))
+        filters_json = json.dumps(profile_data.get("filters", []))
+        template_json = json.dumps(profile_data.get("request_template", {}))
 
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT OR REPLACE INTO profiles 
             (name, url, endpoint, method, auth_type, auth_value, model, 
              filters, rate_limit, waf, websocket, request_template, response_path, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        """, (
-            name,
-            profile_data.get('url', ''),
-            profile_data.get('endpoint'),
-            profile_data.get('method', 'POST'),
-            profile_data.get('auth_type'),
-            profile_data.get('auth_value'),
-            profile_data.get('model'),
-            filters_json,
-            profile_data.get('rate_limit'),
-            profile_data.get('waf'),
-            profile_data.get('websocket'),
-            template_json,
-            profile_data.get('response_path'),
-        ))
+        """,
+            (
+                name,
+                profile_data.get("url", ""),
+                profile_data.get("endpoint"),
+                profile_data.get("method", "POST"),
+                profile_data.get("auth_type"),
+                profile_data.get("auth_value"),
+                profile_data.get("model"),
+                filters_json,
+                profile_data.get("rate_limit"),
+                profile_data.get("waf"),
+                profile_data.get("websocket"),
+                template_json,
+                profile_data.get("response_path"),
+            ),
+        )
         self.conn.commit()
         return cursor.lastrowid
 
@@ -340,8 +368,8 @@ class AIXDatabase:
         if row:
             profile = dict(row)
             # Parse JSON fields
-            profile['filters'] = json.loads(profile.get('filters', '[]'))
-            profile['request_template'] = json.loads(profile.get('request_template', '{}'))
+            profile["filters"] = json.loads(profile.get("filters", "[]"))
+            profile["request_template"] = json.loads(profile.get("request_template", "{}"))
             return profile
 
         return None
@@ -370,23 +398,25 @@ class AIXDatabase:
         module: str | None = None,
     ) -> None:
         """Export results to HTML report"""
-        from aix.core.reporting.base import Finding, Reporter, Severity
         from aix.core.owasp import parse_owasp_list
+        from aix.core.reporting.base import Finding, Reporter, Severity
 
         results = self.get_results(target=target, module=module, limit=1000)
 
         reporter = Reporter()
 
         for r in results:
-            if r['result'] == 'success':
-                severity = Severity(r.get('severity', 'high'))
+            if r["result"] == "success":
+                severity = Severity(r.get("severity", "high"))
 
                 # Parse OWASP from JSON
                 owasp_categories = []
-                owasp_raw = r.get('owasp')
+                owasp_raw = r.get("owasp")
                 if owasp_raw:
                     try:
-                        owasp_list = json.loads(owasp_raw) if isinstance(owasp_raw, str) else owasp_raw
+                        owasp_list = (
+                            json.loads(owasp_raw) if isinstance(owasp_raw, str) else owasp_raw
+                        )
                         owasp_categories = parse_owasp_list(owasp_list) if owasp_list else []
                     except (json.JSONDecodeError, TypeError):
                         pass
@@ -394,11 +424,11 @@ class AIXDatabase:
                 finding = Finding(
                     title=f"{r['technique']} - Vulnerable",
                     severity=severity,
-                    technique=r['technique'],
-                    payload=r.get('payload', ''),
-                    response=r.get('response', ''),
-                    target=r['target'],
-                    reason=r.get('reason', ''),
+                    technique=r["technique"],
+                    payload=r.get("payload", ""),
+                    response=r.get("response", ""),
+                    target=r["target"],
+                    reason=r.get("reason", ""),
                     owasp=owasp_categories,
                 )
                 reporter.add_finding(finding)
@@ -411,9 +441,9 @@ class AIXDatabase:
         profiles = self.list_profiles()
 
         data = {
-            'exported_at': datetime.now().isoformat(),
-            'results': results,
-            'profiles': profiles,
+            "exported_at": datetime.now().isoformat(),
+            "results": results,
+            "profiles": profiles,
         }
 
         Path(filepath).write_text(json.dumps(data, indent=2, default=str))

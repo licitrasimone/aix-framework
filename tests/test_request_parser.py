@@ -1,6 +1,7 @@
 """
 Tests for AIX Request Parser Module
 """
+
 import json
 import tempfile
 from pathlib import Path
@@ -28,7 +29,7 @@ class TestParsedRequest:
             url="https://api.example.com/chat",
             headers={"Content-Type": "application/json"},
             body='{"message": "hello"}',
-            body_json={"message": "hello"}
+            body_json={"message": "hello"},
         )
 
         assert request.method == "POST"
@@ -38,20 +39,14 @@ class TestParsedRequest:
     def test_host_from_headers(self):
         """Test host extraction from headers"""
         request = ParsedRequest(
-            method="GET",
-            url="https://api.example.com/test",
-            headers={"Host": "api.example.com"}
+            method="GET", url="https://api.example.com/test", headers={"Host": "api.example.com"}
         )
 
         assert request.host == "api.example.com"
 
     def test_host_from_url(self):
         """Test host extraction from URL when no Host header"""
-        request = ParsedRequest(
-            method="GET",
-            url="https://api.example.com:8080/test",
-            headers={}
-        )
+        request = ParsedRequest(method="GET", url="https://api.example.com:8080/test", headers={})
 
         assert request.host == "api.example.com:8080"
 
@@ -60,7 +55,7 @@ class TestParsedRequest:
         request = ParsedRequest(
             method="POST",
             url="https://example.com",
-            headers={"Content-Type": "application/json; charset=utf-8"}
+            headers={"Content-Type": "application/json; charset=utf-8"},
         )
 
         assert request.content_type == "application/json"
@@ -68,9 +63,7 @@ class TestParsedRequest:
     def test_content_type_case_insensitive(self):
         """Test content type header is case insensitive"""
         request = ParsedRequest(
-            method="POST",
-            url="https://example.com",
-            headers={"content-type": "application/json"}
+            method="POST", url="https://example.com", headers={"content-type": "application/json"}
         )
 
         assert request.content_type == "application/json"
@@ -82,14 +75,14 @@ class TestParsedRequest:
             url="https://example.com",
             headers={"Content-Type": "application/json"},
             body='{"key": "value"}',
-            body_json={"key": "value"}
+            body_json={"key": "value"},
         )
 
         non_json_request = ParsedRequest(
             method="POST",
             url="https://example.com",
             headers={"Content-Type": "text/plain"},
-            body="plain text"
+            body="plain text",
         )
 
         assert json_request.is_json is True
@@ -199,7 +192,7 @@ Host: example.com
 
 {"data": "test"}"""
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write(content)
             filepath = f.name
 
@@ -276,7 +269,7 @@ class TestInjectPayload:
             headers={"Content-Type": "application/json"},
             body='{"message": "original"}',
             body_json={"message": "original"},
-            injection_param="message"
+            injection_param="message",
         )
 
         result = inject_payload(request, "PAYLOAD")
@@ -292,7 +285,7 @@ class TestInjectPayload:
             headers={"Content-Type": "application/json"},
             body='{"messages": [{"role": "user", "content": "hello"}]}',
             body_json={"messages": [{"role": "user", "content": "hello"}]},
-            injection_param="messages[0].content"
+            injection_param="messages[0].content",
         )
 
         result = inject_payload(request, "INJECTED")
@@ -306,7 +299,7 @@ class TestInjectPayload:
             url="https://example.com",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             body="username=test&message=original",
-            injection_param="message"
+            injection_param="message",
         )
 
         result = inject_payload(request, "PAYLOAD")
@@ -321,7 +314,7 @@ class TestInjectPayload:
             url="https://example.com",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             body="query=test",
-            injection_param="query"
+            injection_param="query",
         )
 
         result = inject_payload(request, "test&inject=bad")
@@ -331,12 +324,7 @@ class TestInjectPayload:
 
     def test_inject_no_param_raises(self):
         """Test injection without param raises error"""
-        request = ParsedRequest(
-            method="POST",
-            url="https://example.com",
-            headers={},
-            body="test"
-        )
+        request = ParsedRequest(method="POST", url="https://example.com", headers={}, body="test")
 
         with pytest.raises(RequestParseError, match="No injection parameter"):
             inject_payload(request, "PAYLOAD")
@@ -350,7 +338,7 @@ class TestInjectPayload:
             headers={"Content-Type": "application/json"},
             body=json.dumps(original_body),
             body_json=original_body,
-            injection_param="message"
+            injection_param="message",
         )
 
         inject_payload(request, "MODIFIED")

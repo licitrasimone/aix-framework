@@ -1,12 +1,11 @@
 """
 Tests for AIX Reporter Module
 """
+
 import json
 import tempfile
 from datetime import datetime
 from pathlib import Path
-
-import pytest
 
 from aix.core.reporter import Finding, Reporter, Severity
 
@@ -45,7 +44,7 @@ class TestFinding:
             technique="injection",
             payload="test payload",
             response="test response",
-            target="https://test.com"
+            target="https://test.com",
         )
 
         assert finding.title == "Test Finding"
@@ -62,7 +61,7 @@ class TestFinding:
             severity=Severity.LOW,
             technique="test",
             payload="payload",
-            response="response"
+            response="response",
         )
 
         assert finding.target == ""
@@ -80,34 +79,30 @@ class TestFinding:
             response="I am DAN",
             target="https://api.example.com",
             details="Bypassed safety",
-            reason="Model responded without restrictions"
+            reason="Model responded without restrictions",
         )
 
         result = finding.to_dict()
 
-        assert result['title'] == "Test Finding"
-        assert result['severity'] == "critical"
-        assert result['technique'] == "jailbreak"
-        assert result['payload'] == "DAN payload"
-        assert result['response'] == "I am DAN"
-        assert result['target'] == "https://api.example.com"
-        assert result['details'] == "Bypassed safety"
-        assert result['reason'] == "Model responded without restrictions"
-        assert 'timestamp' in result
+        assert result["title"] == "Test Finding"
+        assert result["severity"] == "critical"
+        assert result["technique"] == "jailbreak"
+        assert result["payload"] == "DAN payload"
+        assert result["response"] == "I am DAN"
+        assert result["target"] == "https://api.example.com"
+        assert result["details"] == "Bypassed safety"
+        assert result["reason"] == "Model responded without restrictions"
+        assert "timestamp" in result
 
     def test_finding_timestamp_format(self):
         """Test timestamp is in ISO format"""
         finding = Finding(
-            title="Test",
-            severity=Severity.INFO,
-            technique="test",
-            payload="p",
-            response="r"
+            title="Test", severity=Severity.INFO, technique="test", payload="p", response="r"
         )
 
         result = finding.to_dict()
         # Should be valid ISO format
-        datetime.fromisoformat(result['timestamp'])
+        datetime.fromisoformat(result["timestamp"])
 
 
 class TestReporter:
@@ -137,11 +132,7 @@ class TestReporter:
         """Test adding findings"""
         reporter = Reporter()
         finding = Finding(
-            title="Test",
-            severity=Severity.HIGH,
-            technique="test",
-            payload="p",
-            response="r"
+            title="Test", severity=Severity.HIGH, technique="test", payload="p", response="r"
         )
 
         reporter.add_finding(finding)
@@ -159,7 +150,7 @@ class TestReporter:
                 severity=Severity.MEDIUM,
                 technique="test",
                 payload=f"payload_{i}",
-                response=f"response_{i}"
+                response=f"response_{i}",
             )
             reporter.add_finding(finding)
 
@@ -176,12 +167,12 @@ class TestReporter:
             technique="test",
             payload="test payload",
             response="test response",
-            target="https://test.com"
+            target="https://test.com",
         )
         reporter.add_finding(finding)
         reporter.end()
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             filepath = f.name
 
         try:
@@ -190,11 +181,11 @@ class TestReporter:
             with open(filepath) as f:
                 data = json.load(f)
 
-            assert 'scan_info' in data
-            assert 'findings' in data
-            assert data['scan_info']['total_findings'] == 1
-            assert len(data['findings']) == 1
-            assert data['findings'][0]['title'] == "JSON Export Test"
+            assert "scan_info" in data
+            assert "findings" in data
+            assert data["scan_info"]["total_findings"] == 1
+            assert len(data["findings"]) == 1
+            assert data["findings"][0]["title"] == "JSON Export Test"
         finally:
             Path(filepath).unlink(missing_ok=True)
 
@@ -208,11 +199,11 @@ class TestReporter:
             technique="test",
             payload="<script>alert('xss')</script>",
             response="test response with <html>",
-            target="https://test.com"
+            target="https://test.com",
         )
         reporter.add_finding(finding)
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
             filepath = f.name
 
         try:
@@ -220,12 +211,12 @@ class TestReporter:
 
             content = Path(filepath).read_text()
 
-            assert '<!DOCTYPE html>' in content
-            assert 'AIX Security Report' in content
-            assert 'HTML Export Test' in content
+            assert "<!DOCTYPE html>" in content
+            assert "AIX Security Report" in content
+            assert "HTML Export Test" in content
             # Check HTML escaping
-            assert '&lt;script&gt;' in content
-            assert '<script>' not in content.split('<style>')[1].split('</style>')[0]  # Not in CSS
+            assert "&lt;script&gt;" in content
+            assert "<script>" not in content.split("<style>")[1].split("</style>")[0]  # Not in CSS
         finally:
             Path(filepath).unlink(missing_ok=True)
 
@@ -234,12 +225,15 @@ class TestReporter:
         reporter = Reporter()
 
         test_cases = [
-            ('&', '&amp;'),
-            ('<', '&lt;'),
-            ('>', '&gt;'),
-            ('"', '&quot;'),
-            ("'", '&#39;'),
-            ('<script>alert("xss")</script>', '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;'),
+            ("&", "&amp;"),
+            ("<", "&lt;"),
+            (">", "&gt;"),
+            ('"', "&quot;"),
+            ("'", "&#39;"),
+            (
+                '<script>alert("xss")</script>',
+                "&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;",
+            ),
         ]
 
         for input_str, expected in test_cases:
@@ -249,7 +243,7 @@ class TestReporter:
         """Test JSON export with no findings"""
         reporter = Reporter()
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             filepath = f.name
 
         try:
@@ -258,8 +252,8 @@ class TestReporter:
             with open(filepath) as f:
                 data = json.load(f)
 
-            assert data['scan_info']['total_findings'] == 0
-            assert data['findings'] == []
+            assert data["scan_info"]["total_findings"] == 0
+            assert data["findings"] == []
         finally:
             Path(filepath).unlink(missing_ok=True)
 
@@ -267,15 +261,23 @@ class TestReporter:
         """Test findings are properly categorized by severity"""
         reporter = Reporter()
 
-        severities = [Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW, Severity.INFO]
+        severities = [
+            Severity.CRITICAL,
+            Severity.HIGH,
+            Severity.MEDIUM,
+            Severity.LOW,
+            Severity.INFO,
+        ]
         for sev in severities:
-            reporter.add_finding(Finding(
-                title=f"{sev.value} finding",
-                severity=sev,
-                technique="test",
-                payload="p",
-                response="r"
-            ))
+            reporter.add_finding(
+                Finding(
+                    title=f"{sev.value} finding",
+                    severity=sev,
+                    technique="test",
+                    payload="p",
+                    response="r",
+                )
+            )
 
         # Verify all severities present
         found_severities = {f.severity for f in reporter.findings}

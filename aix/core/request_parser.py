@@ -16,6 +16,7 @@ from urllib.parse import quote_plus
 @dataclass
 class ParsedRequest:
     """Represents a parsed HTTP request"""
+
     method: str
     url: str
     headers: dict[str, str] = field(default_factory=dict)
@@ -26,10 +27,11 @@ class ParsedRequest:
     @property
     def host(self) -> str:
         """Extract host from URL or headers"""
-        if 'Host' in self.headers:
-            return self.headers['Host']
+        if "Host" in self.headers:
+            return self.headers["Host"]
         # Parse from URL
         from urllib.parse import urlparse
+
         parsed = urlparse(self.url)
         return parsed.netloc
 
@@ -37,18 +39,19 @@ class ParsedRequest:
     def content_type(self) -> str | None:
         """Get content type from headers"""
         for key, value in self.headers.items():
-            if key.lower() == 'content-type':
-                return value.split(';')[0].strip()
+            if key.lower() == "content-type":
+                return value.split(";")[0].strip()
         return None
 
     @property
     def is_json(self) -> bool:
         """Check if body is JSON"""
-        return self.content_type == 'application/json' and self.body_json is not None
+        return self.content_type == "application/json" and self.body_json is not None
 
 
 class RequestParseError(Exception):
     """Raised when request parsing fails"""
+
     pass
 
 
@@ -62,13 +65,13 @@ class RequestParser:
 
     def parse(self, injection_param: str | None = None) -> ParsedRequest:
         """Parse the request file and return a ParsedRequest object"""
-        content = self.filepath.read_text(encoding='utf-8')
+        content = self.filepath.read_text(encoding="utf-8")
         return self.parse_raw(content, injection_param)
 
     @staticmethod
     def parse_raw(content: str, injection_param: str | None = None) -> ParsedRequest:
         """Parse raw HTTP request content"""
-        lines = content.strip().split('\n')
+        lines = content.strip().split("\n")
         if not lines:
             raise RequestParseError("Empty request file")
 
@@ -82,18 +85,18 @@ class RequestParser:
 
         for i, line in enumerate(lines[1:], start=1):
             line = line.strip()
-            if line == '':
+            if line == "":
                 body_start_idx = i + 1
                 break
-            if ':' in line:
-                key, value = line.split(':', 1)
+            if ":" in line:
+                key, value = line.split(":", 1)
                 headers[key.strip()] = value.strip()
 
         # Parse body
         body = None
         body_json = None
         if body_start_idx < len(lines):
-            body = '\n'.join(lines[body_start_idx:]).strip()
+            body = "\n".join(lines[body_start_idx:]).strip()
             if body:
                 # Try to parse as JSON
                 try:
@@ -102,8 +105,8 @@ class RequestParser:
                     pass
 
         # Construct full URL
-        host = headers.get('Host', 'localhost')
-        scheme = 'https' if '443' in host else 'http'
+        host = headers.get("Host", "localhost")
+        scheme = "https" if "443" in host else "http"
         url = f"{scheme}://{host}{path}"
 
         return ParsedRequest(
@@ -112,7 +115,7 @@ class RequestParser:
             headers=headers,
             body=body,
             body_json=body_json,
-            injection_param=injection_param
+            injection_param=injection_param,
         )
 
     @staticmethod
@@ -124,7 +127,7 @@ class RequestParser:
 
         method = parts[0].upper()
         path = parts[1]
-        protocol = parts[2] if len(parts) > 2 else 'HTTP/1.1'
+        protocol = parts[2] if len(parts) > 2 else "HTTP/1.1"
 
         return method, path, protocol
 
@@ -141,6 +144,7 @@ def set_nested_value(obj: Any, path: str, value: Any) -> Any:
     Returns a copy with the value set.
     """
     import copy
+
     obj = copy.deepcopy(obj)
 
     # Parse path into components
@@ -193,7 +197,7 @@ def _parse_path(path: str) -> list[Any]:
     components = []
 
     # Split by dots, but handle array indices
-    pattern = r'([^\.\[\]]+)|\[(\d+)\]'
+    pattern = r"([^\.\[\]]+)|\[(\d+)\]"
     matches = re.findall(pattern, path)
 
     for match in matches:
@@ -226,9 +230,7 @@ def inject_payload(request: ParsedRequest, payload: str) -> ParsedRequest:
     if request.is_json and request.body_json:
         # Inject into JSON body
         new_request.body_json = set_nested_value(
-            request.body_json,
-            request.injection_param,
-            payload
+            request.body_json, request.injection_param, payload
         )
         new_request.body = json.dumps(new_request.body_json)
     elif request.body:
@@ -238,7 +240,7 @@ def inject_payload(request: ParsedRequest, payload: str) -> ParsedRequest:
         # Regex to match: (^|&)param=([^&]*)
         # We want to replace group 2 with the payload
         param = re.escape(request.injection_param)
-        pattern = r'(^|&)' + param + r'=([^&]*)'
+        pattern = r"(^|&)" + param + r"=([^&]*)"
 
         if re.search(pattern, request.body):
             # Replace logic: keep the delimiter and key, replace value with payload
@@ -248,28 +250,30 @@ def inject_payload(request: ParsedRequest, payload: str) -> ParsedRequest:
             new_request.body = re.sub(
                 pattern,
                 lambda m: f"{m.group(1)}{request.injection_param}={encoded_payload}",
-                request.body
+                request.body,
             )
         else:
             # Fallback: if param not found as key=value, try naive replacement (placeholder style)
             # This covers cases where user just put "MARKER" in the body
             if request.injection_param in request.body:
-                 # If it looks like a placeholder, maybe don't encode?
-                 # But if it's in a form body, it probably should be.
-                 # Let's check if the body looks like url-encoded (has & or =)
-                 if '&' in request.body or '=' in request.body:
-                     new_request.body = request.body.replace(request.injection_param, quote_plus(payload))
-                 else:
-                     new_request.body = request.body.replace(request.injection_param, payload)
+                # If it looks like a placeholder, maybe don't encode?
+                # But if it's in a form body, it probably should be.
+                # Let's check if the body looks like url-encoded (has & or =)
+                if "&" in request.body or "=" in request.body:
+                    new_request.body = request.body.replace(
+                        request.injection_param, quote_plus(payload)
+                    )
+                else:
+                    new_request.body = request.body.replace(request.injection_param, payload)
             else:
-                 # If explicit parameter was requested but not found even as text
-                 # effectively append it? Or just error?
-                 # For now, let's append it to be helpful for form-data
-                 encoded_payload = quote_plus(payload)
-                 if new_request.body:
-                     new_request.body += f"&{request.injection_param}={encoded_payload}"
-                 else:
-                     new_request.body = f"{request.injection_param}={encoded_payload}"
+                # If explicit parameter was requested but not found even as text
+                # effectively append it? Or just error?
+                # For now, let's append it to be helpful for form-data
+                encoded_payload = quote_plus(payload)
+                if new_request.body:
+                    new_request.body += f"&{request.injection_param}={encoded_payload}"
+                else:
+                    new_request.body = f"{request.injection_param}={encoded_payload}"
     else:
         raise RequestParseError("No body to inject payload into")
 
@@ -292,11 +296,11 @@ def load_request(filepath: str, injection_param: str | None = None) -> ParsedReq
 
 
 __all__ = [
-    'ParsedRequest',
-    'RequestParser',
-    'RequestParseError',
-    'load_request',
-    'inject_payload',
-    'set_nested_value',
-    'get_nested_value',
+    "ParsedRequest",
+    "RequestParseError",
+    "RequestParser",
+    "get_nested_value",
+    "inject_payload",
+    "load_request",
+    "set_nested_value",
 ]

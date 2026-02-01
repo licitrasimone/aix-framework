@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
 from rich.panel import Panel
@@ -23,6 +23,7 @@ console = Console()
 
 class Severity(Enum):
     """Severity levels for findings"""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -33,6 +34,7 @@ class Severity(Enum):
 @dataclass
 class Finding:
     """Represents a security finding"""
+
     title: str
     severity: Severity
     technique: str
@@ -41,21 +43,21 @@ class Finding:
     target: str = ""
     details: str = ""
     reason: str = ""  # New field for exploit motivation/reason
-    owasp: list['OWASPCategory'] = field(default_factory=list)  # OWASP LLM Top 10 mapping
+    owasp: list["OWASPCategory"] = field(default_factory=list)  # OWASP LLM Top 10 mapping
     timestamp: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            'title': self.title,
-            'severity': self.severity.value,
-            'technique': self.technique,
-            'payload': self.payload,
-            'response': self.response,
-            'target': self.target,
-            'details': self.details,
-            'reason': self.reason,
-            'owasp': [cat.id for cat in self.owasp] if self.owasp else [],
-            'timestamp': self.timestamp.isoformat(),
+            "title": self.title,
+            "severity": self.severity.value,
+            "technique": self.technique,
+            "payload": self.payload,
+            "response": self.response,
+            "target": self.target,
+            "details": self.details,
+            "reason": self.reason,
+            "owasp": [cat.id for cat in self.owasp] if self.owasp else [],
+            "timestamp": self.timestamp.isoformat(),
         }
 
 
@@ -99,16 +101,18 @@ class Reporter:
             owasp_ids = ", ".join(cat.id for cat in finding.owasp)
             owasp_line = f"[dim]OWASP:[/dim] {owasp_ids}\n"
 
-        console.print(Panel(
-            f"[bold]{finding.title}[/bold]\n\n"
-            f"[dim]Technique:[/dim] {finding.technique}\n"
-            f"{owasp_line}"
-            f"[dim]Reason:[/dim] {finding.reason}\n"
-            f"[dim]Payload:[/dim] {finding.payload[:100]}...\n"
-            f"[dim]Response:[/dim] {finding.response[:200]}...",
-            title=f"[{color}]{finding.severity.value.upper()}[/{color}]",
-            border_style=color,
-        ))
+        console.print(
+            Panel(
+                f"[bold]{finding.title}[/bold]\n\n"
+                f"[dim]Technique:[/dim] {finding.technique}\n"
+                f"{owasp_line}"
+                f"[dim]Reason:[/dim] {finding.reason}\n"
+                f"[dim]Payload:[/dim] {finding.payload[:100]}...\n"
+                f"[dim]Response:[/dim] {finding.response[:200]}...",
+                title=f"[{color}]{finding.severity.value.upper()}[/{color}]",
+                border_style=color,
+            )
+        )
 
     def print_summary(self) -> None:
         """Print findings summary"""
@@ -135,22 +139,19 @@ class Reporter:
             }.get(severity, "white")
 
             if counts[severity] > 0:
-                table.add_row(
-                    f"[{color}]{severity.value.upper()}[/{color}]",
-                    str(counts[severity])
-                )
+                table.add_row(f"[{color}]{severity.value.upper()}[/{color}]", str(counts[severity]))
 
         console.print(table)
 
     def export_json(self, filepath: str) -> None:
         """Export findings to JSON"""
         data = {
-            'scan_info': {
-                'start_time': self.start_time.isoformat() if self.start_time else None,
-                'end_time': self.end_time.isoformat() if self.end_time else None,
-                'total_findings': len(self.findings),
+            "scan_info": {
+                "start_time": self.start_time.isoformat() if self.start_time else None,
+                "end_time": self.end_time.isoformat() if self.end_time else None,
+                "total_findings": len(self.findings),
             },
-            'findings': [f.to_dict() for f in self.findings],
+            "findings": [f.to_dict() for f in self.findings],
         }
 
         Path(filepath).write_text(json.dumps(data, indent=2))
@@ -160,13 +161,13 @@ class Reporter:
 
         # Count findings by severity
         counts = dict.fromkeys(Severity, 0)
-        
+
         # Group findings by target
         findings_by_target: dict[str, list[Finding]] = {}
-        
+
         for finding in self.findings:
             counts[finding.severity] += 1
-            
+
             target = finding.target or "Unknown Target"
             if target not in findings_by_target:
                 findings_by_target[target] = []
@@ -174,30 +175,34 @@ class Reporter:
 
         # Sort findings within each target by severity
         severity_order = {
-            Severity.CRITICAL: 0, 
-            Severity.HIGH: 1, 
-            Severity.MEDIUM: 2, 
-            Severity.LOW: 3, 
-            Severity.INFO: 4
+            Severity.CRITICAL: 0,
+            Severity.HIGH: 1,
+            Severity.MEDIUM: 2,
+            Severity.LOW: 3,
+            Severity.INFO: 4,
         }
-        
+
         for target in findings_by_target:
             findings_by_target[target].sort(key=lambda f: severity_order.get(f.severity, 99))
 
         # Generate findings HTML
         findings_html = ""
-        
+
         for target, target_findings in findings_by_target.items():
             findings_html += f'<div class="target-group"><h3>{target}</h3>'
-            
+
             for finding in target_findings:
                 severity_class = finding.severity.value
                 # Generate OWASP badges
                 owasp_badges = ""
                 if finding.owasp:
-                    owasp_badges = '<div class="owasp-tags">' + ''.join(
-                        f'<span class="owasp-badge">{cat.id}</span>' for cat in finding.owasp
-                    ) + '</div>'
+                    owasp_badges = (
+                        '<div class="owasp-tags">'
+                        + "".join(
+                            f'<span class="owasp-badge">{cat.id}</span>' for cat in finding.owasp
+                        )
+                        + "</div>"
+                    )
                 findings_html += f"""
                 <div class="finding {severity_class}">
                     <div class="finding-header">
@@ -511,9 +516,10 @@ class Reporter:
 
     def _escape_html(self, text: str) -> str:
         """Escape HTML special characters"""
-        return (text
-            .replace('&', '&amp;')
-            .replace('<', '&lt;')
-            .replace('>', '&gt;')
-            .replace('"', '&quot;')
-            .replace("'", '&#39;'))
+        return (
+            text.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+            .replace("'", "&#39;")
+        )

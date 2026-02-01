@@ -7,60 +7,55 @@ Handles:
 - Mermaid diagram export
 - Dry-run execution plan display
 """
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any
+
 import time
+from typing import Any
 
 from rich.console import Console, Group
 from rich.live import Live
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
-from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
 
 from aix.core.chain_engine.context import StepResult, StepStatus
 from aix.core.chain_engine.playbook import Playbook, StepConfig, StepType
-from .base import Severity
-
 
 # Module color mapping
 MODULE_COLORS = {
-    'recon': 'cyan',
-    'inject': 'magenta',
-    'jailbreak': 'red',
-    'extract': 'yellow',
-    'leak': 'orange1',
-    'exfil': 'red',
-    'rag': 'green',
-    'agent': 'blue',
-    'multiturn': 'purple',
-    'memory': 'bright_magenta',
-    'dos': 'bright_red',
-    'fuzz': 'bright_yellow',
-    'fingerprint': 'bright_cyan',
-    'condition': 'white',
-    'report': 'bright_white',
+    "recon": "cyan",
+    "inject": "magenta",
+    "jailbreak": "red",
+    "extract": "yellow",
+    "leak": "orange1",
+    "exfil": "red",
+    "rag": "green",
+    "agent": "blue",
+    "multiturn": "purple",
+    "memory": "bright_magenta",
+    "dos": "bright_red",
+    "fuzz": "bright_yellow",
+    "fingerprint": "bright_cyan",
+    "condition": "white",
+    "report": "bright_white",
 }
 
 # Status symbols
 STATUS_SYMBOLS = {
-    StepStatus.PENDING: '○',
-    StepStatus.RUNNING: '●',
-    StepStatus.SUCCESS: '✓',
-    StepStatus.FAILED: '✗',
-    StepStatus.SKIPPED: '◌',
-    StepStatus.TIMEOUT: '⏱',
+    StepStatus.PENDING: "○",
+    StepStatus.RUNNING: "●",
+    StepStatus.SUCCESS: "✓",
+    StepStatus.FAILED: "✗",
+    StepStatus.SKIPPED: "◌",
+    StepStatus.TIMEOUT: "⏱",
 }
 
 STATUS_COLORS = {
-    StepStatus.PENDING: 'dim',
-    StepStatus.RUNNING: 'cyan',
-    StepStatus.SUCCESS: 'green',
-    StepStatus.FAILED: 'red',
-    StepStatus.SKIPPED: 'dim',
-    StepStatus.TIMEOUT: 'yellow',
+    StepStatus.PENDING: "dim",
+    StepStatus.RUNNING: "cyan",
+    StepStatus.SUCCESS: "green",
+    StepStatus.FAILED: "red",
+    StepStatus.SKIPPED: "dim",
+    StepStatus.TIMEOUT: "yellow",
 }
 
 
@@ -104,17 +99,17 @@ class PlaybookVisualizer:
 
     def _render_step_node(self, step: StepConfig) -> str:
         """Render a single step as a tree node."""
-        color = MODULE_COLORS.get(step.module or step.type.value, 'white')
+        color = MODULE_COLORS.get(step.module or step.type.value, "white")
 
         # Icon based on type
         if step.type == StepType.MODULE:
-            icon = '🔧'
+            icon = "🔧"
         elif step.type == StepType.CONDITION:
-            icon = '🔀'
+            icon = "🔀"
         elif step.type == StepType.REPORT:
-            icon = '📊'
+            icon = "📊"
         else:
-            icon = '○'
+            icon = "○"
 
         # Build node text
         node = f"{icon} [{color}]{step.id}[/{color}]"
@@ -166,7 +161,7 @@ class PlaybookVisualizer:
                     lines.append("       │")
                     branches = []
                     for cond in step.conditions:
-                        target = cond.get('then') or cond.get('else')
+                        target = cond.get("then") or cond.get("else")
                         if target:
                             branches.append(target)
                     if branches:
@@ -178,7 +173,7 @@ class PlaybookVisualizer:
                     lines.append("       ▼")
 
             # Next step
-            if step.on_success and step.on_success not in ('abort', 'continue', 'report'):
+            if step.on_success and step.on_success not in ("abort", "continue", "report"):
                 step = playbook.get_step(step.on_success)
             else:
                 # Try sequential
@@ -233,11 +228,13 @@ class DryRunVisualizer:
         """
         # Header
         self.console.print()
-        self.console.print(Panel(
-            f"[bold]DRY RUN: {playbook.name}[/bold]\n"
-            "[dim]This shows the execution plan without running any attacks[/dim]",
-            border_style="yellow",
-        ))
+        self.console.print(
+            Panel(
+                f"[bold]DRY RUN: {playbook.name}[/bold]\n"
+                "[dim]This shows the execution plan without running any attacks[/dim]",
+                border_style="yellow",
+            )
+        )
 
         # Variables
         merged_vars = playbook.variables.copy()
@@ -269,7 +266,7 @@ class DryRunVisualizer:
 
     def _print_step_plan(self, num: int, step: StepConfig) -> None:
         """Print a single step in the plan."""
-        color = MODULE_COLORS.get(step.module or step.type.value, 'white')
+        color = MODULE_COLORS.get(step.module or step.type.value, "white")
         step_type = step.type.value
 
         self.console.print(f"\n[bold]{num}. {step.name}[/bold] [dim]({step_type})[/dim]")
@@ -291,11 +288,11 @@ class DryRunVisualizer:
         if step.conditions:
             self.console.print("   └─ Branches:")
             for cond in step.conditions:
-                if 'if' in cond:
-                    target = cond.get('then', 'continue')
+                if "if" in cond:
+                    target = cond.get("then", "continue")
                     self.console.print(f"      ├─ IF {cond['if']} → {target}")
-                elif 'else' in cond:
-                    target = cond.get('else') or cond.get('then', 'continue')
+                elif "else" in cond:
+                    target = cond.get("else") or cond.get("then", "continue")
                     self.console.print(f"      └─ ELSE → {target}")
 
         if step.on_success:
@@ -314,7 +311,7 @@ class DryRunVisualizer:
 
         # Find abort path
         for step in playbook.steps:
-            if step.on_fail == 'abort':
+            if step.on_fail == "abort":
                 paths["Abort on fail"] = [step.id, "ABORT"]
                 break
 
@@ -366,7 +363,9 @@ class LiveChainVisualizer:
         )
         self.live.start()
 
-    def update_step(self, step_id: str, status: StepStatus, result: StepResult | None = None) -> None:
+    def update_step(
+        self, step_id: str, status: StepStatus, result: StepResult | None = None
+    ) -> None:
         """Update a step's status."""
         self.step_status[step_id] = status
         self.current_step = step_id if status == StepStatus.RUNNING else self.current_step
@@ -442,8 +441,8 @@ class LiveChainVisualizer:
     def _render_step_line(self, step: StepConfig) -> Text:
         """Render a single step line."""
         status = self.step_status.get(step.id, StepStatus.PENDING)
-        symbol = STATUS_SYMBOLS.get(status, '?')
-        color = STATUS_COLORS.get(status, 'white')
+        symbol = STATUS_SYMBOLS.get(status, "?")
+        color = STATUS_COLORS.get(status, "white")
 
         line = Text()
         line.append(f"  [{symbol}] ", style=color)
@@ -468,7 +467,7 @@ class LiveChainVisualizer:
 class MermaidExporter:
     """Export playbook as Mermaid diagram."""
 
-    def __init__(self, theme: str = 'base', direction: str = 'TD', icons: bool = True):
+    def __init__(self, theme: str = "base", direction: str = "TD", icons: bool = True):
         """
         Initialize exporter.
 
@@ -495,16 +494,20 @@ class MermaidExporter:
 
         # Header
         lines.append(f"flowchart {self.direction}")
-        
+
         # Link Style - Orthogonal/Technical
-        lines.append("    linkStyle default stroke:#00d4ff,stroke-width:2px,fill:none,stroke-dasharray: 0;")
-        
+        lines.append(
+            "    linkStyle default stroke:#00d4ff,stroke-width:2px,fill:none,stroke-dasharray: 0;"
+        )
+
         # Class Definitions (Tech/Circuit Theme)
         lines.append("    classDef base fill:#0a0a0f,stroke:#00d4ff,stroke-width:2px,color:#fff;")
         lines.append("    classDef attack fill:#0a0a0f,stroke:#ff4757,stroke-width:2px,color:#fff;")
         lines.append("    classDef check fill:#0a0a0f,stroke:#ffa502,stroke-width:2px,color:#fff;")
         lines.append("    classDef report fill:#0a0a0f,stroke:#2ed573,stroke-width:2px,color:#fff;")
-        lines.append("    classDef sub fill:#0a0a0f,stroke:#aaa,stroke-width:1px,color:#aaa,stroke-dasharray: 4 4;")
+        lines.append(
+            "    classDef sub fill:#0a0a0f,stroke:#aaa,stroke-width:1px,color:#aaa,stroke-dasharray: 4 4;"
+        )
 
         # Subgraph for playbook
         lines.append(f"    subgraph {self._sanitize(playbook.name)}")
@@ -520,11 +523,11 @@ class MermaidExporter:
             elif step.type == StepType.REPORT:
                 style_class = "report"
             elif step.type == StepType.MODULE:
-                if step.module in ('recon', 'fingerprint'):
+                if step.module in ("recon", "fingerprint"):
                     style_class = "base"
                 else:
                     style_class = "attack"
-            
+
             lines.append(f"        {node}:::{style_class}")
 
         lines.append("    end")
@@ -558,7 +561,7 @@ class MermaidExporter:
             # Stadium/Rounded for IO/Report
             return f'{step.id}(["{label}"])'
         elif step.type == StepType.MODULE:
-            if step.module in ('recon', 'fingerprint'):
+            if step.module in ("recon", "fingerprint"):
                 # Standard Rectangle
                 return f'{step.id}["{label}"]'
             else:
@@ -573,16 +576,16 @@ class MermaidExporter:
 
         if step.type == StepType.CONDITION and step.conditions:
             for cond in step.conditions:
-                target = cond.get('then') or cond.get('else')
-                if target and target not in ('abort', 'continue', 'report'):
-                    label = cond.get('if', 'else')[:15]
+                target = cond.get("then") or cond.get("else")
+                if target and target not in ("abort", "continue", "report"):
+                    label = cond.get("if", "else")[:15]
                     edges.append(f'{step.id} -- "{label}" --> {target}')
         else:
-            if step.on_success and step.on_success not in ('abort', 'continue', 'report'):
-                edges.append(f'{step.id} --> {step.on_success}')
-            if step.on_fail and step.on_fail not in ('abort', 'continue', 'report'):
+            if step.on_success and step.on_success not in ("abort", "continue", "report"):
+                edges.append(f"{step.id} --> {step.on_success}")
+            if step.on_fail and step.on_fail not in ("abort", "continue", "report"):
                 # Dotted link for failures
-                edges.append(f'{step.id} -.-> {step.on_fail}')
+                edges.append(f"{step.id} -.-> {step.on_fail}")
 
         return edges
 
@@ -593,35 +596,35 @@ class MermaidExporter:
     def _get_icon(self, step: StepConfig) -> str:
         """Get emoji icon for step type."""
         icons = {
-            'recon': '🔍',
-            'inject': '💉',
-            'jailbreak': '🔓',
-            'extract': '📜',
-            'leak': '💧',
-            'exfil': '📤',
-            'rag': '🗄️',
-            'agent': '🤖',
-            'multiturn': '💬',
-            'memory': '🧠',
-            'dos': '💥',
-            'fuzz': '🔀',
-            'fingerprint': '🔎',
-            'condition': '❓',
-            'report': '📊',
+            "recon": "🔍",
+            "inject": "💉",
+            "jailbreak": "🔓",
+            "extract": "📜",
+            "leak": "💧",
+            "exfil": "📤",
+            "rag": "🗄️",
+            "agent": "🤖",
+            "multiturn": "💬",
+            "memory": "🧠",
+            "dos": "💥",
+            "fuzz": "🔀",
+            "fingerprint": "🔎",
+            "condition": "❓",
+            "report": "📊",
         }
         module = step.module or step.type.value
-        return icons.get(module, '○')
+        return icons.get(module, "○")
 
     def _sanitize(self, text: str) -> str:
         """Sanitize text for Mermaid."""
-        return text.replace('"', "'").replace('\n', ' ')
+        return text.replace('"', "'").replace("\n", " ")
 
 
 def print_execution_summary(
     playbook: Playbook,
     execution_path: list[str],
     step_results: dict[str, StepResult],
-    console: Console | None = None
+    console: Console | None = None,
 ) -> None:
     """
     Print execution summary with visual flow.
@@ -636,7 +639,7 @@ def print_execution_summary(
         console = Console()
 
     console.print()
-    console.print(f"[bold]═══ Execution Flow ═══[/bold]")
+    console.print("[bold]═══ Execution Flow ═══[/bold]")
     console.print()
 
     for i, step_id in enumerate(execution_path):
@@ -648,8 +651,8 @@ def print_execution_summary(
 
         # Status symbol
         status = result.status if result else StepStatus.PENDING
-        symbol = STATUS_SYMBOLS.get(status, '?')
-        color = STATUS_COLORS.get(status, 'white')
+        symbol = STATUS_SYMBOLS.get(status, "?")
+        color = STATUS_COLORS.get(status, "white")
 
         # Build line
         prefix = "├─▶" if i < len(execution_path) - 1 else "└─▶"
@@ -679,28 +682,29 @@ def print_execution_summary(
 
     console.print()
 
+
 class CytoscapeExporter:
     """Export playbook and execution result as Cytoscape elements (JSON)."""
 
     def __init__(self):
         pass
 
-    def export(self, playbook: Playbook, result: 'ChainResult | None' = None) -> str:
+    def export(self, playbook: Playbook, result: "ChainResult | None" = None) -> str:
         """
         Export playbook as simplified Cytoscape elements JSON string.
-        
+
         Args:
             playbook: Parsed playbook
             result: Optional execution result to color-code nodes
-            
+
         Returns:
             JSON string defining 'nodes' and 'edges'
         """
         import json
-        
+
         nodes = []
         edges = []
-        
+
         # Track execution status if result provided
         step_status = {}
         if result:
@@ -709,129 +713,128 @@ class CytoscapeExporter:
             executed_ids = set()
             if result.execution_path:
                 executed_ids = set(result.execution_path)
-            
+
             for step in playbook.steps:
                 if step.id in executed_ids:
                     # simplistic check: if it's in path, assume it ran
                     # We'd ideally need the specific StepStatus from context
-                    step_status[step.id] = 'executed'
+                    step_status[step.id] = "executed"
                 else:
-                    step_status[step.id] = 'pending'
-                    
+                    step_status[step.id] = "pending"
+
             # granular status if possible
             if result.context:
                 for res in result.context.results.values():
-                    step_status[res.step_id] = res.status.name.lower() # success, failed, etc.
+                    step_status[res.step_id] = res.status.name.lower()  # success, failed, etc.
 
         for step in playbook.steps:
             # Node Data
-            status = step_status.get(step.id, 'default')
-            
+            status = step_status.get(step.id, "default")
+
             # Additional details from result
             details = {}
             if result and result.context:
                 res = result.context.results.get(step.id)
                 if res:
-                    details['duration'] = f"{res.duration:.2f}s"
-                    details['error'] = res.error
-                    details['findings'] = res.findings_count
-                    
+                    details["duration"] = f"{res.duration:.2f}s"
+                    details["error"] = res.error
+                    details["findings"] = res.findings_count
+
                     # Serialize vars and output safely
                     import json
+
                     try:
-                        details['variables'] = json.dumps(res.stored_vars, indent=2) if res.stored_vars else None
+                        details["variables"] = (
+                            json.dumps(res.stored_vars, indent=2) if res.stored_vars else None
+                        )
                     except Exception:
-                        details['variables'] = str(res.stored_vars)
+                        details["variables"] = str(res.stored_vars)
 
                     try:
                         # Truncate output if too large to avoid lag
                         out_str = json.dumps(res.output, indent=2)
                         if len(out_str) > 1000:
                             out_str = out_str[:1000] + "... (truncated)"
-                        details['output'] = out_str if res.output else None
+                        details["output"] = out_str if res.output else None
                     except Exception:
-                        details['output'] = str(res.output)[:1000]
-            
+                        details["output"] = str(res.output)[:1000]
+
             # Determine type for styling
-            node_type = 'step'
+            node_type = "step"
             if step.type == StepType.CONDITION:
-                node_type = 'condition'
+                node_type = "condition"
             elif step.type == StepType.REPORT:
-                node_type = 'report'
-            
+                node_type = "report"
+
             # Icon
             icon = self._get_icon(step)
-            
+
             # Label
             label = f"{step.name or step.id}"
-            if len(label) > 20: 
+            if len(label) > 20:
                 label = label[:20] + "..."
-            
-            nodes.append({
-                "data": {
-                    "id": step.id,
-                    "label": label,
-                    "full_name": step.name or step.id,
-                    "type": node_type,
-                    "module": step.module or step.type.value,
-                    "status": status,
-                    "icon": icon,
-                    "details": details  # Pass rich details to frontend
+
+            nodes.append(
+                {
+                    "data": {
+                        "id": step.id,
+                        "label": label,
+                        "full_name": step.name or step.id,
+                        "type": node_type,
+                        "module": step.module or step.type.value,
+                        "status": status,
+                        "icon": icon,
+                        "details": details,  # Pass rich details to frontend
+                    }
                 }
-            })
-            
+            )
+
             # Edges
             if step.type == StepType.CONDITION and step.conditions:
                 for cond in step.conditions:
-                    target = cond.get('then') or cond.get('else')
-                    if target and target not in ('abort', 'continue', 'report'):
-                        cond_label = cond.get('if', 'else')[:15]
-                        edges.append({
-                            "data": {
-                                "source": step.id,
-                                "target": target,
-                                "label": cond_label,
-                                "type": "condition"
+                    target = cond.get("then") or cond.get("else")
+                    if target and target not in ("abort", "continue", "report"):
+                        cond_label = cond.get("if", "else")[:15]
+                        edges.append(
+                            {
+                                "data": {
+                                    "source": step.id,
+                                    "target": target,
+                                    "label": cond_label,
+                                    "type": "condition",
+                                }
                             }
-                        })
+                        )
             else:
-                if step.on_success and step.on_success not in ('abort', 'continue', 'report'):
-                    edges.append({
-                        "data": {
-                            "source": step.id,
-                            "target": step.on_success,
-                            "type": "success"
-                        }
-                    })
-                if step.on_fail and step.on_fail not in ('abort', 'continue', 'report'):
-                    edges.append({
-                        "data": {
-                            "source": step.id,
-                            "target": step.on_fail,
-                            "type": "fail"
-                        }
-                    })
-        
+                if step.on_success and step.on_success not in ("abort", "continue", "report"):
+                    edges.append(
+                        {"data": {"source": step.id, "target": step.on_success, "type": "success"}}
+                    )
+                if step.on_fail and step.on_fail not in ("abort", "continue", "report"):
+                    edges.append(
+                        {"data": {"source": step.id, "target": step.on_fail, "type": "fail"}}
+                    )
+
         return json.dumps({"nodes": nodes, "edges": edges}, indent=2)
 
     def _get_icon(self, step: StepConfig) -> str:
         """Get unicode icon for step."""
         icons = {
-            'recon': '🔍',
-            'inject': '💉',
-            'jailbreak': '🔓',
-            'extract': '📜',
-            'leak': '💧',
-            'exfil': '📤',
-            'rag': '🗄️',
-            'agent': '🤖',
-            'multiturn': '💬',
-            'memory': '🧠',
-            'dos': '💥',
-            'fuzz': '🔀',
-            'fingerprint': '🔎',
-            'condition': '❓',
-            'report': '📊',
+            "recon": "🔍",
+            "inject": "💉",
+            "jailbreak": "🔓",
+            "extract": "📜",
+            "leak": "💧",
+            "exfil": "📤",
+            "rag": "🗄️",
+            "agent": "🤖",
+            "multiturn": "💬",
+            "memory": "🧠",
+            "dos": "💥",
+            "fuzz": "🔀",
+            "fingerprint": "🔎",
+            "condition": "❓",
+            "report": "📊",
         }
         module = step.module or step.type.value
-        return icons.get(module, '○')
+        return icons.get(module, "○")
