@@ -100,7 +100,7 @@ async def _run_enrollment(args):
     print(f"[*] Enrolling model: {args.model_name} (family: {args.family})")
     print(f"[*] Target: {args.target}")
     print(f"[*] Runs: {args.runs}")
-    print(f"[*] Loading encoder (all-MiniLM-L6-v2)...")
+    print("[*] Loading encoder (all-MiniLM-L6-v2)...")
 
     encoder = SentenceTransformer("all-MiniLM-L6-v2")
 
