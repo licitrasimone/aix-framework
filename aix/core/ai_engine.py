@@ -140,18 +140,22 @@ class AIEngine:
             console.print(f"[yellow]AI_ENGINE[/yellow] [!] Context gathering failed: {e}")
             return TargetContext(target="")
 
+    @staticmethod
+    def _strip_markdown_codeblock(text: str) -> str:
+        """Strip markdown code block fences from a string."""
+        clean = text.strip()
+        if clean.startswith("```json"):
+            clean = clean[7:]
+        if clean.startswith("```"):
+            clean = clean[3:]
+        if clean.endswith("```"):
+            clean = clean[:-3]
+        return clean.strip()
+
     def _parse_context(self, response: str) -> TargetContext:
         """Parse AI response into TargetContext."""
         try:
-            # Clean markdown code blocks
-            clean = response.strip()
-            if clean.startswith("```json"):
-                clean = clean[7:]
-            if clean.startswith("```"):
-                clean = clean[3:]
-            if clean.endswith("```"):
-                clean = clean[:-3]
-            clean = clean.strip()
+            clean = self._strip_markdown_codeblock(response)
 
             # Try to find JSON object in response
             start_idx = clean.find("{")
@@ -224,14 +228,7 @@ class AIEngine:
 
     def _parse_eval_result(self, response: str) -> dict[str, Any]:
         """Parse evaluation response into structured result."""
-        # Clean markdown code blocks
-        clean = response.strip()
-        if clean.startswith("```json"):
-            clean = clean[7:]
-        if clean.startswith("```"):
-            clean = clean[3:]
-        if clean.endswith("```"):
-            clean = clean[:-3]
+        clean = self._strip_markdown_codeblock(response)
 
         try:
             result = json.loads(clean)
@@ -317,15 +314,7 @@ class AIEngine:
 
     def _parse_generated_payloads(self, response: str) -> list[dict[str, str]]:
         """Parse generated payloads from AI response."""
-        # Clean markdown code blocks
-        clean = response.strip()
-        if clean.startswith("```json"):
-            clean = clean[7:]
-        if clean.startswith("```"):
-            clean = clean[3:]
-        if clean.endswith("```"):
-            clean = clean[:-3]
-        clean = clean.strip()
+        clean = self._strip_markdown_codeblock(response)
 
         # Try to find JSON array in response
         start_idx = clean.find("[")

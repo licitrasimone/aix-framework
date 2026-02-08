@@ -61,7 +61,6 @@ class BaseScanner(ABC):
         self.headers = kwargs.get("headers")
         self.injection_param = kwargs.get("injection_param")
         self.body_format = kwargs.get("body_format")
-        self.body_format = kwargs.get("body_format")
         self.refresh_config = kwargs.get("refresh_config")
         self.response_regex = kwargs.get("response_regex")
         self.response_path = kwargs.get("response_path")
@@ -129,6 +128,7 @@ class BaseScanner(ABC):
 
         # Module specific config (default, can be overridden)
         self.module_name = "BASE"
+        self.db_module_name = None  # Override to use a different key in db.add_result()
         self.console_color = "white"
 
         self.last_eval_reason = None
@@ -468,6 +468,144 @@ class BaseScanner(ABC):
             return True, best_response
         else:
             return False, best_response
+
+    # ------------------------------------------------------------------
+    # Template method helpers – subclasses can override the hooks
+    # ------------------------------------------------------------------
+
+    def _on_finding(
+        self, payload_dict: dict, response: str, is_vulnerable: bool
+    ) -> tuple[bool, str | None]:
+        """Hook called after scan_payload() for each payload.
+
+        Subclasses override this to add post-scan analysis (e.g. tool
+        extraction in agent, source detection in rag).
+
+        Returns:
+            (is_vulnerable, extra_response)  – *extra_response* is appended
+            to the Finding response when not ``None``.
+        """
+        return is_vulnerable, None
+
+    def _on_scan_complete(self) -> None:
+        """Hook called after the scan loop finishes.
+
+        Default prints the standard "X successful, Y blocked" summary.
+        """
+        self._print(
+            "info",
+            f"{self.stats['success']} successful, {self.stats['blocked']} blocked",
+        )
+
+    async def _run_payload_scan(
+        self,
+        payloads: list[dict],
+        *,
+        progress_description: str,
+        finding_title_prefix: str | None = None,
+        sleep_interval: float = 0.3,
+        response_limit: int = 2000,
+        use_dedup_payload: bool = False,
+    ) -> list:
+        """Template method that encapsulates the standard scanning flow.
+
+        1. Create connector & connect
+        2. Gather context
+        3. Generate AI payloads if configured
+        4. Progress-tracked loop: scan_payload → _on_finding hook → Finding + db
+        5. CircuitBreakerError handling
+        6. Connector cleanup in finally
+        7. Call _on_scan_complete()
+        """
+        from rich.progress import track
+
+        from aix.core.reporter import Finding
+
+        title_prefix = finding_title_prefix or self.module_name.title()
+        db_key = self.db_module_name or self.module_name.lower()
+
+        connector = self._create_connector()
+        await connector.connect()
+        await self.gather_context(connector)
+
+        # Generate context-aware payloads if requested
+        if self.generate_count > 0 and self.ai_engine and self.context:
+            generated = await self.generate_payloads()
+            if generated:
+                payloads = payloads + generated
+
+        self._print("info", f"Testing {len(payloads)} payloads...")
+
+        try:
+            for p in track(
+                payloads,
+                description=progress_description,
+                console=self.console,
+                disable=not self.show_progress,
+            ):
+                self.stats["total"] += 1
+                try:
+                    is_vulnerable, best_resp = await self.scan_payload(
+                        connector, p["payload"], p["indicators"], p["name"]
+                    )
+
+                    # Let subclass modify vulnerability decision / add info
+                    is_vulnerable, extra_response = self._on_finding(p, best_resp, is_vulnerable)
+
+                    if is_vulnerable:
+                        self.stats["success"] += 1
+                        self._print("success", "", p["name"], response=best_resp)
+
+                        response_text = best_resp[:response_limit]
+                        if extra_response:
+                            response_text += extra_response
+
+                        self.findings.append(
+                            Finding(
+                                title=f"{title_prefix} - {p['name']}",
+                                severity=p["severity"],
+                                technique=p["name"],
+                                payload=p["payload"],
+                                response=response_text,
+                                target=self.target,
+                                reason=self.last_eval_reason,
+                                owasp=p.get("owasp", []),
+                            )
+                        )
+
+                        db_kwargs = {}
+                        if use_dedup_payload:
+                            db_kwargs["dedup_payload"] = p.get("original_payload", p["payload"])
+
+                        self.db.add_result(
+                            self.target,
+                            db_key,
+                            p["name"],
+                            "success",
+                            p["payload"],
+                            best_resp[:response_limit],
+                            p["severity"].value,
+                            reason=self.last_eval_reason,
+                            owasp=p.get("owasp", []),
+                            **db_kwargs,
+                        )
+                    else:
+                        self.stats["blocked"] += 1
+                        self._print("blocked", "", p["name"])
+
+                except CircuitBreakerError:
+                    break
+                except Exception as e:
+                    self.stats["blocked"] += 1
+                    self._print("error", f"Error testing {p['name']}: {e}")
+
+                await asyncio.sleep(sleep_interval)
+
+        finally:
+            await connector.close()
+
+        self._on_scan_complete()
+        return self.findings
 
     async def run(self):
         """Main execution method - usually overridden by subclasses but can provide skeleton"""

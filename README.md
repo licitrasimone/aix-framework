@@ -29,6 +29,7 @@ AIX is an automated security testing framework for AI/LLM endpoints. It provides
 - **Memory Attacks** - Context manipulation and poisoning
 - **RAG Attacks** - Knowledge base and retrieval vulnerabilities
 - **Multi-Turn Attacks** - Conversation-based exploitation (crescendo, trust building, context poisoning)
+- **Model Fingerprinting** - Probabilistic LLM identification via embedding and pattern analysis
 - **Attack Chains** - YAML-defined attack workflows with conditional branching and state passing
 
 ---
@@ -52,6 +53,16 @@ pip install -e .
 
 # Verify installation
 aix --version
+```
+
+### Optional Dependencies
+
+```bash
+# ML features (embedding-based model fingerprinting)
+pip install aix-framework[ml]
+
+# Development tools
+pip install aix-framework[dev]
 ```
 
 ---
@@ -83,12 +94,20 @@ aix db --export report.html
 ## Modules
 
 ### recon - Reconnaissance
-Discover AI endpoint details including API structure, authentication, input filters, model fingerprinting, and rate limits.
+Discover AI endpoint details including API structure, authentication, input filters, model fingerprinting, and rate limits. Includes built-in fingerprinting to identify the underlying LLM model.
 
 ```bash
 aix recon https://company.com/chatbot
 aix recon -r request.txt -p "messages[0].content"
 aix recon https://api.company.com -o profile.json
+```
+
+### fingerprint - Model Fingerprinting
+Identify the underlying LLM model behind an endpoint using probabilistic analysis. Supports two strategies: embedding-based (high accuracy, requires `aix-framework[ml]`) and pattern-based (default fallback using regex matching and softmax scoring).
+
+```bash
+aix fingerprint https://api.target.com -k sk-xxx
+aix fingerprint -r request.txt -p "messages[0].content"
 ```
 
 ### inject - Prompt Injection

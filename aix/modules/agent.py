@@ -1,13 +1,10 @@
 """AIX Agent Module - AI agent and tool exploitation"""
 
-import asyncio
 import re
 from typing import TYPE_CHECKING, Optional
 
-from rich.progress import track
-
-from aix.core.reporter import Finding, Severity
-from aix.core.scanner import BaseScanner, CircuitBreakerError, run_scanner
+from aix.core.reporting.base import Severity
+from aix.core.scanner import BaseScanner, run_scanner
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -26,23 +23,9 @@ class AgentScanner(BaseScanner):
         super().__init__(target, api_key, verbose, parsed_request, **kwargs)
         self.module_name = "AGENT"
         self.console_color = "cyan"
-        self.browser = browser  # Explicitly needed here or passed via kwargs? BaseScanner handles kwargs['browser'].
-        # BaseScanner sets self.browser via kwargs.
-        # But CLI passes `browser` as named arg, so it needs to be passed to super or handled.
-        # Kwargs handled it in BaseScanner. Wait, BaseScanner.__init__ args: target, api_key, verbose, parsed_request, **kwargs.
-        # If I call super().__init__(..., browser=browser, ...), it works.
+        self.browser = browser
         self.discovered_tools = []
         self.default_payloads = self.load_payloads("agent.json")
-
-    def _check_indicators(self, response: str, indicators: list[str]) -> tuple:
-        """Check if response contains vulnerability indicators"""
-        response_lower = response.lower()
-        matched = []
-        for ind in indicators:
-            if ind.lower() in response_lower:
-                matched.append(ind)
-        # For discovery, require only 1 match; for exploits require 2+
-        return len(matched) >= 1, matched
 
     def _extract_tools(self, response: str) -> list[str]:
         """Extract tool/function names from response"""
@@ -56,96 +39,25 @@ class AgentScanner(BaseScanner):
             tools.extend(re.findall(pattern, response))
         return list(set(tools))
 
-    async def run(self, payloads: list[dict] = None):
-        if payloads is None:
-            payloads = self.default_payloads
+    def _on_finding(
+        self, payload_dict: dict, response: str, is_vulnerable: bool
+    ) -> tuple[bool, str | None]:
+        # For discovery payloads, extract tool names
+        if payload_dict.get("category") == "discovery":
+            tools = self._extract_tools(response)
+            self.discovered_tools.extend(tools)
+            if tools:
+                is_vulnerable = True
 
-        connector = self._create_connector()
-        await connector.connect()
-        await self.gather_context(connector)
+        if is_vulnerable:
+            if payload_dict.get("category") == "discovery" and self.discovered_tools:
+                self._print("detail", f'Tools found: {", ".join(self.discovered_tools[:5])}')
+            else:
+                self._print("detail", f'Category: {payload_dict.get("category", "unknown")}')
 
-        # Generate context-aware payloads if requested
-        if self.generate_count > 0 and self.ai_engine and self.context:
-            generated = await self.generate_payloads()
-            if generated:
-                payloads = payloads + generated
+        return is_vulnerable, None
 
-        self._print("info", f"Testing {len(payloads)} agent exploitation techniques...")
-
-        try:
-            for p in track(
-                payloads,
-                description="[bold blue]🕵️ Hijacking Tools...  [/]",
-                console=self.console,
-                disable=not self.show_progress,
-            ):
-                self.stats["total"] += 1
-
-                try:
-                    # Scan payload (handles N attempts)
-                    is_vulnerable, resp = await self.scan_payload(
-                        connector, p["payload"], p["indicators"], p["name"]
-                    )
-
-                    # For discovery payloads, also extract tool names
-                    if p["category"] == "discovery":
-                        tools = self._extract_tools(resp)
-                        self.discovered_tools.extend(tools)
-                        if tools:
-                            is_vulnerable = True
-
-                    if is_vulnerable:
-                        self.stats["success"] += 1  # Standardized from 'vulnerable'
-                        self._print("success", "", p["name"], response=resp)
-
-                        if p["category"] == "discovery" and self.discovered_tools:
-                            self._print(
-                                "detail", f'Tools found: {", ".join(self.discovered_tools[:5])}'
-                            )
-                        else:
-                            self._print("detail", f'Category: {p["category"]}')
-
-                        self.findings.append(
-                            Finding(
-                                title=f"Agent - {p['name']}",
-                                severity=p["severity"],
-                                technique=p["name"],
-                                payload=p["payload"],
-                                response=resp[:5000],
-                                target=self.target,
-                                reason=self.last_eval_reason,
-                                owasp=p.get("owasp", []),
-                            )
-                        )
-                        self.db.add_result(
-                            self.target,
-                            "agent",
-                            p["name"],
-                            "success",
-                            p["payload"],
-                            resp[:5000],
-                            p["severity"].value,
-                            reason=self.last_eval_reason,
-                            owasp=p.get("owasp", []),
-                        )
-                    else:
-                        self.stats["blocked"] += 1
-                        self._print("blocked", "", p["name"])
-
-                except CircuitBreakerError:
-                    break
-                except Exception as e:
-                    self.stats["blocked"] += 1
-                    self._print("error", f"Agent probe failed: {e}")
-                    if self.verbose:
-                        self._print("blocked", str(e), p["name"])
-
-                await asyncio.sleep(0.3)
-
-        finally:
-            await connector.close()
-
-        # Print summary
+    def _on_scan_complete(self) -> None:
         self.discovered_tools = list(set(self.discovered_tools))
         if self.discovered_tools:
             self._print("info", f'Discovered tools: {", ".join(self.discovered_tools[:10])}')
@@ -163,7 +75,15 @@ class AgentScanner(BaseScanner):
 
         self._print("info", f"{self.stats['success']} vulnerable, {self.stats['blocked']} blocked")
 
-        return self.findings
+    async def run(self, payloads: list[dict] = None):
+        if payloads is None:
+            payloads = self.default_payloads
+
+        return await self._run_payload_scan(
+            payloads,
+            progress_description="[bold blue]🕵️ Hijacking Tools...  [/]",
+            response_limit=5000,
+        )
 
 
 def run(target: str = None, api_key: str = None, **kwargs):

@@ -98,6 +98,7 @@ class ReconScanner(BaseScanner):
             },
             "modalities": {"input": ["text"], "output": ["text"]},
             "input_processing": {"supported_formats": [], "sanitization_detected": False},
+            "fingerprint_method": None,  # "embedding" or "pattern"
         }
 
         # Load discovery paths
@@ -1232,6 +1233,13 @@ class ReconScanner(BaseScanner):
         )
         table.add_row("Version", self.results["version"] or "Unknown")
         table.add_row("Confidence Score", f"[{conf_style}]{self.results['model_confidence']}%[/]")
+        if self.results.get("fingerprint_method"):
+            method_label = (
+                "Embedding"
+                if self.results["fingerprint_method"] == "embedding"
+                else "Pattern-Based"
+            )
+            table.add_row("Fingerprint Method", f"[cyan]{method_label}[/]")
         table.add_row("Authentication", self.results["auth_type"])
 
         # WAF Status
@@ -1367,6 +1375,10 @@ class ReconScanner(BaseScanner):
                 )
                 # Simplified update:
                 self.results["fingerprint_winner"] = winner
+                # Track which fingerprinting method was used
+                self.results["fingerprint_method"] = (
+                    "embedding" if fp.embedding_available else "pattern"
+                )
 
                 # Add a Finding for fingerprint success so chain knows recon succeeded
                 self.findings.append(
