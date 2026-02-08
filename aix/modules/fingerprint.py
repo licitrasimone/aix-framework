@@ -240,9 +240,7 @@ class FingerprintScanner:
             display = self.signature_db["models"][winner_key].get("display_name", winner_key)
             family = self.signature_db["models"][winner_key].get("family", "Unknown")
             if not self.quiet:
-                self.console.print(
-                    f"[bold green][+] Embedding ID: {display} ({family})[/]"
-                )
+                self.console.print(f"[bold green][+] Embedding ID: {display} ({family})[/]")
             return winner_key
         return None
 
@@ -260,9 +258,7 @@ class FingerprintScanner:
             return None
 
         if not self.quiet:
-            self.console.print(
-                "[cyan][*] Running embedding-based fingerprinting...[/cyan]"
-            )
+            self.console.print("[cyan][*] Running embedding-based fingerprinting...[/cyan]")
 
         # Send probes and collect responses
         for probe in track(
@@ -275,15 +271,11 @@ class FingerprintScanner:
 
             if response == "AUTH_FAILED":
                 if not self.quiet:
-                    self.console.print(
-                        "[red][!] Embedding fingerprint aborted: auth failure[/red]"
-                    )
+                    self.console.print("[red][!] Embedding fingerprint aborted: auth failure[/red]")
                 return None
 
             if response:
-                self.response_pairs.append(
-                    (probe["id"], probe["prompt"], response)
-                )
+                self.response_pairs.append((probe["id"], probe["prompt"], response))
                 await asyncio.sleep(0.5)
 
         if not self.response_pairs:
@@ -454,8 +446,7 @@ class FingerprintScanner:
 
         # Auto-select: embedding if deps available AND signatures populated
         has_signatures = any(
-            m.get("signature")
-            for m in self.signature_db.get("models", {}).values()
+            m.get("signature") for m in self.signature_db.get("models", {}).values()
         )
         if self.embedding_available and has_signatures:
             result = await self._run_embedding()

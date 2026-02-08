@@ -51,9 +51,7 @@ class AgentScanner(BaseScanner):
 
         if is_vulnerable:
             if payload_dict.get("category") == "discovery" and self.discovered_tools:
-                self._print(
-                    "detail", f'Tools found: {", ".join(self.discovered_tools[:5])}'
-                )
+                self._print("detail", f'Tools found: {", ".join(self.discovered_tools[:5])}')
             else:
                 self._print("detail", f'Category: {payload_dict.get("category", "unknown")}')
 

@@ -1235,7 +1235,9 @@ class ReconScanner(BaseScanner):
         table.add_row("Confidence Score", f"[{conf_style}]{self.results['model_confidence']}%[/]")
         if self.results.get("fingerprint_method"):
             method_label = (
-                "Embedding" if self.results["fingerprint_method"] == "embedding" else "Pattern-Based"
+                "Embedding"
+                if self.results["fingerprint_method"] == "embedding"
+                else "Pattern-Based"
             )
             table.add_row("Fingerprint Method", f"[cyan]{method_label}[/]")
         table.add_row("Authentication", self.results["auth_type"])

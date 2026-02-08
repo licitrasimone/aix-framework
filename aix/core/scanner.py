@@ -550,9 +550,7 @@ class BaseScanner(ABC):
                     )
 
                     # Let subclass modify vulnerability decision / add info
-                    is_vulnerable, extra_response = self._on_finding(
-                        p, best_resp, is_vulnerable
-                    )
+                    is_vulnerable, extra_response = self._on_finding(p, best_resp, is_vulnerable)
 
                     if is_vulnerable:
                         self.stats["success"] += 1
@@ -577,9 +575,7 @@ class BaseScanner(ABC):
 
                         db_kwargs = {}
                         if use_dedup_payload:
-                            db_kwargs["dedup_payload"] = p.get(
-                                "original_payload", p["payload"]
-                            )
+                            db_kwargs["dedup_payload"] = p.get("original_payload", p["payload"])
 
                         self.db.add_result(
                             self.target,
