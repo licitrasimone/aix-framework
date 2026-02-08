@@ -4,6 +4,13 @@ AIX Fingerprint Module
 Advanced probabilistic model fingerprinting mechanism.
 Identifies LLMs by analyzing their responses to specific "Shibboleth" questions,
 refusal styles, and identity claims.
+
+Supports two strategies:
+- Embedding-based (requires `sentence-transformers`): Uses cosine similarity against
+  pre-enrolled model signatures for 95%+ accuracy.
+- Pattern-based (default fallback): Uses regex matching and softmax scoring.
+
+Install `pip install aix-framework[ml]` to enable embedding-based fingerprinting.
 """
 
 import asyncio
@@ -61,6 +68,16 @@ class FingerprintScanner:
         num_models = len(self.scores)
         self.probabilities = dict.fromkeys(self.scores, 1.0 / num_models)
 
+        # Embedding-based fingerprinting (auto-detected)
+        self.embedding_available = self._check_embedding_deps()
+        self._encoder = None  # lazy-loaded
+        self.embedding_probes = []
+        self.signature_db = {}
+        self.response_pairs = []  # (query, response) tuples for embedding
+        if self.embedding_available:
+            self.embedding_probes = self._load_embedding_probes()
+            self.signature_db = self._load_signature_db()
+
     def _load_db(self) -> dict:
         """Load fingerprint database"""
         try:
@@ -71,6 +88,216 @@ class FingerprintScanner:
             if hasattr(self, "console") and not getattr(self, "quiet", False):
                 self.console.print(f"[red][-] Failed to load fingerprint DB: {e}[/red]")
             return {"questions": [], "signatures": {}}
+
+    # --- Embedding support methods ---
+
+    @staticmethod
+    def _check_embedding_deps() -> bool:
+        """Check if sentence-transformers is available. Never raises."""
+        try:
+            import sentence_transformers  # noqa: F401
+
+            return True
+        except Exception:
+            return False
+
+    def _load_embedding_probes(self) -> list:
+        """Load embedding probe queries from fingerprint_probes.json."""
+        try:
+            path = Path(__file__).parent.parent / "payloads" / "fingerprint_probes.json"
+            with open(path) as f:
+                return json.load(f)
+        except Exception:
+            return []
+
+    def _load_signature_db(self) -> dict:
+        """Load embedding signature database from fingerprint_embeddings.json."""
+        try:
+            path = Path(__file__).parent.parent / "payloads" / "fingerprint_embeddings.json"
+            with open(path) as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+    def _get_encoder(self):
+        """Lazy-load the SentenceTransformer encoder."""
+        if self._encoder is None:
+            from sentence_transformers import SentenceTransformer
+
+            self._encoder = SentenceTransformer("all-MiniLM-L6-v2")
+        return self._encoder
+
+    def _compute_signature(self) -> list:
+        """
+        Compute an embedding signature from collected (query, response) pairs.
+
+        Each pair is encoded as "query: {q} [SEP] response: {r}".
+        All embeddings are mean-pooled and L2-normalized to a 384-dim vector.
+        """
+        if not self.response_pairs:
+            return []
+
+        encoder = self._get_encoder()
+
+        # Build input texts with weights
+        texts = []
+        weights = []
+        probe_weights = {p["id"]: p.get("weight", 1.0) for p in self.embedding_probes}
+
+        for probe_id, query, response in self.response_pairs:
+            texts.append(f"query: {query} [SEP] response: {response}")
+            weights.append(probe_weights.get(probe_id, 1.0))
+
+        # Encode all texts
+        embeddings = encoder.encode(texts, show_progress_bar=False)
+
+        # Weighted mean-pool
+        total_weight = sum(weights)
+        dim = len(embeddings[0])
+        pooled = [0.0] * dim
+        for i, emb in enumerate(embeddings):
+            w = weights[i] / total_weight
+            for j in range(dim):
+                pooled[j] += float(emb[j]) * w
+
+        # L2-normalize
+        norm = math.sqrt(sum(x * x for x in pooled))
+        if norm > 0:
+            pooled = [x / norm for x in pooled]
+
+        return pooled
+
+    @staticmethod
+    def cosine_similarity(a: list, b: list) -> float:
+        """Compute cosine similarity between two vectors. Pure Python, no numpy needed."""
+        if not a or not b or len(a) != len(b):
+            return 0.0
+
+        dot = sum(x * y for x, y in zip(a, b))
+        norm_a = math.sqrt(sum(x * x for x in a))
+        norm_b = math.sqrt(sum(x * x for x in b))
+
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+
+        return dot / (norm_a * norm_b)
+
+    def _match_embedding(self, signature: list) -> list:
+        """
+        Match a computed signature against all populated entries in the signature DB.
+
+        Returns list of (model_name, similarity_score) sorted descending.
+        """
+        if not signature or not self.signature_db.get("models"):
+            return []
+
+        scores = []
+        for model_key, model_info in self.signature_db["models"].items():
+            ref_sig = model_info.get("signature", [])
+            if not ref_sig:
+                continue  # Skip models without enrolled signatures
+            sim = self.cosine_similarity(signature, ref_sig)
+            scores.append((model_key, sim))
+
+        scores.sort(key=lambda x: x[1], reverse=True)
+        return scores
+
+    def _print_embedding_report(self, scores: list) -> str | None:
+        """
+        Print embedding-based fingerprint results as a Rich table.
+
+        Returns the winning model name if top similarity > 0.70, else None.
+        """
+        if not scores:
+            return None
+
+        table = Table(
+            title="Embedding Fingerprint Analysis",
+            show_header=True,
+            header_style="bold magenta",
+        )
+        table.add_column("Model", style="cyan")
+        table.add_column("Similarity", justify="right", style="green")
+        table.add_column("Family", style="white")
+
+        # Show top 5
+        for model_key, sim in scores[:5]:
+            model_info = self.signature_db["models"].get(model_key, {})
+            family = model_info.get("family", "Unknown")
+            display = model_info.get("display_name", model_key)
+
+            pct = f"{sim * 100:.1f}%"
+            color = "green" if sim > 0.70 else "yellow" if sim > 0.50 else "red"
+            table.add_row(display, f"[{color}]{pct}[/]", family)
+
+        if not self.quiet:
+            self.console.print()
+            self.console.print(table)
+
+        # Return winner if above threshold
+        if scores[0][1] > 0.70:
+            winner_key = scores[0][0]
+            display = self.signature_db["models"][winner_key].get("display_name", winner_key)
+            family = self.signature_db["models"][winner_key].get("family", "Unknown")
+            if not self.quiet:
+                self.console.print(
+                    f"[bold green][+] Embedding ID: {display} ({family})[/]"
+                )
+            return winner_key
+        return None
+
+    async def _run_embedding(self) -> str | None:
+        """
+        Run embedding-based fingerprinting.
+
+        1. Send 8 probes from fingerprint_probes.json
+        2. Collect (query, response) pairs
+        3. Compute embedding signature
+        4. Match against signature DB
+        5. Print report and return winner or None
+        """
+        if not self.embedding_probes:
+            return None
+
+        if not self.quiet:
+            self.console.print(
+                "[cyan][*] Running embedding-based fingerprinting...[/cyan]"
+            )
+
+        # Send probes and collect responses
+        for probe in track(
+            self.embedding_probes,
+            description="[bold cyan]Embedding probes... [/]",
+            console=self.console,
+            disable=not self.show_progress,
+        ):
+            response = await self._send_probe(probe)
+
+            if response == "AUTH_FAILED":
+                if not self.quiet:
+                    self.console.print(
+                        "[red][!] Embedding fingerprint aborted: auth failure[/red]"
+                    )
+                return None
+
+            if response:
+                self.response_pairs.append(
+                    (probe["id"], probe["prompt"], response)
+                )
+                await asyncio.sleep(0.5)
+
+        if not self.response_pairs:
+            return None
+
+        # Compute signature and match
+        signature = self._compute_signature()
+        if not signature:
+            return None
+
+        scores = self._match_embedding(signature)
+        return self._print_embedding_report(scores)
+
+    # --- End embedding support ---
 
     async def _send_probe(self, question: dict) -> str:
         """Send a single probe question"""
@@ -183,7 +410,7 @@ class FingerprintScanner:
         top_models = [m for m in sorted_models if m[1] > 0.01][:5]  # Top 5 with >1% prob
 
         table = Table(
-            title="🧬 Fingerprint Analysis", show_header=True, header_style="bold magenta"
+            title="Pattern Fingerprint Analysis", show_header=True, header_style="bold magenta"
         )
         table.add_column("Likely Model", style="cyan")
         table.add_column("Probability", justify="right", style="green")
@@ -224,15 +451,25 @@ class FingerprintScanner:
 
     async def run(self):
         """Run the full fingerprinting process"""
-        # console.print(f"[cyan][*] Running Advanced Fingerprinting ({len(self.db['questions'])} probes)...[/cyan]")
 
-        # Create progress bar
+        # Auto-select: embedding if deps available AND signatures populated
+        has_signatures = any(
+            m.get("signature")
+            for m in self.signature_db.get("models", {}).values()
+        )
+        if self.embedding_available and has_signatures:
+            result = await self._run_embedding()
+            if result:
+                return result
+            # Fall through to pattern-based if embedding didn't produce a match
+
+        # Existing pattern-based flow
         questions = self.db["questions"]
 
         # We can run these in parallel or serial. Serial is safer for rate limits.
         for q in track(
             questions,
-            description="[bold cyan]🔍 Fingerprinting...  [/]",
+            description="[bold cyan]Pattern probes...   [/]",
             console=self.console,
             disable=not self.show_progress,
         ):

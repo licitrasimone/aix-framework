@@ -31,6 +31,11 @@ class TestPayloadFiles:
         "recon_config.json",
         "leak_config.json",
         "fuzz_config.json",
+        "fingerprint_embeddings.json",
+    ]
+
+    PROBE_FILES = [
+        "fingerprint_probes.json",
     ]
 
     def test_payload_dir_exists(self):
@@ -147,6 +152,35 @@ class TestPayloadFiles:
 
         # Config files should be objects (dicts)
         assert isinstance(data, (dict, list)), f"{filename} should be JSON object or array"
+
+    @pytest.mark.parametrize("filename", PROBE_FILES)
+    def test_probe_file_exists(self, filename):
+        """Test probe files exist"""
+        filepath = self.PAYLOAD_DIR / filename
+        assert filepath.exists(), f"Probe file {filename} not found"
+
+    @pytest.mark.parametrize("filename", PROBE_FILES)
+    def test_probe_file_valid_json(self, filename):
+        """Test probe files are valid JSON arrays"""
+        filepath = self.PAYLOAD_DIR / filename
+
+        with open(filepath) as f:
+            data = json.load(f)
+
+        assert isinstance(data, list), f"{filename} should contain a JSON array"
+
+    @pytest.mark.parametrize("filename", PROBE_FILES)
+    def test_probe_file_structure(self, filename):
+        """Test probe file entries have required fields"""
+        filepath = self.PAYLOAD_DIR / filename
+
+        with open(filepath) as f:
+            probes = json.load(f)
+
+        for i, probe in enumerate(probes):
+            assert "id" in probe, f"{filename}[{i}]: missing 'id'"
+            assert "prompt" in probe, f"{filename}[{i}]: missing 'prompt'"
+            assert "weight" in probe, f"{filename}[{i}]: missing 'weight'"
 
 
 class TestPayloadIndicators:

@@ -232,6 +232,8 @@ steps:
 - [x] **WAF Evasion**: Lakera, Cloudflare AI bypass techniques
 - [x] **Model Fingerprinting 2.0**: GPT-4/Claude/Llama detection
 - [x] **RAG Exploitation Module**: Knowledge base poisoning
+- [x] **Fingerprint Module**: Embedding + pattern-based probabilistic model identification
+- [x] **Code Quality Refactoring**: Template method pattern for scan modules, eliminated ~1200 lines of duplication
 
 ### Modules Implemented
 - [x] RECON - Reconnaissance and fingerprinting
@@ -247,6 +249,7 @@ steps:
 - [x] RAG - RAG-specific attacks
 - [x] MULTITURN - Multi-turn conversation attacks (8 categories, 16 sequences)
 - [x] CHAIN - Attack chain execution with YAML playbooks (6 pre-built playbooks)
+- [x] FINGERPRINT - Probabilistic model fingerprinting (embedding + pattern strategies)
 
 ---
 
@@ -274,7 +277,7 @@ steps:
 
 ---
 
-*Last Updated: January 23, 2026*
+*Last Updated: February 8, 2026*
 
 ---
 

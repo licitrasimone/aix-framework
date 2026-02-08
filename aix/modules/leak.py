@@ -27,7 +27,6 @@ class LeakScanner(BaseScanner):
     ):
         super().__init__(target, api_key, verbose, parsed_request, **kwargs)
         self.module_name = "LEAK"
-        self.console_color = "red"  # Leak usually uses cyan? Code used cyan. BaseScanner default white. I'll use cyan to match others or red/yellow for leaks? Original code used cyan in _print.
         self.console_color = "cyan"
         self.browser = browser
 

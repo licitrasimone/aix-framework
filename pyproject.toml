@@ -68,6 +68,10 @@ dev = [
     "mypy>=1.0.0",
     "pre-commit>=3.0.0",
 ]
+ml = [
+    "sentence-transformers>=2.2.0",
+    "numpy>=1.24.0",
+]
 docs = [
     "mkdocs>=1.5.0",
     "mkdocs-material>=9.0.0",

@@ -1,0 +1,24 @@
+{
+  "metadata": {
+    "embedding_model": "all-MiniLM-L6-v2",
+    "embedding_dim": 384,
+    "num_probes": 8
+  },
+  "models": {
+    "gpt-4o": {"family": "OpenAI", "display_name": "GPT-4o", "signature": []},
+    "gpt-4-turbo": {"family": "OpenAI", "display_name": "GPT-4 Turbo", "signature": []},
+    "gpt-3.5-turbo": {"family": "OpenAI", "display_name": "GPT-3.5 Turbo", "signature": []},
+    "claude-3.5-sonnet": {"family": "Anthropic", "display_name": "Claude 3.5 Sonnet", "signature": []},
+    "claude-3-opus": {"family": "Anthropic", "display_name": "Claude 3 Opus", "signature": []},
+    "claude-3-haiku": {"family": "Anthropic", "display_name": "Claude 3 Haiku", "signature": []},
+    "gemini-1.5-pro": {"family": "Google", "display_name": "Gemini 1.5 Pro", "signature": []},
+    "llama-3.1-70b": {"family": "Meta", "display_name": "Llama 3.1 70B", "signature": []},
+    "llama-3.1-8b": {"family": "Meta", "display_name": "Llama 3.1 8B", "signature": []},
+    "mistral-large": {"family": "Mistral AI", "display_name": "Mistral Large", "signature": []},
+    "mistral-7b": {"family": "Mistral AI", "display_name": "Mistral 7B", "signature": []},
+    "mixtral-8x7b": {"family": "Mistral AI", "display_name": "Mixtral 8x7B", "signature": []},
+    "deepseek-v2": {"family": "DeepSeek", "display_name": "DeepSeek V2", "signature": []},
+    "qwen-2": {"family": "Alibaba", "display_name": "Qwen 2", "signature": []},
+    "gemma-2": {"family": "Google", "display_name": "Gemma 2", "signature": []}
+  }
+}

@@ -1,12 +1,8 @@
 """AIX Jailbreak Module - Bypass AI restrictions"""
 
-import asyncio
 from typing import TYPE_CHECKING, Optional
 
-from rich.progress import track
-
-from aix.core.reporter import Finding
-from aix.core.scanner import BaseScanner, CircuitBreakerError, run_scanner
+from aix.core.scanner import BaseScanner, run_scanner
 
 if TYPE_CHECKING:
     from aix.core.request_parser import ParsedRequest
@@ -23,6 +19,7 @@ class JailbreakScanner(BaseScanner):
     ):
         super().__init__(target, api_key, verbose, parsed_request, **kwargs)
         self.module_name = "JAILBRK"
+        self.db_module_name = "jailbreak"
         self.console_color = "cyan"
         self.test_harmful = kwargs.get("test_harmful", False)
         self.default_jailbreaks = self.load_payloads("jailbreak.json")
@@ -31,76 +28,13 @@ class JailbreakScanner(BaseScanner):
         if jailbreaks is None:
             jailbreaks = self.default_jailbreaks
 
-        connector = self._create_connector()
-        await connector.connect()
-        await self.gather_context(connector)
-
-        # Generate context-aware payloads if requested
-        if self.generate_count > 0 and self.ai_engine and self.context:
-            generated = await self.generate_payloads()
-            if generated:
-                jailbreaks = jailbreaks + generated
-
-        self._print("info", f"Testing {len(jailbreaks)} jailbreak techniques...")
-
-        try:
-            for j in track(
-                jailbreaks,
-                description="[bold red]🔓 Breaking Rails...   [/]",
-                console=self.console,
-                disable=not self.show_progress,
-            ):
-                self.stats["total"] += 1
-                try:
-                    # Scan payload (handles N attempts internally)
-                    is_vulnerable, best_resp = await self.scan_payload(
-                        connector, j["payload"], j["indicators"], j["name"]
-                    )
-
-                    if is_vulnerable:
-                        self.stats["success"] += 1
-                        self._print("success", "", j["name"], response=best_resp)
-                        self.findings.append(
-                            Finding(
-                                title=f"Jailbreak - {j['name']}",
-                                severity=j["severity"],
-                                technique=j["name"],
-                                payload=j["payload"],
-                                response=best_resp[:2000],
-                                target=self.target,
-                                reason=self.last_eval_reason,
-                                owasp=j.get("owasp", []),
-                            )
-                        )
-                        self.db.add_result(
-                            self.target,
-                            "jailbreak",
-                            j["name"],
-                            "success",
-                            j["payload"],
-                            best_resp[:2000],
-                            j["severity"].value,
-                            reason=self.last_eval_reason,
-                            dedup_payload=j.get("original_payload", j["payload"]),
-                            owasp=j.get("owasp", []),
-                        )
-                    else:
-                        self.stats["blocked"] += 1
-                        self._print("blocked", "", j["name"])
-
-                except CircuitBreakerError:
-                    break
-                except Exception as e:
-                    self._print("error", f"Error with {j['name']}: {e}")
-                    self.stats["blocked"] += 1
-                    if self.verbose:
-                        self._print("blocked", f"Error in {j['name']}: {e}", j["name"])
-                await asyncio.sleep(0.5)
-        finally:
-            await connector.close()
-
-        self._print("info", f"{self.stats['success']} successful, {self.stats['blocked']} blocked")
-        return self.findings
+        return await self._run_payload_scan(
+            jailbreaks,
+            progress_description="[bold red]🔓 Breaking Rails...   [/]",
+            finding_title_prefix="Jailbreak",
+            sleep_interval=0.5,
+            use_dedup_payload=True,
+        )
 
 
 def run(target: str = None, api_key: str = None, **kwargs):
