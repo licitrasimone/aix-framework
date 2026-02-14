@@ -56,6 +56,11 @@ class Connector(ABC):
             _global_console = Console()
         self.console = console or _global_console
 
+        # Chat ID tracking
+        self.chat_id_path = kwargs.get("chat_id_path")
+        self.chat_id_param = kwargs.get("chat_id_param")
+        self._current_chat_id: str | None = None
+
     def _parse_cookies(self, cookies: str | None) -> dict[str, str]:
         """Parse cookie string into dictionary"""
         if not cookies:
@@ -79,6 +84,39 @@ class Connector(ABC):
                 key, value = item.strip().split(":", 1)
                 header_dict[key.strip()] = value.strip()
         return header_dict
+
+    def _navigate_json_path(self, data: Any, path: str) -> Any:
+        """Navigate a dot-separated JSON path (e.g., 'data.chat_id')."""
+        result = data
+        for key in path.split("."):
+            if isinstance(result, list):
+                if key.isdigit() and int(key) < len(result):
+                    result = result[int(key)]
+                else:
+                    return None
+            elif isinstance(result, dict):
+                result = result.get(key)
+            else:
+                return None
+            if result is None:
+                return None
+        return result
+
+    def _capture_chat_id(self, response_data: dict) -> None:
+        """Extract chat_id from response if chat_id_path is configured."""
+        if not self.chat_id_path:
+            return
+        chat_id = self._navigate_json_path(response_data, self.chat_id_path)
+        if chat_id:
+            self._current_chat_id = str(chat_id)
+
+    def reset_chat_id(self) -> None:
+        """Clear captured chat ID (for fresh conversation)."""
+        self._current_chat_id = None
+
+    @property
+    def current_chat_id(self) -> str | None:
+        return self._current_chat_id
 
     @abstractmethod
     async def connect(self) -> None:
@@ -292,6 +330,10 @@ class APIConnector(Connector):
                 if key not in payload:
                     payload[key] = value
 
+        # Inject captured chat ID if available
+        if self._current_chat_id and self.chat_id_param and "{chat_id}" not in self.url:
+            payload[self.chat_id_param] = self._current_chat_id
+
         return payload
 
     def _extract_response(self, data: dict[str, Any]) -> str:
@@ -501,6 +543,7 @@ class APIConnector(Connector):
             response = await self.client.post(url, json=body, headers=headers)
             response.raise_for_status()
             data = response.json()
+            self._capture_chat_id(data)
             return self._extract_response(data)
 
         except httpx.HTTPStatusError as e:
@@ -534,6 +577,10 @@ class APIConnector(Connector):
                 url = self.url
             else:
                 url = self.url.rstrip("/") + endpoint
+
+            # Support {chat_id} URL placeholder
+            if self._current_chat_id and "{chat_id}" in url:
+                url = url.replace("{chat_id}", self._current_chat_id)
 
             # Use profile URL if available
             if self.profile and self.profile.endpoint:
@@ -584,6 +631,7 @@ class APIConnector(Connector):
                 response.raise_for_status()
 
                 data = response.json()
+                self._capture_chat_id(data)
                 return self._extract_response(data)
 
             except httpx.HTTPStatusError as e:
@@ -666,7 +714,11 @@ class WebSocketConnector(Connector):
 
     def _build_message(self, payload: str) -> str:
         """Build JSON message from payload."""
-        return json.dumps({self.injection_param: payload})
+        msg = {self.injection_param: payload}
+        # Inject captured chat ID if available
+        if self._current_chat_id and self.chat_id_param:
+            msg[self.chat_id_param] = self._current_chat_id
+        return json.dumps(msg)
 
     def _extract_response(self, raw: str) -> str:
         """Parse JSON response and extract text using response_path or fallback keys."""
@@ -769,6 +821,14 @@ class WebSocketConnector(Connector):
 
         if self.verbose >= 3:
             self.console.print(f"[cyan]WS-CONN[/cyan] [*] Received: {raw[:200]}")
+
+        # Capture chat ID from WebSocket response
+        try:
+            ws_data = json.loads(raw)
+            if isinstance(ws_data, dict):
+                self._capture_chat_id(ws_data)
+        except (json.JSONDecodeError, TypeError):
+            pass
 
         return self._extract_response(raw)
 
@@ -1019,6 +1079,7 @@ class RequestConnector(Connector):
             # Try to parse JSON response
             try:
                 data = response.json()
+                self._capture_chat_id(data)
                 return self._extract_response(data)
             except json.JSONDecodeError:
                 return self._apply_regex(response.text)

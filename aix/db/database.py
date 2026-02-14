@@ -7,6 +7,7 @@ Like NetExec's database functionality.
 
 import json
 import sqlite3
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -90,6 +91,56 @@ class AIXDatabase:
             )
             cursor.execute("ALTER TABLE results ADD COLUMN owasp TEXT")
 
+        # Sessions table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sessions (
+                id TEXT PRIMARY KEY,
+                name TEXT,
+                target TEXT NOT NULL,
+                status TEXT DEFAULT 'active',
+                notes TEXT,
+                modules_run TEXT,
+                start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+                end_time DATETIME
+            )
+        """)
+
+        # Conversations table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS conversations (
+                id TEXT PRIMARY KEY,
+                session_id TEXT,
+                target TEXT NOT NULL,
+                module TEXT NOT NULL,
+                technique TEXT,
+                target_chat_id TEXT,
+                transcript TEXT,
+                turn_count INTEGER DEFAULT 0,
+                status TEXT DEFAULT 'completed',
+                started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                finished_at DATETIME,
+                FOREIGN KEY (session_id) REFERENCES sessions(id)
+            )
+        """)
+
+        # Migration: Add session_id column to results
+        try:
+            cursor.execute("SELECT session_id FROM results LIMIT 1")
+        except sqlite3.OperationalError:
+            console.print(
+                "[yellow][*] Migrating database: Adding 'session_id' column to results table[/yellow]"
+            )
+            cursor.execute("ALTER TABLE results ADD COLUMN session_id TEXT")
+
+        # Migration: Add conversation_id column to results
+        try:
+            cursor.execute("SELECT conversation_id FROM results LIMIT 1")
+        except sqlite3.OperationalError:
+            console.print(
+                "[yellow][*] Migrating database: Adding 'conversation_id' column to results table[/yellow]"
+            )
+            cursor.execute("ALTER TABLE results ADD COLUMN conversation_id TEXT")
+
         # Profiles table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS profiles (
@@ -145,6 +196,8 @@ class AIXDatabase:
         reason: str = "",
         owasp: list[str] | None = None,
         dedup_payload: str | None = None,
+        session_id: str | None = None,
+        conversation_id: str | None = None,
     ) -> int:
         """
         Add a scan result.
@@ -190,10 +243,12 @@ class AIXDatabase:
             cursor.execute(
                 """
                 UPDATE results
-                SET result = ?, payload = ?, response = ?, severity = ?, reason = ?, owasp = ?, timestamp = CURRENT_TIMESTAMP
+                SET result = ?, payload = ?, response = ?, severity = ?, reason = ?, owasp = ?,
+                    session_id = COALESCE(?, session_id), conversation_id = COALESCE(?, conversation_id),
+                    timestamp = CURRENT_TIMESTAMP
                 WHERE id = ?
             """,
-                (result, payload, response, severity, reason, owasp_json, row_id),
+                (result, payload, response, severity, reason, owasp_json, session_id, conversation_id, row_id),
             )
             self.conn.commit()
             return row_id
@@ -201,8 +256,8 @@ class AIXDatabase:
             # Insert new result
             cursor.execute(
                 """
-                INSERT INTO results (target, module, technique, result, payload, response, severity, reason, owasp)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO results (target, module, technique, result, payload, response, severity, reason, owasp, session_id, conversation_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
                     target,
@@ -214,6 +269,8 @@ class AIXDatabase:
                     severity,
                     reason,
                     owasp_json,
+                    session_id,
+                    conversation_id,
                 ),
             )
             self.conn.commit()
@@ -224,6 +281,7 @@ class AIXDatabase:
         target: str | None = None,
         module: str | None = None,
         result: str | None = None,
+        session_id: str | None = None,
         limit: int = 100,
     ) -> list[dict[str, Any]]:
         """Get scan results with optional filters"""
@@ -243,6 +301,10 @@ class AIXDatabase:
         if result:
             query += " AND result = ?"
             params.append(result)
+
+        if session_id:
+            query += " AND session_id = ?"
+            params.append(session_id)
 
         query += " ORDER BY timestamp DESC LIMIT ?"
         params.append(limit)
@@ -322,6 +384,306 @@ class AIXDatabase:
         self.conn.commit()
 
     # ========================================================================
+    # Sessions
+    # ========================================================================
+
+    def create_session(
+        self,
+        target: str,
+        name: str | None = None,
+        notes: str | None = None,
+    ) -> str:
+        """Create a new scan session. Returns session_id."""
+        session_id = str(uuid.uuid4())
+        if not name:
+            name = f"Scan - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO sessions (id, name, target, status, notes, modules_run)
+            VALUES (?, ?, ?, 'active', ?, '[]')
+        """,
+            (session_id, name, target, notes),
+        )
+        self.conn.commit()
+        return session_id
+
+    def end_session(self, session_id: str, status: str = "completed") -> None:
+        """Mark a session as completed or aborted."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            UPDATE sessions SET status = ?, end_time = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """,
+            (status, session_id),
+        )
+        self.conn.commit()
+
+    def update_session_modules(self, session_id: str, module: str) -> None:
+        """Append a module to the session's modules_run list."""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT modules_run FROM sessions WHERE id = ?", (session_id,))
+        row = cursor.fetchone()
+        if not row:
+            return
+        modules = json.loads(row[0] or "[]")
+        if module not in modules:
+            modules.append(module)
+        cursor.execute(
+            "UPDATE sessions SET modules_run = ? WHERE id = ?",
+            (json.dumps(modules), session_id),
+        )
+        self.conn.commit()
+
+    def get_session(self, session_id: str) -> dict[str, Any] | None:
+        """Get a session by ID."""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM sessions WHERE id = ?", (session_id,))
+        row = cursor.fetchone()
+        if row:
+            result = dict(row)
+            result["modules_run"] = json.loads(result.get("modules_run") or "[]")
+            return result
+        return None
+
+    def list_sessions(self, limit: int = 50) -> list[dict[str, Any]]:
+        """List all sessions, newest first."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT * FROM sessions ORDER BY start_time DESC LIMIT ?", (limit,)
+        )
+        rows = []
+        for row in cursor.fetchall():
+            r = dict(row)
+            r["modules_run"] = json.loads(r.get("modules_run") or "[]")
+            rows.append(r)
+        return rows
+
+    def get_session_results(self, session_id: str) -> list[dict[str, Any]]:
+        """Get all results for a specific session."""
+        return self.get_results(session_id=session_id, limit=10000)
+
+    def get_or_create_session(self, target: str) -> str:
+        """Find active session for target or create new one. Returns session_id."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT id FROM sessions
+            WHERE target = ? AND status = 'active'
+            AND start_time > datetime('now', '-24 hours')
+            ORDER BY start_time DESC LIMIT 1
+        """,
+            (target,),
+        )
+        row = cursor.fetchone()
+        if row:
+            return row[0]
+        return self.create_session(target=target)
+
+    def display_sessions(self, sessions: list[dict[str, Any]] | None = None) -> None:
+        """Display sessions in a nice table."""
+        if sessions is None:
+            sessions = self.list_sessions()
+
+        if not sessions:
+            console.print("[dim]No sessions found[/dim]")
+            return
+
+        table = Table(title="AIX Sessions")
+        table.add_column("ID", style="dim", max_width=8)
+        table.add_column("Name", style="cyan")
+        table.add_column("Target", style="green", max_width=30)
+        table.add_column("Status")
+        table.add_column("Modules", style="blue")
+        table.add_column("Started", style="dim")
+
+        for s in sessions:
+            status_str = s["status"]
+            if status_str == "active":
+                status_str = "[green]active[/green]"
+            elif status_str == "completed":
+                status_str = "[blue]completed[/blue]"
+            elif status_str == "aborted":
+                status_str = "[red]aborted[/red]"
+
+            target = s["target"]
+            if len(target) > 28:
+                target = target[:25] + "..."
+
+            modules = ", ".join(s.get("modules_run", []))
+            started = s.get("start_time", "")[:16] if s.get("start_time") else ""
+
+            table.add_row(
+                s["id"][:8],
+                s.get("name", ""),
+                target,
+                status_str,
+                modules,
+                started,
+            )
+
+        console.print(table)
+
+    # ========================================================================
+    # Conversations
+    # ========================================================================
+
+    def save_conversation(
+        self,
+        target: str,
+        module: str,
+        technique: str = "",
+        transcript: list[dict] | None = None,
+        turn_count: int = 0,
+        session_id: str | None = None,
+        target_chat_id: str | None = None,
+        conversation_id: str | None = None,
+        status: str = "completed",
+    ) -> str:
+        """Save a conversation record. Returns conversation_id."""
+        if not conversation_id:
+            conversation_id = str(uuid.uuid4())
+        cursor = self.conn.cursor()
+        transcript_json = json.dumps(transcript or [])
+        cursor.execute(
+            """
+            INSERT INTO conversations (id, session_id, target, module, technique, target_chat_id, transcript, turn_count, status, finished_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """,
+            (
+                conversation_id,
+                session_id,
+                target,
+                module,
+                technique,
+                target_chat_id,
+                transcript_json,
+                turn_count,
+                status,
+            ),
+        )
+        self.conn.commit()
+        return conversation_id
+
+    def get_conversation(self, conversation_id: str) -> dict[str, Any] | None:
+        """Get a conversation by ID."""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
+        row = cursor.fetchone()
+        if row:
+            result = dict(row)
+            result["transcript"] = json.loads(result.get("transcript") or "[]")
+            return result
+        return None
+
+    def list_conversations(
+        self,
+        session_id: str | None = None,
+        target: str | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """List conversations with optional filters."""
+        cursor = self.conn.cursor()
+        query = "SELECT * FROM conversations WHERE 1=1"
+        params: list[Any] = []
+
+        if session_id:
+            query += " AND session_id = ?"
+            params.append(session_id)
+        if target:
+            query += " AND target LIKE ?"
+            params.append(f"%{target}%")
+
+        query += " ORDER BY started_at DESC LIMIT ?"
+        params.append(limit)
+
+        cursor.execute(query, params)
+        rows = []
+        for row in cursor.fetchall():
+            r = dict(row)
+            r["transcript"] = json.loads(r.get("transcript") or "[]")
+            rows.append(r)
+        return rows
+
+    def display_conversations(self, conversations: list[dict[str, Any]] | None = None) -> None:
+        """Display conversations in a nice table."""
+        if conversations is None:
+            conversations = self.list_conversations()
+
+        if not conversations:
+            console.print("[dim]No conversations found[/dim]")
+            return
+
+        table = Table(title="AIX Conversations")
+        table.add_column("ID", style="dim", max_width=8)
+        table.add_column("Target", style="cyan", max_width=25)
+        table.add_column("Module", style="blue")
+        table.add_column("Technique", max_width=20)
+        table.add_column("Turns", justify="right")
+        table.add_column("Chat ID", style="yellow", max_width=12)
+        table.add_column("Status")
+        table.add_column("Date", style="dim")
+
+        for c in conversations:
+            target = c["target"]
+            if len(target) > 23:
+                target = target[:20] + "..."
+
+            chat_id = c.get("target_chat_id") or ""
+            if len(chat_id) > 10:
+                chat_id = chat_id[:10] + ".."
+
+            date_str = c.get("started_at", "")[:16] if c.get("started_at") else ""
+
+            table.add_row(
+                c["id"][:8],
+                target,
+                c["module"],
+                c.get("technique", ""),
+                str(c.get("turn_count", 0)),
+                chat_id,
+                c.get("status", ""),
+                date_str,
+            )
+
+        console.print(table)
+
+    def display_conversation_transcript(self, conversation_id: str) -> None:
+        """Display a full conversation transcript."""
+        conv = self.get_conversation(conversation_id)
+        if not conv:
+            console.print(f"[red]Conversation {conversation_id} not found[/red]")
+            return
+
+        from rich.panel import Panel
+
+        console.print(
+            Panel(
+                f"[bold]Module:[/bold] {conv['module']}  [bold]Technique:[/bold] {conv.get('technique', 'N/A')}\n"
+                f"[bold]Target:[/bold] {conv['target']}\n"
+                f"[bold]Target Chat ID:[/bold] {conv.get('target_chat_id') or 'N/A'}\n"
+                f"[bold]Turns:[/bold] {conv.get('turn_count', 0)}  [bold]Status:[/bold] {conv.get('status', 'N/A')}",
+                title=f"[cyan]Conversation {conversation_id[:8]}[/cyan]",
+            )
+        )
+
+        transcript = conv.get("transcript", [])
+        for entry in transcript:
+            role = entry.get("role", "unknown").upper()
+            content = entry.get("content", "")
+            turn = entry.get("turn_number", "?")
+
+            if role == "USER":
+                console.print(f"\n[bold blue]Turn {turn} - USER:[/bold blue]")
+            else:
+                console.print(f"\n[bold green]Turn {turn} - ASSISTANT:[/bold green]")
+
+            # Escape Rich markup in content
+            escaped = content.replace("[", r"\[")
+            console.print(f"  {escaped[:1000]}")
+
+    # ========================================================================
     # Profiles
     # ========================================================================
 
@@ -396,14 +758,28 @@ class AIXDatabase:
         filepath: str,
         target: str | None = None,
         module: str | None = None,
+        session_id: str | None = None,
     ) -> None:
         """Export results to HTML report"""
         from aix.core.owasp import parse_owasp_list
-        from aix.core.reporting.base import Finding, Reporter, Severity
+        from aix.core.reporting.base import Finding, Reporter, ScanMetadata, Severity
 
-        results = self.get_results(target=target, module=module, limit=1000)
+        results = self.get_results(target=target, module=module, session_id=session_id, limit=1000)
 
         reporter = Reporter()
+
+        # Load session metadata if available
+        if session_id:
+            session = self.get_session(session_id)
+            if session:
+                reporter.metadata = ScanMetadata(
+                    session_id=session_id,
+                    session_name=session.get("name"),
+                    target=session.get("target", ""),
+                    start_time=datetime.fromisoformat(session["start_time"]) if session.get("start_time") else None,
+                    end_time=datetime.fromisoformat(session["end_time"]) if session.get("end_time") else None,
+                    modules_run=session.get("modules_run", []),
+                )
 
         for r in results:
             if r["result"] == "success":

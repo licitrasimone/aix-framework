@@ -400,3 +400,177 @@ class TestWebSocketConnector:
         # close() should not raise even without a connection
         await connector.close()
         assert connector.ws is None
+
+
+class TestChatIdCapture:
+    """Tests for chat ID capture from responses"""
+
+    def test_capture_simple_path(self):
+        """Test capturing chat_id from a simple JSON path"""
+        connector = APIConnector(
+            url="https://example.com",
+            chat_id_path="conversation_id",
+        )
+
+        connector._capture_chat_id({"conversation_id": "abc123", "response": "hi"})
+        assert connector.current_chat_id == "abc123"
+
+    def test_capture_nested_path(self):
+        """Test capturing chat_id from a nested JSON path"""
+        connector = APIConnector(
+            url="https://example.com",
+            chat_id_path="data.chat_id",
+        )
+
+        connector._capture_chat_id({"data": {"chat_id": "nested-id"}, "response": "hi"})
+        assert connector.current_chat_id == "nested-id"
+
+    def test_capture_no_path_configured(self):
+        """Test that no capture happens when chat_id_path is not set"""
+        connector = APIConnector(url="https://example.com")
+
+        connector._capture_chat_id({"conversation_id": "abc123"})
+        assert connector.current_chat_id is None
+
+    def test_capture_path_missing_in_response(self):
+        """Test that missing path in response doesn't crash"""
+        connector = APIConnector(
+            url="https://example.com",
+            chat_id_path="nonexistent.path",
+        )
+
+        connector._capture_chat_id({"other_field": "value"})
+        assert connector.current_chat_id is None
+
+    def test_capture_converts_to_string(self):
+        """Test that numeric chat IDs are converted to string"""
+        connector = APIConnector(
+            url="https://example.com",
+            chat_id_path="chat_id",
+        )
+
+        connector._capture_chat_id({"chat_id": 12345})
+        assert connector.current_chat_id == "12345"
+
+    def test_capture_on_websocket_connector(self):
+        """Test chat ID capture on WebSocketConnector"""
+        connector = WebSocketConnector(
+            url="wss://example.com/chat",
+            chat_id_path="session_id",
+        )
+
+        connector._capture_chat_id({"session_id": "ws-123", "text": "hi"})
+        assert connector.current_chat_id == "ws-123"
+
+
+class TestChatIdInjection:
+    """Tests for chat ID injection into requests"""
+
+    def test_inject_into_payload_body(self):
+        """Test chat_id injection into API request body"""
+        connector = APIConnector(
+            url="https://example.com/chat",
+            chat_id_param="conversation_id",
+        )
+        connector._current_chat_id = "injected-id"
+
+        payload = connector._build_payload("hello")
+        assert payload["conversation_id"] == "injected-id"
+
+    def test_no_injection_without_chat_id(self):
+        """Test no injection when no chat_id has been captured"""
+        connector = APIConnector(
+            url="https://example.com/chat",
+            chat_id_param="conversation_id",
+        )
+
+        payload = connector._build_payload("hello")
+        assert "conversation_id" not in payload
+
+    def test_no_injection_without_param(self):
+        """Test no injection when chat_id_param is not set"""
+        connector = APIConnector(url="https://example.com/chat")
+        connector._current_chat_id = "some-id"
+
+        payload = connector._build_payload("hello")
+        assert "conversation_id" not in payload
+
+    def test_websocket_inject_into_message(self):
+        """Test chat_id injection into WebSocket message"""
+        connector = WebSocketConnector(
+            url="wss://example.com/chat",
+            chat_id_param="session_id",
+        )
+        connector._current_chat_id = "ws-inject-id"
+
+        import json
+        msg = json.loads(connector._build_message("test"))
+        assert msg["session_id"] == "ws-inject-id"
+
+    def test_no_body_injection_when_url_placeholder(self):
+        """Test that chat_id is NOT injected into body when URL has {chat_id}"""
+        connector = APIConnector(
+            url="https://example.com/chat/{chat_id}/messages",
+            chat_id_param="conversation_id",
+        )
+        connector._current_chat_id = "url-id"
+
+        payload = connector._build_payload("hello")
+        assert "conversation_id" not in payload
+
+
+class TestChatIdReset:
+    """Tests for chat ID reset"""
+
+    def test_reset_clears_chat_id(self):
+        """Test that reset_chat_id clears the captured ID"""
+        connector = APIConnector(
+            url="https://example.com",
+            chat_id_path="chat_id",
+        )
+        connector._current_chat_id = "some-id"
+
+        connector.reset_chat_id()
+        assert connector.current_chat_id is None
+
+    def test_reset_on_fresh_connector(self):
+        """Test that reset on a fresh connector doesn't crash"""
+        connector = APIConnector(url="https://example.com")
+        connector.reset_chat_id()
+        assert connector.current_chat_id is None
+
+
+class TestNavigateJsonPath:
+    """Tests for _navigate_json_path on Connector base class"""
+
+    def test_simple_path(self):
+        """Test simple key navigation"""
+        connector = APIConnector(url="https://example.com")
+        result = connector._navigate_json_path({"key": "value"}, "key")
+        assert result == "value"
+
+    def test_nested_path(self):
+        """Test nested dot-separated path"""
+        connector = APIConnector(url="https://example.com")
+        data = {"a": {"b": {"c": "deep"}}}
+        result = connector._navigate_json_path(data, "a.b.c")
+        assert result == "deep"
+
+    def test_list_index(self):
+        """Test list index navigation"""
+        connector = APIConnector(url="https://example.com")
+        data = {"items": [{"id": "first"}, {"id": "second"}]}
+        result = connector._navigate_json_path(data, "items.1.id")
+        assert result == "second"
+
+    def test_missing_key(self):
+        """Test missing key returns None"""
+        connector = APIConnector(url="https://example.com")
+        result = connector._navigate_json_path({"a": 1}, "b")
+        assert result is None
+
+    def test_list_index_out_of_range(self):
+        """Test out-of-range list index returns None"""
+        connector = APIConnector(url="https://example.com")
+        result = connector._navigate_json_path({"items": [1, 2]}, "items.5")
+        assert result is None

@@ -453,3 +453,317 @@ class TestAIXDatabaseEdgeCases:
                 assert len(results[0]["payload"]) == 10000
             finally:
                 db.close()
+
+
+class TestSessions:
+    """Tests for session management"""
+
+    @pytest.fixture
+    def temp_db(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "test_aix.db")
+            db = AIXDatabase(db_path)
+            yield db
+            db.close()
+
+    def test_create_session(self, temp_db):
+        """Test creating a session returns a UUID"""
+        session_id = temp_db.create_session(target="https://example.com")
+        assert session_id is not None
+        assert len(session_id) == 36  # UUID length
+
+    def test_create_session_with_name(self, temp_db):
+        """Test creating a session with a custom name"""
+        session_id = temp_db.create_session(
+            target="https://example.com", name="My Test Session"
+        )
+        session = temp_db.get_session(session_id)
+        assert session is not None
+        assert session["name"] == "My Test Session"
+        assert session["target"] == "https://example.com"
+        assert session["status"] == "active"
+
+    def test_end_session(self, temp_db):
+        """Test ending a session"""
+        session_id = temp_db.create_session(target="https://example.com")
+        temp_db.end_session(session_id, status="completed")
+
+        session = temp_db.get_session(session_id)
+        assert session["status"] == "completed"
+        assert session["end_time"] is not None
+
+    def test_end_session_aborted(self, temp_db):
+        """Test ending a session as aborted"""
+        session_id = temp_db.create_session(target="https://example.com")
+        temp_db.end_session(session_id, status="aborted")
+
+        session = temp_db.get_session(session_id)
+        assert session["status"] == "aborted"
+
+    def test_update_session_modules(self, temp_db):
+        """Test appending modules to a session"""
+        session_id = temp_db.create_session(target="https://example.com")
+        temp_db.update_session_modules(session_id, "inject")
+        temp_db.update_session_modules(session_id, "jailbreak")
+
+        session = temp_db.get_session(session_id)
+        assert session["modules_run"] == ["inject", "jailbreak"]
+
+    def test_update_session_modules_no_duplicates(self, temp_db):
+        """Test that duplicate modules are not added"""
+        session_id = temp_db.create_session(target="https://example.com")
+        temp_db.update_session_modules(session_id, "inject")
+        temp_db.update_session_modules(session_id, "inject")
+
+        session = temp_db.get_session(session_id)
+        assert session["modules_run"] == ["inject"]
+
+    def test_list_sessions(self, temp_db):
+        """Test listing sessions"""
+        temp_db.create_session(target="https://target1.com")
+        temp_db.create_session(target="https://target2.com")
+
+        sessions = temp_db.list_sessions()
+        assert len(sessions) == 2
+
+    def test_get_session_not_found(self, temp_db):
+        """Test getting a non-existent session"""
+        result = temp_db.get_session("nonexistent-id")
+        assert result is None
+
+    def test_get_or_create_session_creates_new(self, temp_db):
+        """Test get_or_create_session creates a new session when none exists"""
+        session_id = temp_db.get_or_create_session("https://example.com")
+        assert session_id is not None
+        session = temp_db.get_session(session_id)
+        assert session["target"] == "https://example.com"
+        assert session["status"] == "active"
+
+    def test_get_or_create_session_reuses_existing(self, temp_db):
+        """Test get_or_create_session reuses an active session"""
+        id1 = temp_db.get_or_create_session("https://example.com")
+        id2 = temp_db.get_or_create_session("https://example.com")
+        assert id1 == id2
+
+    def test_get_or_create_session_different_targets(self, temp_db):
+        """Test get_or_create_session creates separate sessions per target"""
+        id1 = temp_db.get_or_create_session("https://target1.com")
+        id2 = temp_db.get_or_create_session("https://target2.com")
+        assert id1 != id2
+
+    def test_get_session_results(self, temp_db):
+        """Test getting results filtered by session"""
+        session_id = temp_db.create_session(target="https://example.com")
+
+        temp_db.add_result(
+            target="https://example.com",
+            module="inject",
+            technique="test",
+            result="success",
+            payload="p",
+            response="r",
+            severity="high",
+            session_id=session_id,
+        )
+        temp_db.add_result(
+            target="https://example.com",
+            module="jailbreak",
+            technique="test2",
+            result="success",
+            payload="p2",
+            response="r2",
+            severity="medium",
+        )
+
+        results = temp_db.get_session_results(session_id)
+        assert len(results) == 1
+        assert results[0]["module"] == "inject"
+
+
+class TestConversations:
+    """Tests for conversation management"""
+
+    @pytest.fixture
+    def temp_db(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "test_aix.db")
+            db = AIXDatabase(db_path)
+            yield db
+            db.close()
+
+    def test_save_conversation(self, temp_db):
+        """Test saving a conversation"""
+        transcript = [
+            {"role": "user", "content": "hello", "turn_number": 1},
+            {"role": "assistant", "content": "hi!", "turn_number": 1},
+        ]
+        conv_id = temp_db.save_conversation(
+            target="https://example.com",
+            module="multiturn",
+            technique="crescendo",
+            transcript=transcript,
+            turn_count=2,
+        )
+        assert conv_id is not None
+
+        conv = temp_db.get_conversation(conv_id)
+        assert conv is not None
+        assert conv["target"] == "https://example.com"
+        assert conv["module"] == "multiturn"
+        assert conv["technique"] == "crescendo"
+        assert conv["turn_count"] == 2
+        assert len(conv["transcript"]) == 2
+
+    def test_save_conversation_with_target_chat_id(self, temp_db):
+        """Test that target_chat_id is stored"""
+        conv_id = temp_db.save_conversation(
+            target="https://example.com",
+            module="inject",
+            technique="test",
+            target_chat_id="abc-123",
+        )
+
+        conv = temp_db.get_conversation(conv_id)
+        assert conv["target_chat_id"] == "abc-123"
+
+    def test_save_conversation_with_session(self, temp_db):
+        """Test saving a conversation linked to a session"""
+        session_id = temp_db.create_session(target="https://example.com")
+        conv_id = temp_db.save_conversation(
+            target="https://example.com",
+            module="multiturn",
+            session_id=session_id,
+        )
+
+        conv = temp_db.get_conversation(conv_id)
+        assert conv["session_id"] == session_id
+
+    def test_save_conversation_custom_id(self, temp_db):
+        """Test saving a conversation with a custom ID"""
+        custom_id = "my-custom-conv-id"
+        conv_id = temp_db.save_conversation(
+            target="https://example.com",
+            module="inject",
+            conversation_id=custom_id,
+        )
+        assert conv_id == custom_id
+
+    def test_get_conversation_not_found(self, temp_db):
+        """Test getting a non-existent conversation"""
+        result = temp_db.get_conversation("nonexistent-id")
+        assert result is None
+
+    def test_list_conversations(self, temp_db):
+        """Test listing conversations"""
+        temp_db.save_conversation(target="https://t1.com", module="inject")
+        temp_db.save_conversation(target="https://t2.com", module="jailbreak")
+
+        convs = temp_db.list_conversations()
+        assert len(convs) == 2
+
+    def test_list_conversations_by_session(self, temp_db):
+        """Test filtering conversations by session"""
+        session_id = temp_db.create_session(target="https://example.com")
+        temp_db.save_conversation(
+            target="https://example.com", module="inject", session_id=session_id
+        )
+        temp_db.save_conversation(
+            target="https://example.com", module="jailbreak"
+        )
+
+        convs = temp_db.list_conversations(session_id=session_id)
+        assert len(convs) == 1
+        assert convs[0]["module"] == "inject"
+
+    def test_list_conversations_by_target(self, temp_db):
+        """Test filtering conversations by target"""
+        temp_db.save_conversation(target="https://target1.com", module="inject")
+        temp_db.save_conversation(target="https://target2.com", module="inject")
+
+        convs = temp_db.list_conversations(target="target1.com")
+        assert len(convs) == 1
+
+
+class TestResultsWithSessionAndConversation:
+    """Tests for results with session_id and conversation_id"""
+
+    @pytest.fixture
+    def temp_db(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "test_aix.db")
+            db = AIXDatabase(db_path)
+            yield db
+            db.close()
+
+    def test_add_result_with_session_id(self, temp_db):
+        """Test adding a result with session_id"""
+        session_id = temp_db.create_session(target="https://example.com")
+        temp_db.add_result(
+            target="https://example.com",
+            module="inject",
+            technique="test",
+            result="success",
+            payload="p",
+            response="r",
+            severity="high",
+            session_id=session_id,
+        )
+
+        results = temp_db.get_results(session_id=session_id)
+        assert len(results) == 1
+        assert results[0]["session_id"] == session_id
+
+    def test_add_result_with_conversation_id(self, temp_db):
+        """Test adding a result with conversation_id"""
+        temp_db.add_result(
+            target="https://example.com",
+            module="inject",
+            technique="test",
+            result="success",
+            payload="p",
+            response="r",
+            severity="high",
+            conversation_id="conv-123",
+        )
+
+        results = temp_db.get_results()
+        assert results[0]["conversation_id"] == "conv-123"
+
+    def test_get_results_filtered_by_session(self, temp_db):
+        """Test filtering results by session_id"""
+        s1 = temp_db.create_session(target="https://example.com")
+        s2 = temp_db.create_session(target="https://example.com")
+
+        temp_db.add_result(
+            target="https://example.com", module="inject", technique="t1",
+            result="success", payload="p", response="r", severity="high",
+            session_id=s1,
+        )
+        temp_db.add_result(
+            target="https://example.com", module="jailbreak", technique="t2",
+            result="success", payload="p", response="r", severity="high",
+            session_id=s2,
+        )
+
+        results = temp_db.get_results(session_id=s1)
+        assert len(results) == 1
+        assert results[0]["technique"] == "t1"
+
+    def test_update_result_preserves_session_id(self, temp_db):
+        """Test that updating a result with COALESCE preserves session_id"""
+        session_id = temp_db.create_session(target="https://example.com")
+        temp_db.add_result(
+            target="https://example.com", module="inject", technique="test",
+            result="success", payload="p", response="r1", severity="high",
+            session_id=session_id,
+        )
+        # Update same result without providing session_id
+        temp_db.add_result(
+            target="https://example.com", module="inject", technique="test",
+            result="success", payload="p", response="r2", severity="critical",
+        )
+
+        results = temp_db.get_results()
+        assert len(results) == 1
+        assert results[0]["response"] == "r2"
+        assert results[0]["session_id"] == session_id

@@ -206,6 +206,20 @@ class MultiTurnScanner(BaseScanner):
                         # Execute sequence
                         result = await conv_manager.execute_sequence(seq)
 
+                        # Save conversation transcript
+                        target_chat_id = connector.current_chat_id if hasattr(connector, 'current_chat_id') else None
+                        self.db.save_conversation(
+                            target=self.target,
+                            module="multiturn",
+                            technique=seq.get("name", "unnamed"),
+                            transcript=conv_manager.get_transcript_as_dicts(),
+                            turn_count=result.turns_executed,
+                            session_id=self.session_id,
+                            target_chat_id=target_chat_id,
+                            conversation_id=result.conversation_id,
+                            status="success" if result.success else "failed",
+                        )
+
                         if result.success:
                             self.stats["success"] += 1
                             category_stats[seq_category]["success"] += 1
@@ -235,6 +249,8 @@ class MultiTurnScanner(BaseScanner):
                                 severity.value,
                                 reason=f"Category: {seq_category}, Indicators: {result.matched_indicators}",
                                 owasp=seq.get("owasp", []),
+                                session_id=self.session_id,
+                                conversation_id=result.conversation_id,
                             )
 
                             self._print(

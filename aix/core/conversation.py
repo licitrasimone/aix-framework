@@ -10,6 +10,7 @@ Handles:
 
 import asyncio
 import re
+import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -66,6 +67,7 @@ class ConversationState:
     retries: int = 0
     max_retries: int = 2
     branch_taken: str | None = None
+    conversation_id: str = ""
 
 
 @dataclass
@@ -82,6 +84,7 @@ class SequenceResult:
     matched_indicators: list[str]
     variables_extracted: dict
     error: str | None = None
+    conversation_id: str = ""
 
 
 class ConversationManager:
@@ -120,7 +123,7 @@ class ConversationManager:
 
     def reset(self):
         """Reset conversation state for new sequence."""
-        self.state = ConversationState()
+        self.state = ConversationState(conversation_id=str(uuid.uuid4()))
 
     def _build_messages(self) -> list[dict]:
         """
@@ -409,10 +412,22 @@ class ConversationManager:
                     console.print(f"[red]Error at turn {turn_num}: {e}[/red]")
                 break
 
-        # Copy extracted variables
+        # Copy extracted variables and conversation ID
         result.variables_extracted = dict(self.state.variables)
+        result.conversation_id = self.state.conversation_id
 
         return result
+
+    def get_transcript_as_dicts(self) -> list[dict]:
+        """Get conversation history as a list of serializable dicts for DB storage."""
+        return [
+            {
+                "role": turn.role,
+                "content": turn.content,
+                "turn_number": turn.turn_number,
+            }
+            for turn in self.state.history
+        ]
 
     def get_conversation_transcript(self) -> str:
         """
