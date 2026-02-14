@@ -259,6 +259,47 @@ class TestScannerConnectorCreation:
         # Connector uses scanner's timeout (default 30)
         assert connector.config.get("timeout") == 30  # Default timeout
 
+    def test_create_connector_ws_url(self):
+        """Test ws:// URL creates WebSocketConnector"""
+        from aix.core.connector import WebSocketConnector
+        from aix.modules.inject import InjectScanner
+
+        scanner = InjectScanner(target="ws://target.com/chat")
+
+        connector = scanner._create_connector()
+
+        assert isinstance(connector, WebSocketConnector)
+
+    def test_create_connector_wss_url(self):
+        """Test wss:// URL creates WebSocketConnector"""
+        from aix.core.connector import WebSocketConnector
+        from aix.modules.inject import InjectScanner
+
+        scanner = InjectScanner(target="wss://target.com/chat")
+
+        connector = scanner._create_connector()
+
+        assert isinstance(connector, WebSocketConnector)
+
+    def test_ws_connector_inherits_params(self):
+        """Test WebSocketConnector gets scanner parameters"""
+        from aix.core.connector import WebSocketConnector
+        from aix.modules.inject import InjectScanner
+
+        scanner = InjectScanner(
+            target="wss://target.com/chat",
+            injection_param="query",
+            response_path="data.text",
+            cookies="session=abc",
+        )
+
+        connector = scanner._create_connector()
+
+        assert isinstance(connector, WebSocketConnector)
+        assert connector.injection_param == "query"
+        assert connector.response_path == "data.text"
+        assert connector.cookies == "session=abc"
+
 
 class TestScannerEvaluator:
     """Tests for evaluator integration"""

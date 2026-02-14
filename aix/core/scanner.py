@@ -11,7 +11,7 @@ from typing import Any, Optional
 from rich.console import Console
 
 from aix.core.ai_engine import AIEngine
-from aix.core.connector import APIConnector, RequestConnector
+from aix.core.connector import APIConnector, RequestConnector, WebSocketConnector
 from aix.core.context import TargetContext
 from aix.core.evaluator import LLMEvaluator
 from aix.core.evasion import PayloadEvasion
@@ -230,6 +230,19 @@ class BaseScanner(ABC):
                 response_regex=self.response_regex,
                 response_path=self.response_path,
                 console=self.console,
+            )
+        elif self.target.startswith(("ws://", "wss://")):
+            return WebSocketConnector(
+                self.target,
+                injection_param=self.injection_param,
+                response_path=self.response_path,
+                response_regex=self.response_regex,
+                cookies=self.cookies,
+                headers=self.headers,
+                timeout=self.timeout,
+                verbose=self.verbose,
+                console=self.console,
+                proxy=self.proxy,
             )
         else:
             return APIConnector(

@@ -89,6 +89,13 @@ def validate_input(target, request, param):
             console.print(f"[red][-][/red] Error parsing request file: {e}")
             raise click.Abort()
 
+    # Hint: suggest --response-path for WebSocket targets
+    if target and target.startswith(("ws://", "wss://")) and not parsed_request:
+        console.print(
+            "[cyan][*][/cyan] WebSocket target detected. "
+            "Use [bold]-rp[/bold] (--response-path) to extract a specific JSON field from responses."
+        )
+
     return target, parsed_request
 
 

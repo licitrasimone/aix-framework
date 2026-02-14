@@ -4,7 +4,7 @@ Tests for AIX Connector Module
 
 import pytest
 
-from aix.core.connector import APIConnector, RequestConnector
+from aix.core.connector import APIConnector, RequestConnector, WebSocketConnector
 from aix.core.request_parser import ParsedRequest
 
 
@@ -234,3 +234,169 @@ class TestConnectorHeaderParsing:
         result = connector._parse_headers(None)
 
         assert result == {}
+
+
+class TestWebSocketConnector:
+    """Tests for WebSocketConnector class"""
+
+    def test_init_defaults(self):
+        """Test default initialization"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        assert connector.url == "wss://target.com/chat"
+        assert connector.injection_param == "message"
+        assert connector.response_path is None
+        assert connector.timeout == 30
+        assert connector.ws is None
+
+    def test_init_custom_params(self):
+        """Test initialization with custom parameters"""
+        connector = WebSocketConnector(
+            url="wss://target.com/chat",
+            injection_param="query",
+            response_path="data.content",
+            timeout=60,
+        )
+
+        assert connector.injection_param == "query"
+        assert connector.response_path == "data.content"
+        assert connector.timeout == 60
+
+    def test_build_message(self):
+        """Test message building with default param"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        result = connector._build_message("hello")
+
+        assert result == '{"message": "hello"}'
+
+    def test_build_message_custom_param(self):
+        """Test message building with custom injection param"""
+        connector = WebSocketConnector(url="wss://target.com/chat", injection_param="query")
+
+        result = connector._build_message("test payload")
+
+        assert result == '{"query": "test payload"}'
+
+    def test_extract_response_with_path(self):
+        """Test response extraction with explicit path"""
+        connector = WebSocketConnector(url="wss://target.com/chat", response_path="content")
+
+        raw = '{"user": "Bot", "content": "Hello there!"}'
+        result = connector._extract_response(raw)
+
+        assert result == "Hello there!"
+
+    def test_extract_response_nested_path(self):
+        """Test response extraction with nested dot path"""
+        connector = WebSocketConnector(url="wss://target.com/chat", response_path="data.text")
+
+        raw = '{"data": {"text": "nested value"}}'
+        result = connector._extract_response(raw)
+
+        assert result == "nested value"
+
+    def test_extract_response_fallback(self):
+        """Test response extraction with fallback keys (no response_path)"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        raw = '{"user": "Bot", "content": "fallback hit"}'
+        result = connector._extract_response(raw)
+
+        assert result == "fallback hit"
+
+    def test_extract_response_fallback_response_key(self):
+        """Test fallback to 'response' key"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        raw = '{"response": "answer here"}'
+        result = connector._extract_response(raw)
+
+        assert result == "answer here"
+
+    def test_extract_response_no_known_keys(self):
+        """Test fallback to JSON dump when no known keys match"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        raw = '{"unknown_field": "some data"}'
+        result = connector._extract_response(raw)
+
+        assert "unknown_field" in result
+        assert "some data" in result
+
+    def test_extract_response_non_json(self):
+        """Test non-JSON response passthrough"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        result = connector._extract_response("plain text response")
+
+        assert result == "plain text response"
+
+    def test_build_extra_headers_cookies(self):
+        """Test extra headers with cookies"""
+        connector = WebSocketConnector(url="wss://target.com/chat", cookies="session=abc;token=xyz")
+
+        headers = connector._build_extra_headers()
+
+        assert "Cookie" in headers
+        assert "session=abc" in headers["Cookie"]
+        assert "token=xyz" in headers["Cookie"]
+
+    def test_build_extra_headers_custom(self):
+        """Test extra headers with custom headers"""
+        connector = WebSocketConnector(
+            url="wss://target.com/chat", headers="Authorization:Bearer tok;X-Custom:val"
+        )
+
+        headers = connector._build_extra_headers()
+
+        assert headers["Authorization"] == "Bearer tok"
+        assert headers["X-Custom"] == "val"
+
+    def test_build_extra_headers_both(self):
+        """Test extra headers with both cookies and custom headers"""
+        connector = WebSocketConnector(
+            url="wss://target.com/chat",
+            cookies="session=abc",
+            headers="X-Custom:val",
+        )
+
+        headers = connector._build_extra_headers()
+
+        assert "Cookie" in headers
+        assert headers["X-Custom"] == "val"
+
+    def test_build_extra_headers_empty(self):
+        """Test extra headers when none configured"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        headers = connector._build_extra_headers()
+
+        assert headers == {}
+
+    def test_navigate_path_nested(self):
+        """Test dot-path navigation in nested data"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        data = {"a": {"b": {"c": "deep"}}}
+        result = connector._navigate_path(data, "a.b.c")
+
+        assert result == "deep"
+
+    def test_navigate_path_missing(self):
+        """Test dot-path navigation with missing key"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        data = {"a": {"x": 1}}
+        result = connector._navigate_path(data, "a.b.c")
+
+        assert result == ""
+
+    @pytest.mark.asyncio
+    async def test_context_manager(self):
+        """Test async context manager protocol (close without connect)"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        # close() should not raise even without a connection
+        await connector.close()
+        assert connector.ws is None
