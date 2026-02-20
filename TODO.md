@@ -259,7 +259,7 @@ steps:
 |-------|--------|--------|----------|--------|
 | Phase 1: Advanced Attacks | Very High | Medium | **P0** | Multi-Turn ✅ |
 | Phase 2: Adaptive Testing | Very High | High | **P0** | Planned |
-| Phase 3: Attack Chaining | High | Medium | **P1** | Core ✅ |
+| Phase 3: Attack Chaining | High | Medium | **P1** | Core ✅, WebSocket ✅ |
 | Phase 4: Enterprise/CI | High | Medium | **P1** | Planned |
 | Phase 5: Blue Team | Medium | Medium | **P2** | Planned |
 | Phase 6: Platform | Medium | High | **P2** | Planned |
@@ -277,13 +277,35 @@ steps:
 
 ---
 
-*Last Updated: February 8, 2026*
+*Last Updated: February 20, 2026*
 
 ---
 
 ## Recent Changes
 
-### v1.3.0 - AI Context & OWASP Integration
+### v1.1.0 - WebSocket Support & Sessions
+- Added **WebSocket Connector** (`ws://` / `wss://` targets):
+  - Full attack module support for WebSocket endpoints
+  - Configurable JSON message template and response extraction path
+  - SSL verification disabled for `wss://` (Burp/ZAP compatible)
+  - Extra headers support for the HTTP upgrade handshake
+- Added **Chat ID Tracking**:
+  - `--chat-id-path`: extract chat/session ID from response via dot-path
+  - `--chat-id-param`: inject captured ID back into subsequent requests
+  - `--new-chat` / `--reuse-chat` flags to control conversation continuity
+  - `{chat_id}` URL placeholder substitution
+- Added **Sessions** to the database:
+  - Scans are automatically grouped into sessions per target
+  - `sessions` table with status, notes, and modules-run tracking
+  - `aix db --sessions` to list sessions; `aix db --session <id>` for results
+  - `get_or_create_session()` auto-creates a session at the start of each run
+- Added **Conversations** to the database:
+  - Multi-turn transcripts stored as conversations linked to sessions
+  - `conversations` table with full turn-by-turn transcript (JSON)
+  - `aix db --conversations` to list; `aix db --conversation <id>` for transcript
+- DB migrations: `session_id` and `conversation_id` columns added to `results`
+
+### v1.0.2 - AI Context & OWASP Integration
 - Added **AI Context Gathering** feature:
   - Probes target to detect purpose, domain, personality, restrictions
   - New fields: `purpose`, `domain`, `expected_inputs`, `personality`
@@ -305,7 +327,7 @@ steps:
   - Preserved successful attempt reason in `scan_payload()`
   - Prevents failure reasons from overwriting success reasons with `--verify-attempts`
 
-### v1.2.0 - Attack Chain Module
+### v1.0.1 - Attack Chain Module
 - Added `aix chain` command for executing YAML-defined attack playbooks
 - Implemented ChainExecutor for orchestrating multi-step attack workflows
 - Implemented ChainContext for state management and variable interpolation
@@ -326,7 +348,7 @@ steps:
 - Added conditional branching with `on_success`, `on_fail`, and `conditions`
 - Added variable storage and interpolation across steps
 
-### v1.1.0 - Multi-Turn Attack Module
+### v1.0.0 - Multi-Turn Attack Module
 - Added `aix multiturn` command with 8 attack categories
 - Implemented ConversationManager for stateful attacks
 - Implemented TurnEvaluator for response analysis

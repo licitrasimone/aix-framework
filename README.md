@@ -2,7 +2,7 @@
 
 ```
     ▄▀█ █ ▀▄▀
-    █▀█ █ █ █  v1.0.2
+    █▀█ █ █ █  v1.1.0
 
     AI Security Testing Framework
 ```
@@ -85,8 +85,16 @@ aix chain https://api.target.com/chat -k sk-xxx -P full_compromise
 # Use with Burp Suite request file
 aix inject -r request.txt -p "messages[0].content"
 
+# Target a WebSocket endpoint
+aix inject ws://api.target.com/ws -k sk-xxx
+aix scan wss://api.target.com/ws -k sk-xxx
+
 # Generate HTML report
 aix db --export report.html
+
+# View sessions and conversations
+aix db --sessions
+aix db --conversations
 ```
 
 ---
@@ -414,6 +422,36 @@ The `-p` parameter specifies the JSON path to the injection point. Examples:
 
 ---
 
+## WebSocket Support
+
+AIX supports WebSocket endpoints (`ws://` and `wss://`) natively. Use them exactly like HTTP targets:
+
+```bash
+aix recon ws://api.target.com/chat
+aix inject wss://api.target.com/chat -k sk-xxx
+aix scan wss://api.target.com/chat -k sk-xxx
+```
+
+### Chat ID Tracking
+
+For stateful APIs that return a session or chat ID in the response, AIX can extract and reuse it automatically across requests:
+
+| Option | Description |
+|--------|-------------|
+| `--chat-id-path` | Dot-path to extract chat ID from response JSON (e.g., `data.chat_id`) |
+| `--chat-id-param` | Request parameter to inject the captured chat ID into |
+| `--new-chat` | Force a new conversation for each payload (ignore existing chat ID) |
+| `--reuse-chat` | Reuse the same chat ID for all payloads in this run |
+
+```bash
+# Extract chat_id from response and send it back in subsequent requests
+aix inject https://api.target.com/chat --chat-id-path data.chat_id --chat-id-param chat_id
+```
+
+> **Note:** HTTP proxy is not supported for WebSocket connections. SSL verification is disabled for `wss://` (same as other connectors, for use with Burp/ZAP).
+
+---
+
 ## Database & Reporting
 
 ```bash
@@ -431,7 +469,23 @@ aix db --export report.html
 
 # Clear database
 aix db --clear
+
+# --- Sessions ---
+# List all sessions (grouped by target)
+aix db --sessions
+
+# Show results for a specific session
+aix db --session <session-id>
+
+# --- Conversations ---
+# List all recorded conversations (multi-turn)
+aix db --conversations
+
+# Show full transcript for a specific conversation
+aix db --conversation <conversation-id>
 ```
+
+All scan runs are automatically grouped into **sessions** by target. Multi-turn attack transcripts are stored as **conversations** and linked to both their session and individual findings.
 
 ---
 
