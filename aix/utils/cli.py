@@ -125,15 +125,48 @@ def scan_options(func):
     return wrapper
 
 
+def chat_id_options(func):
+    """
+    Decorator that adds target chat ID handling options.
+    """
+
+    @click.option(
+        "--chat-id-path",
+        help="JSON path to extract chat ID from response (e.g., conversation_id, data.chat_id)",
+    )
+    @click.option(
+        "--chat-id-param",
+        help="Field name to inject chat ID into request body (or use {chat_id} in URL)",
+    )
+    @click.option(
+        "--new-chat",
+        is_flag=True,
+        default=False,
+        help="Force a fresh conversation per payload (default for single-turn scans)",
+    )
+    @click.option(
+        "--reuse-chat",
+        is_flag=True,
+        default=False,
+        help="Reuse the same conversation across payloads (default for multi-turn)",
+    )
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 def standard_options(func):
     """
-    Combines all standard options: common, refresh, ai, and scan.
+    Combines all standard options: common, refresh, ai, scan, and chat_id.
     """
 
     @common_options
     @refresh_options
     @ai_options
     @scan_options
+    @chat_id_options
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)

@@ -56,6 +56,11 @@ class Connector(ABC):
             _global_console = Console()
         self.console = console or _global_console
 
+        # Chat ID tracking
+        self.chat_id_path = kwargs.get("chat_id_path")
+        self.chat_id_param = kwargs.get("chat_id_param")
+        self._current_chat_id: str | None = None
+
     def _parse_cookies(self, cookies: str | None) -> dict[str, str]:
         """Parse cookie string into dictionary"""
         if not cookies:
@@ -79,6 +84,39 @@ class Connector(ABC):
                 key, value = item.strip().split(":", 1)
                 header_dict[key.strip()] = value.strip()
         return header_dict
+
+    def _navigate_json_path(self, data: Any, path: str) -> Any:
+        """Navigate a dot-separated JSON path (e.g., 'data.chat_id')."""
+        result = data
+        for key in path.split("."):
+            if isinstance(result, list):
+                if key.isdigit() and int(key) < len(result):
+                    result = result[int(key)]
+                else:
+                    return None
+            elif isinstance(result, dict):
+                result = result.get(key)
+            else:
+                return None
+            if result is None:
+                return None
+        return result
+
+    def _capture_chat_id(self, response_data: dict) -> None:
+        """Extract chat_id from response if chat_id_path is configured."""
+        if not self.chat_id_path:
+            return
+        chat_id = self._navigate_json_path(response_data, self.chat_id_path)
+        if chat_id:
+            self._current_chat_id = str(chat_id)
+
+    def reset_chat_id(self) -> None:
+        """Clear captured chat ID (for fresh conversation)."""
+        self._current_chat_id = None
+
+    @property
+    def current_chat_id(self) -> str | None:
+        return self._current_chat_id
 
     @abstractmethod
     async def connect(self) -> None:
@@ -292,6 +330,10 @@ class APIConnector(Connector):
                 if key not in payload:
                     payload[key] = value
 
+        # Inject captured chat ID if available
+        if self._current_chat_id and self.chat_id_param and "{chat_id}" not in self.url:
+            payload[self.chat_id_param] = self._current_chat_id
+
         return payload
 
     def _extract_response(self, data: dict[str, Any]) -> str:
@@ -501,6 +543,7 @@ class APIConnector(Connector):
             response = await self.client.post(url, json=body, headers=headers)
             response.raise_for_status()
             data = response.json()
+            self._capture_chat_id(data)
             return self._extract_response(data)
 
         except httpx.HTTPStatusError as e:
@@ -534,6 +577,10 @@ class APIConnector(Connector):
                 url = self.url
             else:
                 url = self.url.rstrip("/") + endpoint
+
+            # Support {chat_id} URL placeholder
+            if self._current_chat_id and "{chat_id}" in url:
+                url = url.replace("{chat_id}", self._current_chat_id)
 
             # Use profile URL if available
             if self.profile and self.profile.endpoint:
@@ -584,6 +631,7 @@ class APIConnector(Connector):
                 response.raise_for_status()
 
                 data = response.json()
+                self._capture_chat_id(data)
                 return self._extract_response(data)
 
             except httpx.HTTPStatusError as e:
@@ -629,35 +677,169 @@ class APIConnector(Connector):
 class WebSocketConnector(Connector):
     """
     WebSocket connector for real-time chat interfaces.
+
+    Sends JSON messages over WebSocket and extracts responses
+    using configurable JSON path or regex. Supports cookies
+    and custom headers via the HTTP upgrade handshake.
     """
 
     def __init__(self, url: str, profile=None, **kwargs):
-        super().__init__(url, profile, **kwargs)
+        console = kwargs.pop("console", None)
+        super().__init__(url, profile, console=console, **kwargs)
         self.ws = None
-        self.message_format = kwargs.get("message_format", lambda m: json.dumps({"message": m}))
-        self.response_parser = kwargs.get(
-            "response_parser", lambda r: json.loads(r).get("response", r)
-        )
+        self.injection_param = kwargs.get("injection_param", "message")
+        self.response_path = kwargs.get("response_path")
+        self.response_regex = kwargs.get("response_regex")
+        self.timeout = kwargs.get("timeout", 30)
+        self.verbose = kwargs.get("verbose", 0)
+        self.cookies = kwargs.get("cookies")
+        self.headers = kwargs.get("headers")
+        self.proxy = kwargs.get("proxy")
+
+    def _build_extra_headers(self) -> dict[str, str]:
+        """Build extra headers for the WebSocket HTTP upgrade handshake."""
+        extra = {}
+
+        # Cookies -> Cookie header
+        cookie_dict = self._parse_cookies(self.cookies)
+        if cookie_dict:
+            extra["Cookie"] = "; ".join(f"{k}={v}" for k, v in cookie_dict.items())
+
+        # Custom headers
+        header_dict = self._parse_headers(self.headers)
+        if header_dict:
+            extra.update(header_dict)
+
+        return extra
+
+    def _build_message(self, payload: str) -> str:
+        """Build JSON message from payload."""
+        msg = {self.injection_param: payload}
+        # Inject captured chat ID if available
+        if self._current_chat_id and self.chat_id_param:
+            msg[self.chat_id_param] = self._current_chat_id
+        return json.dumps(msg)
+
+    def _extract_response(self, raw: str) -> str:
+        """Parse JSON response and extract text using response_path or fallback keys."""
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return self._apply_regex(raw)
+
+        extracted = ""
+
+        if self.response_path:
+            extracted = str(self._navigate_path(data, self.response_path))
+        else:
+            # Try common chatbot response keys
+            for key in ("content", "response", "text", "message", "answer", "reply"):
+                if isinstance(data, dict) and key in data:
+                    extracted = str(data[key])
+                    break
+
+            if not extracted:
+                extracted = json.dumps(data) if isinstance(data, dict) else str(data)
+
+        return self._apply_regex(extracted)
+
+    def _navigate_path(self, data: Any, path: str) -> Any:
+        """Navigate dot-separated path in JSON data (e.g. 'data.content')."""
+        result = data
+        for key in path.split("."):
+            if isinstance(result, list):
+                if key.isdigit() and int(key) < len(result):
+                    result = result[int(key)]
+                else:
+                    return ""
+            elif isinstance(result, dict):
+                result = result.get(key, "")
+            else:
+                return str(result)
+            if not result:
+                break
+        return result
 
     async def connect(self) -> None:
-        """Connect to WebSocket"""
-        import websockets
+        """Connect to WebSocket endpoint."""
+        try:
+            import websockets
+        except ImportError:
+            raise ImportError(
+                "websockets library required for WebSocket connections. "
+                "Install with: pip install aix-framework[full]"
+            )
 
-        self.ws = await websockets.connect(self.url)
+        if self.proxy:
+            self.console.print(
+                "[yellow][!][/yellow] HTTP proxy is not supported for WebSocket connections"
+            )
+
+        extra_headers = self._build_extra_headers()
+
+        # Disable SSL verification for wss:// (same as other connectors for Burp/ZAP)
+        import ssl
+
+        ssl_context = None
+        if self.url.startswith("wss://"):
+            ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+        self.ws = await websockets.connect(
+            self.url,
+            additional_headers=extra_headers,
+            ssl=ssl_context,
+            open_timeout=self.timeout,
+            close_timeout=self.timeout,
+        )
 
     async def send(self, payload: str) -> str:
-        """Send message through WebSocket"""
+        """Send message and wait for response."""
         if not self.ws:
             await self.connect()
 
-        await self.ws.send(self.message_format(payload))
-        response = await self.ws.recv()
-        return self.response_parser(response)
+        message = self._build_message(payload)
+
+        if self.verbose >= 3:
+            self.console.print(f"[cyan]WS-CONN[/cyan] [*] Sending: {message[:200]}")
+
+        try:
+            await self.ws.send(message)
+            raw = await asyncio.wait_for(self.ws.recv(), timeout=self.timeout)
+        except asyncio.TimeoutError:
+            raise ConnectionError(f"WebSocket recv() timed out after {self.timeout}s")
+        except Exception as e:
+            # Auto-reconnect once on connection closed
+            if "close" in str(e).lower() or "closed" in str(e).lower():
+                self.ws = None
+                await self.connect()
+                await self.ws.send(message)
+                raw = await asyncio.wait_for(self.ws.recv(), timeout=self.timeout)
+            else:
+                raise ConnectionError(f"WebSocket error: {e!s}")
+
+        if self.verbose >= 3:
+            self.console.print(f"[cyan]WS-CONN[/cyan] [*] Received: {raw[:200]}")
+
+        # Capture chat ID from WebSocket response
+        try:
+            ws_data = json.loads(raw)
+            if isinstance(ws_data, dict):
+                self._capture_chat_id(ws_data)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        return self._extract_response(raw)
 
     async def close(self) -> None:
-        """Close WebSocket"""
+        """Close WebSocket connection."""
         if self.ws:
-            await self.ws.close()
+            try:
+                await self.ws.close()
+            except Exception:
+                pass
+            self.ws = None
 
 
 class InterceptConnector(Connector):
@@ -897,6 +1079,7 @@ class RequestConnector(Connector):
             # Try to parse JSON response
             try:
                 data = response.json()
+                self._capture_chat_id(data)
                 return self._extract_response(data)
             except json.JSONDecodeError:
                 return self._apply_regex(response.text)

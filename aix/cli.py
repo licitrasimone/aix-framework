@@ -37,6 +37,41 @@ from aix.utils.cli import standard_options
 
 console = Console()
 
+
+def _get_session_id(target: str) -> str:
+    """Get or create a session for the target. Returns session_id."""
+    db = AIXDatabase()
+    session_id = db.get_or_create_session(target)
+    db.close()
+    return session_id
+
+
+def _update_session_module(session_id: str, module: str) -> None:
+    """Register a module run in the session."""
+    db = AIXDatabase()
+    db.update_session_modules(session_id, module)
+    db.close()
+
+
+def _resolve_chat_id_flags(new_chat: bool, reuse_chat: bool, is_multiturn: bool = False) -> bool:
+    """Resolve --new-chat / --reuse-chat flags into a single new_chat bool.
+
+    Defaults: single-turn scans → new_chat=True, multiturn → new_chat=False.
+    Explicit flags override defaults.
+    """
+    if new_chat and reuse_chat:
+        console.print(
+            "[yellow][!] Both --new-chat and --reuse-chat specified; using --new-chat[/yellow]"
+        )
+        return True
+    if new_chat:
+        return True
+    if reuse_chat:
+        return False
+    # Default based on scan type
+    return not is_multiturn
+
+
 BANNER = f"""
 [bold cyan]    ▄▀█ █ ▀▄▀[/bold cyan]
 [bold cyan]    █▀█ █ █ █[/bold cyan]  [dim]v{__version__}[/dim]
@@ -88,6 +123,13 @@ def validate_input(target, request, param):
         except RequestParseError as e:
             console.print(f"[red][-][/red] Error parsing request file: {e}")
             raise click.Abort()
+
+    # Hint: suggest --response-path for WebSocket targets
+    if target and target.startswith(("ws://", "wss://")) and not parsed_request:
+        console.print(
+            "[cyan][*][/cyan] WebSocket target detected. "
+            "Use [bold]-rp[/bold] (--response-path) to extract a specific JSON field from responses."
+        )
 
     return target, parsed_request
 
@@ -161,6 +203,10 @@ def recon_cmd(
     risk,
     show_response,
     verify_attempts,
+    chat_id_path,
+    chat_id_param,
+    new_chat,
+    reuse_chat,
     key=None,
     profile=None,
 ):
@@ -196,6 +242,9 @@ def recon_cmd(
             "enable_context": not no_context,
         }
 
+    session_id = _get_session_id(target)
+    _update_session_module(session_id, "recon")
+
     recon.run(
         target,
         output=output,
@@ -221,6 +270,10 @@ def recon_cmd(
         risk=risk,
         show_response=show_response,
         verify_attempts=verify_attempts,
+        chat_id_path=chat_id_path,
+        chat_id_param=chat_id_param,
+        new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
+        session_id=session_id,
     )
 
 
@@ -275,6 +328,10 @@ def inject_cmd(
     risk,
     show_response,
     verify_attempts,
+    chat_id_path,
+    chat_id_param,
+    new_chat,
+    reuse_chat,
 ):
     """
     Inject - Prompt injection attacks
@@ -309,6 +366,9 @@ def inject_cmd(
             "enable_context": not no_context,
         }
 
+    session_id = _get_session_id(target)
+    _update_session_module(session_id, "inject")
+
     inject.run(
         target=target,
         api_key=key,
@@ -339,6 +399,10 @@ def inject_cmd(
         show_response=show_response,
         verify_attempts=verify_attempts,
         generate=generate,
+        chat_id_path=chat_id_path,
+        chat_id_param=chat_id_param,
+        new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
+        session_id=session_id,
     )
 
 
@@ -388,6 +452,10 @@ def jailbreak_cmd(
     risk,
     show_response,
     verify_attempts,
+    chat_id_path,
+    chat_id_param,
+    new_chat,
+    reuse_chat,
 ):
     """
     Jailbreak - Bypass AI restrictions
@@ -418,6 +486,9 @@ def jailbreak_cmd(
             "enable_context": not no_context,
         }
 
+    session_id = _get_session_id(target)
+    _update_session_module(session_id, "jailbreak")
+
     jailbreak.run(
         target=target,
         api_key=key,
@@ -446,6 +517,10 @@ def jailbreak_cmd(
         show_response=show_response,
         verify_attempts=verify_attempts,
         generate=generate,
+        chat_id_path=chat_id_path,
+        chat_id_param=chat_id_param,
+        new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
+        session_id=session_id,
     )
 
 
@@ -493,6 +568,10 @@ def extract_cmd(
     risk,
     show_response,
     verify_attempts,
+    chat_id_path,
+    chat_id_param,
+    new_chat,
+    reuse_chat,
 ):
     """
     Extract - System prompt extraction
@@ -524,6 +603,9 @@ def extract_cmd(
             "enable_context": not no_context,
         }
 
+    session_id = _get_session_id(target)
+    _update_session_module(session_id, "extract")
+
     extract.run(
         target=target,
         api_key=key,
@@ -551,6 +633,10 @@ def extract_cmd(
         show_response=show_response,
         verify_attempts=verify_attempts,
         generate=generate,
+        chat_id_path=chat_id_path,
+        chat_id_param=chat_id_param,
+        new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
+        session_id=session_id,
     )
 
 
@@ -598,6 +684,10 @@ def leak_cmd(
     risk,
     show_response,
     verify_attempts,
+    chat_id_path,
+    chat_id_param,
+    new_chat,
+    reuse_chat,
 ):
     """
     Leak - Training data extraction
@@ -629,6 +719,9 @@ def leak_cmd(
             "enable_context": not no_context,
         }
 
+    session_id = _get_session_id(target)
+    _update_session_module(session_id, "leak")
+
     leak.run(
         target=target,
         api_key=key,
@@ -656,6 +749,10 @@ def leak_cmd(
         show_response=show_response,
         verify_attempts=verify_attempts,
         generate=generate,
+        chat_id_path=chat_id_path,
+        chat_id_param=chat_id_param,
+        new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
+        session_id=session_id,
     )
 
 
@@ -699,6 +796,10 @@ def exfil_cmd(
     risk,
     show_response,
     verify_attempts,
+    chat_id_path,
+    chat_id_param,
+    new_chat,
+    reuse_chat,
     refresh_url=None,
     refresh_regex=None,
     refresh_param=None,
@@ -736,6 +837,9 @@ def exfil_cmd(
             "enable_context": not no_context,
         }
 
+    session_id = _get_session_id(target)
+    _update_session_module(session_id, "exfil")
+
     exfil.run(
         target=target,
         api_key=key,
@@ -756,6 +860,10 @@ def exfil_cmd(
         show_response=show_response,
         verify_attempts=verify_attempts,
         generate=generate,
+        chat_id_path=chat_id_path,
+        chat_id_param=chat_id_param,
+        new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
+        session_id=session_id,
     )
 
 
@@ -803,6 +911,10 @@ def agent_cmd(
     risk,
     show_response,
     verify_attempts,
+    chat_id_path,
+    chat_id_param,
+    new_chat,
+    reuse_chat,
 ):
     """
     Agent - AI agent exploitation
@@ -834,6 +946,9 @@ def agent_cmd(
             "enable_context": not no_context,
         }
 
+    session_id = _get_session_id(target)
+    _update_session_module(session_id, "agent")
+
     agent.run(
         target=target,
         api_key=key,
@@ -861,6 +976,10 @@ def agent_cmd(
         show_response=show_response,
         verify_attempts=verify_attempts,
         generate=generate,
+        chat_id_path=chat_id_path,
+        chat_id_param=chat_id_param,
+        new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
+        session_id=session_id,
     )
 
 
@@ -908,6 +1027,10 @@ def dos_cmd(
     risk,
     show_response,
     verify_attempts,
+    chat_id_path,
+    chat_id_param,
+    new_chat,
+    reuse_chat,
 ):
     """
     DoS - Denial of Service testing
@@ -937,6 +1060,9 @@ def dos_cmd(
             "enable_context": not no_context,
         }
 
+    session_id = _get_session_id(target)
+    _update_session_module(session_id, "dos")
+
     dos.run(
         target=target,
         api_key=key,
@@ -962,6 +1088,10 @@ def dos_cmd(
         show_response=show_response,
         verify_attempts=verify_attempts,
         generate=generate,
+        chat_id_path=chat_id_path,
+        chat_id_param=chat_id_param,
+        new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
+        session_id=session_id,
     )
 
 
@@ -1011,6 +1141,10 @@ def fuzz_cmd(
     risk,
     show_response,
     verify_attempts,
+    chat_id_path,
+    chat_id_param,
+    new_chat,
+    reuse_chat,
 ):
     """
     Fuzz - Fuzzing and edge cases
@@ -1040,6 +1174,9 @@ def fuzz_cmd(
             "enable_context": not no_context,
         }
 
+    session_id = _get_session_id(target)
+    _update_session_module(session_id, "fuzz")
+
     fuzz.run(
         target=target,
         api_key=key,
@@ -1067,6 +1204,10 @@ def fuzz_cmd(
         risk=risk,
         show_response=show_response,
         generate=generate,
+        chat_id_path=chat_id_path,
+        chat_id_param=chat_id_param,
+        new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
+        session_id=session_id,
     )
 
 
@@ -1114,6 +1255,10 @@ def memory_cmd(
     risk,
     show_response,
     verify_attempts,
+    chat_id_path,
+    chat_id_param,
+    new_chat,
+    reuse_chat,
 ):
     """
     Memory - Memory and context manipulation attacks
@@ -1147,6 +1292,9 @@ def memory_cmd(
             "enable_context": not no_context,
         }
 
+    session_id = _get_session_id(target)
+    _update_session_module(session_id, "memory")
+
     memory.run(
         target=target,
         api_key=key,
@@ -1174,6 +1322,10 @@ def memory_cmd(
         show_response=show_response,
         verify_attempts=verify_attempts,
         generate=generate,
+        chat_id_path=chat_id_path,
+        chat_id_param=chat_id_param,
+        new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
+        session_id=session_id,
     )
 
 
@@ -1245,6 +1397,10 @@ def rag_cmd(
     risk,
     show_response,
     verify_attempts,
+    chat_id_path,
+    chat_id_param,
+    new_chat,
+    reuse_chat,
     canary,
     category,
 ):
@@ -1303,6 +1459,9 @@ def rag_cmd(
             "enable_context": not no_context,
         }
 
+    session_id = _get_session_id(target)
+    _update_session_module(session_id, "rag")
+
     rag.run(
         target=target,
         api_key=key,
@@ -1330,6 +1489,10 @@ def rag_cmd(
         show_response=show_response,
         verify_attempts=verify_attempts,
         generate=generate,
+        chat_id_path=chat_id_path,
+        chat_id_param=chat_id_param,
+        new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
+        session_id=session_id,
         canary=canary,
         category=category,
     )
@@ -1400,6 +1563,10 @@ def multiturn_cmd(
     risk,
     show_response,
     verify_attempts,
+    chat_id_path,
+    chat_id_param,
+    new_chat,
+    reuse_chat,
     category,
     max_turns,
     turn_delay,
@@ -1450,6 +1617,9 @@ def multiturn_cmd(
             "enable_context": not no_context,
         }
 
+    session_id = _get_session_id(target)
+    _update_session_module(session_id, "multiturn")
+
     multiturn.run(
         target=target,
         api_key=key,
@@ -1480,6 +1650,10 @@ def multiturn_cmd(
         max_turns=max_turns,
         turn_delay=turn_delay,
         generate=generate,
+        chat_id_path=chat_id_path,
+        chat_id_param=chat_id_param,
+        new_chat=_resolve_chat_id_flags(new_chat, reuse_chat, is_multiturn=True),
+        session_id=session_id,
     )
 
 
@@ -1494,7 +1668,11 @@ main.add_command(multiturn_cmd, name="multiturn")
 @click.option("--clear", is_flag=True, help="Clear all results")
 @click.option("--target", "-t", help="Filter by target")
 @click.option("--module", "-m", help="Filter by module")
-def db(export, clear, target, module):
+@click.option("--sessions", is_flag=True, help="List all sessions")
+@click.option("--session", "session_id", help="Show results for a specific session ID")
+@click.option("--conversations", is_flag=True, help="List all conversations")
+@click.option("--conversation", "conversation_id", help="Show full conversation transcript")
+def db(export, clear, target, module, sessions, session_id, conversations, conversation_id):
     """
     Database - View and manage results
 
@@ -1504,6 +1682,11 @@ def db(export, clear, target, module):
         aix db --export report.html
         aix db --target company.com
         aix db --clear
+        aix db --sessions
+        aix db --session <id>
+        aix db --session <id> --export report.html
+        aix db --conversations
+        aix db --conversation <id>
     """
     print_banner()
 
@@ -1515,9 +1698,34 @@ def db(export, clear, target, module):
             console.print("[green][+][/green] Database cleared")
         return
 
+    if conversations:
+        convs = db.list_conversations(target=target)
+        db.display_conversations(convs)
+        return
+
+    if conversation_id:
+        db.display_conversation_transcript(conversation_id)
+        return
+
+    if sessions:
+        db.display_sessions()
+        return
+
     if export:
-        db.export_html(export, target=target, module=module)
+        db.export_html(export, target=target, module=module, session_id=session_id)
         console.print(f"[green][+][/green] Report exported: {export}")
+        return
+
+    if session_id:
+        # Show results for specific session
+        results = db.get_session_results(session_id)
+        session = db.get_session(session_id)
+        if session:
+            console.print(f"[cyan]Session:[/cyan] {session.get('name', 'N/A')} ({session_id[:8]})")
+            console.print(f"[cyan]Target:[/cyan] {session.get('target', 'N/A')}")
+            console.print(f"[cyan]Modules:[/cyan] {', '.join(session.get('modules_run', []))}")
+            console.print()
+        db.display_results(results)
         return
 
     # Show results
@@ -1854,7 +2062,16 @@ def scan(
     _set_proxy_env(proxy)
     target, parsed_request = validate_input(target, request, param)
 
+    # Always create a fresh session for full scan
+    scan_db = AIXDatabase()
+    session_id = scan_db.create_session(
+        target=target,
+        name=f"Full Scan - {target[:30]}",
+    )
+    scan_db.close()
+
     console.print("[bold cyan][*][/bold cyan] Starting comprehensive scan...")
+    console.print(f"[dim]Session: {session_id[:8]}[/dim]")
     console.print()
 
     # Run all modules
@@ -1871,6 +2088,7 @@ def scan(
     ]
 
     for name, module in modules_to_run:
+        _update_session_module(session_id, name)
         console.print(f"[bold cyan][*][/bold cyan] Running {name} module...")
         try:
             module.run(
@@ -1903,13 +2121,21 @@ def scan(
                 risk=risk,
                 show_response=show_response,
                 verify_attempts=verify_attempts,
+                session_id=session_id,
             )
         except Exception as e:
             console.print(f"[red][-][/red] {name} failed: {e}")
         console.print()
 
+    # End session
+    end_db = AIXDatabase()
+    end_db.end_session(session_id, status="completed")
+    end_db.close()
+
     console.print("[bold green][+][/bold green] Scan complete!")
-    console.print("[dim]Run 'aix db --export report.html' to generate report[/dim]")
+    console.print(
+        f"[dim]Session: {session_id[:8]} | Run 'aix db --session {session_id[:8]} --export report.html' to generate report[/dim]"
+    )
 
 
 if __name__ == "__main__":

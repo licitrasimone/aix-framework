@@ -4,7 +4,7 @@ Tests for AIX Connector Module
 
 import pytest
 
-from aix.core.connector import APIConnector, RequestConnector
+from aix.core.connector import APIConnector, RequestConnector, WebSocketConnector
 from aix.core.request_parser import ParsedRequest
 
 
@@ -234,3 +234,343 @@ class TestConnectorHeaderParsing:
         result = connector._parse_headers(None)
 
         assert result == {}
+
+
+class TestWebSocketConnector:
+    """Tests for WebSocketConnector class"""
+
+    def test_init_defaults(self):
+        """Test default initialization"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        assert connector.url == "wss://target.com/chat"
+        assert connector.injection_param == "message"
+        assert connector.response_path is None
+        assert connector.timeout == 30
+        assert connector.ws is None
+
+    def test_init_custom_params(self):
+        """Test initialization with custom parameters"""
+        connector = WebSocketConnector(
+            url="wss://target.com/chat",
+            injection_param="query",
+            response_path="data.content",
+            timeout=60,
+        )
+
+        assert connector.injection_param == "query"
+        assert connector.response_path == "data.content"
+        assert connector.timeout == 60
+
+    def test_build_message(self):
+        """Test message building with default param"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        result = connector._build_message("hello")
+
+        assert result == '{"message": "hello"}'
+
+    def test_build_message_custom_param(self):
+        """Test message building with custom injection param"""
+        connector = WebSocketConnector(url="wss://target.com/chat", injection_param="query")
+
+        result = connector._build_message("test payload")
+
+        assert result == '{"query": "test payload"}'
+
+    def test_extract_response_with_path(self):
+        """Test response extraction with explicit path"""
+        connector = WebSocketConnector(url="wss://target.com/chat", response_path="content")
+
+        raw = '{"user": "Bot", "content": "Hello there!"}'
+        result = connector._extract_response(raw)
+
+        assert result == "Hello there!"
+
+    def test_extract_response_nested_path(self):
+        """Test response extraction with nested dot path"""
+        connector = WebSocketConnector(url="wss://target.com/chat", response_path="data.text")
+
+        raw = '{"data": {"text": "nested value"}}'
+        result = connector._extract_response(raw)
+
+        assert result == "nested value"
+
+    def test_extract_response_fallback(self):
+        """Test response extraction with fallback keys (no response_path)"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        raw = '{"user": "Bot", "content": "fallback hit"}'
+        result = connector._extract_response(raw)
+
+        assert result == "fallback hit"
+
+    def test_extract_response_fallback_response_key(self):
+        """Test fallback to 'response' key"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        raw = '{"response": "answer here"}'
+        result = connector._extract_response(raw)
+
+        assert result == "answer here"
+
+    def test_extract_response_no_known_keys(self):
+        """Test fallback to JSON dump when no known keys match"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        raw = '{"unknown_field": "some data"}'
+        result = connector._extract_response(raw)
+
+        assert "unknown_field" in result
+        assert "some data" in result
+
+    def test_extract_response_non_json(self):
+        """Test non-JSON response passthrough"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        result = connector._extract_response("plain text response")
+
+        assert result == "plain text response"
+
+    def test_build_extra_headers_cookies(self):
+        """Test extra headers with cookies"""
+        connector = WebSocketConnector(url="wss://target.com/chat", cookies="session=abc;token=xyz")
+
+        headers = connector._build_extra_headers()
+
+        assert "Cookie" in headers
+        assert "session=abc" in headers["Cookie"]
+        assert "token=xyz" in headers["Cookie"]
+
+    def test_build_extra_headers_custom(self):
+        """Test extra headers with custom headers"""
+        connector = WebSocketConnector(
+            url="wss://target.com/chat", headers="Authorization:Bearer tok;X-Custom:val"
+        )
+
+        headers = connector._build_extra_headers()
+
+        assert headers["Authorization"] == "Bearer tok"
+        assert headers["X-Custom"] == "val"
+
+    def test_build_extra_headers_both(self):
+        """Test extra headers with both cookies and custom headers"""
+        connector = WebSocketConnector(
+            url="wss://target.com/chat",
+            cookies="session=abc",
+            headers="X-Custom:val",
+        )
+
+        headers = connector._build_extra_headers()
+
+        assert "Cookie" in headers
+        assert headers["X-Custom"] == "val"
+
+    def test_build_extra_headers_empty(self):
+        """Test extra headers when none configured"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        headers = connector._build_extra_headers()
+
+        assert headers == {}
+
+    def test_navigate_path_nested(self):
+        """Test dot-path navigation in nested data"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        data = {"a": {"b": {"c": "deep"}}}
+        result = connector._navigate_path(data, "a.b.c")
+
+        assert result == "deep"
+
+    def test_navigate_path_missing(self):
+        """Test dot-path navigation with missing key"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        data = {"a": {"x": 1}}
+        result = connector._navigate_path(data, "a.b.c")
+
+        assert result == ""
+
+    @pytest.mark.asyncio
+    async def test_context_manager(self):
+        """Test async context manager protocol (close without connect)"""
+        connector = WebSocketConnector(url="wss://target.com/chat")
+
+        # close() should not raise even without a connection
+        await connector.close()
+        assert connector.ws is None
+
+
+class TestChatIdCapture:
+    """Tests for chat ID capture from responses"""
+
+    def test_capture_simple_path(self):
+        """Test capturing chat_id from a simple JSON path"""
+        connector = APIConnector(
+            url="https://example.com",
+            chat_id_path="conversation_id",
+        )
+
+        connector._capture_chat_id({"conversation_id": "abc123", "response": "hi"})
+        assert connector.current_chat_id == "abc123"
+
+    def test_capture_nested_path(self):
+        """Test capturing chat_id from a nested JSON path"""
+        connector = APIConnector(
+            url="https://example.com",
+            chat_id_path="data.chat_id",
+        )
+
+        connector._capture_chat_id({"data": {"chat_id": "nested-id"}, "response": "hi"})
+        assert connector.current_chat_id == "nested-id"
+
+    def test_capture_no_path_configured(self):
+        """Test that no capture happens when chat_id_path is not set"""
+        connector = APIConnector(url="https://example.com")
+
+        connector._capture_chat_id({"conversation_id": "abc123"})
+        assert connector.current_chat_id is None
+
+    def test_capture_path_missing_in_response(self):
+        """Test that missing path in response doesn't crash"""
+        connector = APIConnector(
+            url="https://example.com",
+            chat_id_path="nonexistent.path",
+        )
+
+        connector._capture_chat_id({"other_field": "value"})
+        assert connector.current_chat_id is None
+
+    def test_capture_converts_to_string(self):
+        """Test that numeric chat IDs are converted to string"""
+        connector = APIConnector(
+            url="https://example.com",
+            chat_id_path="chat_id",
+        )
+
+        connector._capture_chat_id({"chat_id": 12345})
+        assert connector.current_chat_id == "12345"
+
+    def test_capture_on_websocket_connector(self):
+        """Test chat ID capture on WebSocketConnector"""
+        connector = WebSocketConnector(
+            url="wss://example.com/chat",
+            chat_id_path="session_id",
+        )
+
+        connector._capture_chat_id({"session_id": "ws-123", "text": "hi"})
+        assert connector.current_chat_id == "ws-123"
+
+
+class TestChatIdInjection:
+    """Tests for chat ID injection into requests"""
+
+    def test_inject_into_payload_body(self):
+        """Test chat_id injection into API request body"""
+        connector = APIConnector(
+            url="https://example.com/chat",
+            chat_id_param="conversation_id",
+        )
+        connector._current_chat_id = "injected-id"
+
+        payload = connector._build_payload("hello")
+        assert payload["conversation_id"] == "injected-id"
+
+    def test_no_injection_without_chat_id(self):
+        """Test no injection when no chat_id has been captured"""
+        connector = APIConnector(
+            url="https://example.com/chat",
+            chat_id_param="conversation_id",
+        )
+
+        payload = connector._build_payload("hello")
+        assert "conversation_id" not in payload
+
+    def test_no_injection_without_param(self):
+        """Test no injection when chat_id_param is not set"""
+        connector = APIConnector(url="https://example.com/chat")
+        connector._current_chat_id = "some-id"
+
+        payload = connector._build_payload("hello")
+        assert "conversation_id" not in payload
+
+    def test_websocket_inject_into_message(self):
+        """Test chat_id injection into WebSocket message"""
+        connector = WebSocketConnector(
+            url="wss://example.com/chat",
+            chat_id_param="session_id",
+        )
+        connector._current_chat_id = "ws-inject-id"
+
+        import json
+        msg = json.loads(connector._build_message("test"))
+        assert msg["session_id"] == "ws-inject-id"
+
+    def test_no_body_injection_when_url_placeholder(self):
+        """Test that chat_id is NOT injected into body when URL has {chat_id}"""
+        connector = APIConnector(
+            url="https://example.com/chat/{chat_id}/messages",
+            chat_id_param="conversation_id",
+        )
+        connector._current_chat_id = "url-id"
+
+        payload = connector._build_payload("hello")
+        assert "conversation_id" not in payload
+
+
+class TestChatIdReset:
+    """Tests for chat ID reset"""
+
+    def test_reset_clears_chat_id(self):
+        """Test that reset_chat_id clears the captured ID"""
+        connector = APIConnector(
+            url="https://example.com",
+            chat_id_path="chat_id",
+        )
+        connector._current_chat_id = "some-id"
+
+        connector.reset_chat_id()
+        assert connector.current_chat_id is None
+
+    def test_reset_on_fresh_connector(self):
+        """Test that reset on a fresh connector doesn't crash"""
+        connector = APIConnector(url="https://example.com")
+        connector.reset_chat_id()
+        assert connector.current_chat_id is None
+
+
+class TestNavigateJsonPath:
+    """Tests for _navigate_json_path on Connector base class"""
+
+    def test_simple_path(self):
+        """Test simple key navigation"""
+        connector = APIConnector(url="https://example.com")
+        result = connector._navigate_json_path({"key": "value"}, "key")
+        assert result == "value"
+
+    def test_nested_path(self):
+        """Test nested dot-separated path"""
+        connector = APIConnector(url="https://example.com")
+        data = {"a": {"b": {"c": "deep"}}}
+        result = connector._navigate_json_path(data, "a.b.c")
+        assert result == "deep"
+
+    def test_list_index(self):
+        """Test list index navigation"""
+        connector = APIConnector(url="https://example.com")
+        data = {"items": [{"id": "first"}, {"id": "second"}]}
+        result = connector._navigate_json_path(data, "items.1.id")
+        assert result == "second"
+
+    def test_missing_key(self):
+        """Test missing key returns None"""
+        connector = APIConnector(url="https://example.com")
+        result = connector._navigate_json_path({"a": 1}, "b")
+        assert result is None
+
+    def test_list_index_out_of_range(self):
+        """Test out-of-range list index returns None"""
+        connector = APIConnector(url="https://example.com")
+        result = connector._navigate_json_path({"items": [1, 2]}, "items.5")
+        assert result is None

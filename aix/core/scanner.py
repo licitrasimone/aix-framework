@@ -5,13 +5,14 @@ Base Scanner Module - Common logic for all AIX scanners
 import asyncio
 import json
 import os
+import uuid
 from abc import ABC
 from typing import Any, Optional
 
 from rich.console import Console
 
 from aix.core.ai_engine import AIEngine
-from aix.core.connector import APIConnector, RequestConnector
+from aix.core.connector import APIConnector, RequestConnector, WebSocketConnector
 from aix.core.context import TargetContext
 from aix.core.evaluator import LLMEvaluator
 from aix.core.evasion import PayloadEvasion
@@ -64,6 +65,14 @@ class BaseScanner(ABC):
         self.refresh_config = kwargs.get("refresh_config")
         self.response_regex = kwargs.get("response_regex")
         self.response_path = kwargs.get("response_path")
+
+        # Chat ID config
+        self.chat_id_path = kwargs.get("chat_id_path")
+        self.chat_id_param = kwargs.get("chat_id_param")
+        self.new_chat = kwargs.get("new_chat", True)  # Default: fresh per payload
+
+        # Session config
+        self.session_id = kwargs.get("session_id")
 
         # Filtering config
         self.level = kwargs.get("level", 1)
@@ -230,6 +239,23 @@ class BaseScanner(ABC):
                 response_regex=self.response_regex,
                 response_path=self.response_path,
                 console=self.console,
+                chat_id_path=self.chat_id_path,
+                chat_id_param=self.chat_id_param,
+            )
+        elif self.target.startswith(("ws://", "wss://")):
+            return WebSocketConnector(
+                self.target,
+                injection_param=self.injection_param,
+                response_path=self.response_path,
+                response_regex=self.response_regex,
+                cookies=self.cookies,
+                headers=self.headers,
+                timeout=self.timeout,
+                verbose=self.verbose,
+                console=self.console,
+                proxy=self.proxy,
+                chat_id_path=self.chat_id_path,
+                chat_id_param=self.chat_id_param,
             )
         else:
             return APIConnector(
@@ -246,6 +272,8 @@ class BaseScanner(ABC):
                 response_regex=self.response_regex,
                 response_path=self.response_path,
                 console=self.console,
+                chat_id_path=self.chat_id_path,
+                chat_id_param=self.chat_id_param,
             )
 
     def _print(self, status: str, msg: str, tech: str = "", response: str = None):
@@ -545,12 +573,39 @@ class BaseScanner(ABC):
             ):
                 self.stats["total"] += 1
                 try:
+                    # Reset chat ID for fresh conversation per payload
+                    if self.new_chat:
+                        connector.reset_chat_id()
+
+                    # Generate per-payload conversation ID
+                    conv_id = str(uuid.uuid4())
+
                     is_vulnerable, best_resp = await self.scan_payload(
                         connector, p["payload"], p["indicators"], p["name"]
                     )
 
                     # Let subclass modify vulnerability decision / add info
                     is_vulnerable, extra_response = self._on_finding(p, best_resp, is_vulnerable)
+
+                    # Save conversation record
+                    target_chat_id = connector.current_chat_id
+                    self.db.save_conversation(
+                        target=self.target,
+                        module=db_key,
+                        technique=p["name"],
+                        transcript=[
+                            {"role": "user", "content": p["payload"], "turn_number": 1},
+                            {
+                                "role": "assistant",
+                                "content": (best_resp or "")[:response_limit],
+                                "turn_number": 1,
+                            },
+                        ],
+                        turn_count=1,
+                        session_id=self.session_id,
+                        target_chat_id=target_chat_id,
+                        conversation_id=conv_id,
+                    )
 
                     if is_vulnerable:
                         self.stats["success"] += 1
@@ -587,6 +642,8 @@ class BaseScanner(ABC):
                             p["severity"].value,
                             reason=self.last_eval_reason,
                             owasp=p.get("owasp", []),
+                            session_id=self.session_id,
+                            conversation_id=conv_id,
                             **db_kwargs,
                         )
                     else:
