@@ -60,7 +60,9 @@ def _resolve_chat_id_flags(new_chat: bool, reuse_chat: bool, is_multiturn: bool 
     Explicit flags override defaults.
     """
     if new_chat and reuse_chat:
-        console.print("[yellow][!] Both --new-chat and --reuse-chat specified; using --new-chat[/yellow]")
+        console.print(
+            "[yellow][!] Both --new-chat and --reuse-chat specified; using --new-chat[/yellow]"
+        )
         return True
     if new_chat:
         return True
@@ -68,6 +70,7 @@ def _resolve_chat_id_flags(new_chat: bool, reuse_chat: bool, is_multiturn: bool 
         return False
     # Default based on scan type
     return not is_multiturn
+
 
 BANNER = f"""
 [bold cyan]    ▄▀█ █ ▀▄▀[/bold cyan]
@@ -2130,7 +2133,9 @@ def scan(
     end_db.close()
 
     console.print("[bold green][+][/bold green] Scan complete!")
-    console.print(f"[dim]Session: {session_id[:8]} | Run 'aix db --session {session_id[:8]} --export report.html' to generate report[/dim]")
+    console.print(
+        f"[dim]Session: {session_id[:8]} | Run 'aix db --session {session_id[:8]} --export report.html' to generate report[/dim]"
+    )
 
 
 if __name__ == "__main__":

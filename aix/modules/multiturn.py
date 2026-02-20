@@ -207,7 +207,11 @@ class MultiTurnScanner(BaseScanner):
                         result = await conv_manager.execute_sequence(seq)
 
                         # Save conversation transcript
-                        target_chat_id = connector.current_chat_id if hasattr(connector, 'current_chat_id') else None
+                        target_chat_id = (
+                            connector.current_chat_id
+                            if hasattr(connector, "current_chat_id")
+                            else None
+                        )
                         self.db.save_conversation(
                             target=self.target,
                             module="multiturn",

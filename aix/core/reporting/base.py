@@ -34,52 +34,72 @@ OWASP_REMEDIATION = {
     "LLM01": {
         "title": "Prompt Injection",
         "recommendation": "Implement input validation, use delimiter-based prompt structures, apply least-privilege principles for LLM actions, and consider prompt isolation techniques.",
-        "references": ["https://owasp.org/www-project-top-10-for-large-language-model-applications/"],
+        "references": [
+            "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        ],
     },
     "LLM02": {
         "title": "Insecure Output Handling",
         "recommendation": "Treat all LLM output as untrusted. Apply output encoding, validate and sanitize responses before rendering, and never execute LLM output directly.",
-        "references": ["https://owasp.org/www-project-top-10-for-large-language-model-applications/"],
+        "references": [
+            "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        ],
     },
     "LLM03": {
         "title": "Training Data Poisoning",
         "recommendation": "Vet training data sources, implement data sanitization pipelines, use anomaly detection on training data, and maintain data provenance records.",
-        "references": ["https://owasp.org/www-project-top-10-for-large-language-model-applications/"],
+        "references": [
+            "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        ],
     },
     "LLM04": {
         "title": "Model Denial of Service",
         "recommendation": "Implement rate limiting, set token/response size limits, use input length validation, and deploy resource monitoring with auto-scaling.",
-        "references": ["https://owasp.org/www-project-top-10-for-large-language-model-applications/"],
+        "references": [
+            "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        ],
     },
     "LLM05": {
         "title": "Supply Chain Vulnerabilities",
         "recommendation": "Audit third-party model sources, verify model integrity, maintain software bill of materials (SBOM), and use signed model artifacts.",
-        "references": ["https://owasp.org/www-project-top-10-for-large-language-model-applications/"],
+        "references": [
+            "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        ],
     },
     "LLM06": {
         "title": "Sensitive Information Disclosure",
         "recommendation": "Implement output filtering for PII/secrets, use data classification, apply redaction rules, and restrict training data scope.",
-        "references": ["https://owasp.org/www-project-top-10-for-large-language-model-applications/"],
+        "references": [
+            "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        ],
     },
     "LLM07": {
         "title": "Insecure Plugin Design",
         "recommendation": "Apply strict input validation for plugins, enforce least-privilege access, require user confirmation for sensitive actions, and sandbox plugin execution.",
-        "references": ["https://owasp.org/www-project-top-10-for-large-language-model-applications/"],
+        "references": [
+            "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        ],
     },
     "LLM08": {
         "title": "Excessive Agency",
         "recommendation": "Limit LLM permissions and tool access, implement human-in-the-loop for sensitive operations, log all agent actions, and enforce scope boundaries.",
-        "references": ["https://owasp.org/www-project-top-10-for-large-language-model-applications/"],
+        "references": [
+            "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        ],
     },
     "LLM09": {
         "title": "Overreliance",
         "recommendation": "Implement output verification mechanisms, add confidence scoring, require human review for critical decisions, and clearly communicate AI limitations to users.",
-        "references": ["https://owasp.org/www-project-top-10-for-large-language-model-applications/"],
+        "references": [
+            "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        ],
     },
     "LLM10": {
         "title": "Model Theft",
         "recommendation": "Implement access controls, use watermarking, monitor for extraction attempts, rate-limit API access, and restrict model output verbosity.",
-        "references": ["https://owasp.org/www-project-top-10-for-large-language-model-applications/"],
+        "references": [
+            "https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+        ],
     },
 }
 
@@ -162,9 +182,7 @@ class Reporter:
 
     def calculate_risk_score(self) -> float:
         """Calculate overall risk score (0-10 scale)."""
-        total_weight = sum(
-            SEVERITY_WEIGHTS.get(f.severity.value, 0) for f in self.findings
-        )
+        total_weight = sum(SEVERITY_WEIGHTS.get(f.severity.value, 0) for f in self.findings)
         return min(10.0, total_weight / 5.0)
 
     def get_risk_level(self, score: float) -> str:
@@ -201,7 +219,9 @@ class Reporter:
                         coverage[cat_id]["tested"] = True
                         coverage[cat_id]["findings_count"] += 1
                         current_max = coverage[cat_id]["max_severity"]
-                        if severity_rank.get(finding.severity.value, 4) < severity_rank.get(current_max, 4):
+                        if severity_rank.get(finding.severity.value, 4) < severity_rank.get(
+                            current_max, 4
+                        ):
                             coverage[cat_id]["max_severity"] = finding.severity.value
 
         return coverage
@@ -400,7 +420,12 @@ class Reporter:
             """
 
         # Build executive summary HTML
-        risk_color = {"Critical": "#ff4757", "High": "#ffa502", "Medium": "#3742fa", "Low": "#888"}.get(risk_level, "#888")
+        risk_color = {
+            "Critical": "#ff4757",
+            "High": "#ffa502",
+            "Medium": "#3742fa",
+            "Low": "#888",
+        }.get(risk_level, "#888")
         risk_pct = min(100, risk_score * 10)
         exec_summary_html = f"""
         <div class="executive-summary">
@@ -447,7 +472,9 @@ class Reporter:
             if info["findings_count"] > 0:
                 card_class = "owasp-card vulnerable"
                 status_icon = "&#x2717;"  # ✗
-                status_text = f"{info['findings_count']} finding{'s' if info['findings_count'] > 1 else ''}"
+                status_text = (
+                    f"{info['findings_count']} finding{'s' if info['findings_count'] > 1 else ''}"
+                )
             elif info["tested"]:
                 card_class = "owasp-card clean"
                 status_icon = "&#x2713;"  # ✓
@@ -530,6 +557,7 @@ class Reporter:
 
         # Build footer
         from aix import __version__
+
         footer_html = f"""
         <footer>
             Generated by AIX v{__version__} - AI eXploit Framework<br>

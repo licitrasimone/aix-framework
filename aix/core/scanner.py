@@ -595,7 +595,11 @@ class BaseScanner(ABC):
                         technique=p["name"],
                         transcript=[
                             {"role": "user", "content": p["payload"], "turn_number": 1},
-                            {"role": "assistant", "content": (best_resp or "")[:response_limit], "turn_number": 1},
+                            {
+                                "role": "assistant",
+                                "content": (best_resp or "")[:response_limit],
+                                "turn_number": 1,
+                            },
                         ],
                         turn_count=1,
                         session_id=self.session_id,

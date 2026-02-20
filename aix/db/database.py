@@ -248,7 +248,17 @@ class AIXDatabase:
                     timestamp = CURRENT_TIMESTAMP
                 WHERE id = ?
             """,
-                (result, payload, response, severity, reason, owasp_json, session_id, conversation_id, row_id),
+                (
+                    result,
+                    payload,
+                    response,
+                    severity,
+                    reason,
+                    owasp_json,
+                    session_id,
+                    conversation_id,
+                    row_id,
+                ),
             )
             self.conn.commit()
             return row_id
@@ -450,9 +460,7 @@ class AIXDatabase:
     def list_sessions(self, limit: int = 50) -> list[dict[str, Any]]:
         """List all sessions, newest first."""
         cursor = self.conn.cursor()
-        cursor.execute(
-            "SELECT * FROM sessions ORDER BY start_time DESC LIMIT ?", (limit,)
-        )
+        cursor.execute("SELECT * FROM sessions ORDER BY start_time DESC LIMIT ?", (limit,))
         rows = []
         for row in cursor.fetchall():
             r = dict(row)
@@ -776,8 +784,16 @@ class AIXDatabase:
                     session_id=session_id,
                     session_name=session.get("name"),
                     target=session.get("target", ""),
-                    start_time=datetime.fromisoformat(session["start_time"]) if session.get("start_time") else None,
-                    end_time=datetime.fromisoformat(session["end_time"]) if session.get("end_time") else None,
+                    start_time=(
+                        datetime.fromisoformat(session["start_time"])
+                        if session.get("start_time")
+                        else None
+                    ),
+                    end_time=(
+                        datetime.fromisoformat(session["end_time"])
+                        if session.get("end_time")
+                        else None
+                    ),
                     modules_run=session.get("modules_run", []),
                 )
 
