@@ -37,7 +37,9 @@ AIX is an automated security testing framework for AI/LLM endpoints. It provides
 ## Installation
 
 ```bash
-# Clone the repository
+pip install aix-framework 
+
+# OR Clone the repository
 git clone https://github.com/r08t/aix-framework.git
 cd aix-framework
 # Install script
