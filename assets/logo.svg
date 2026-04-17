@@ -1,0 +1,197 @@
+<svg width="800" height="200" viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&amp;display=swap');
+    </style>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0e13"/>
+      <stop offset="100%" style="stop-color:#0d1520"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ff3333"/>
+      <stop offset="50%" style="stop-color:#ff6600"/>
+      <stop offset="100%" style="stop-color:#ff3333"/>
+    </linearGradient>
+    <linearGradient id="scanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff4400;stop-opacity:0"/>
+      <stop offset="50%" style="stop-color:#ff4400;stop-opacity:0.15"/>
+      <stop offset="100%" style="stop-color:#ff4400;stop-opacity:0"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="textglow">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="subtleglow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <clipPath id="frame">
+      <rect width="800" height="200" rx="12"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="200" fill="url(#bg)" rx="12"/>
+
+  <g clip-path="url(#frame)">
+
+    <!-- Background binary/hex strings -->
+    <g font-family="'Courier New', monospace" font-size="9" fill="#1a2535" opacity="0.9">
+      <text x="12"  y="18">01001100 01001100 01001101 00110001 00110000</text>
+      <text x="12"  y="30">41 4d 4c 2e 54 30 30 34 38 20 4c 4c 4d 20 50 52 4f 4d 50 54</text>
+      <text x="12"  y="42">INJECT JAILBREAK EXTRACT RECON EXFIL FUZZ AGENT</text>
+      <text x="520" y="18">0xff 0x00 0x41 0x49 0x58</text>
+      <text x="580" y="30">AML.T0051 AML.T0048</text>
+      <text x="12"  y="185">LLM01 LLM02 LLM06 LLM07 · OWASP TOP 10 FOR LLM APPLICATIONS</text>
+      <text x="490" y="185">AML.T0025 AML.T0029 AML.T0040 AML.T0057</text>
+      <text x="12"  y="175">{"detected":true,"provider":"llama_guard","confidence":0.87}</text>
+      <text x="530" y="175">bypass_engine=active</text>
+    </g>
+
+    <!-- Subtle dot grid -->
+    <g fill="#1e2d3d" opacity="0.7">
+      <circle cx="60"  cy="50"  r="1"/><circle cx="120" cy="50"  r="1"/><circle cx="180" cy="50"  r="1"/>
+      <circle cx="240" cy="50"  r="1"/><circle cx="300" cy="50"  r="1"/><circle cx="360" cy="50"  r="1"/>
+      <circle cx="440" cy="50"  r="1"/><circle cx="500" cy="50"  r="1"/><circle cx="560" cy="50"  r="1"/>
+      <circle cx="620" cy="50"  r="1"/><circle cx="680" cy="50"  r="1"/><circle cx="740" cy="50"  r="1"/>
+      <circle cx="60"  cy="100" r="1"/><circle cx="120" cy="100" r="1"/><circle cx="180" cy="100" r="1"/>
+      <circle cx="240" cy="100" r="1"/><circle cx="620" cy="100" r="1"/><circle cx="680" cy="100" r="1"/>
+      <circle cx="740" cy="100" r="1"/><circle cx="60"  cy="150" r="1"/><circle cx="120" cy="150" r="1"/>
+      <circle cx="180" cy="150" r="1"/><circle cx="240" cy="150" r="1"/><circle cx="300" cy="150" r="1"/>
+      <circle cx="620" cy="150" r="1"/><circle cx="680" cy="150" r="1"/><circle cx="740" cy="150" r="1"/>
+    </g>
+
+    <!-- Left circuit traces -->
+    <g fill="none" stroke-width="1.2" filter="url(#subtleglow)">
+      <polyline points="20,70 40,70 40,55 65,55" stroke="#ff3333" opacity="0.5"/>
+      <polyline points="20,100 55,100" stroke="#ff5500" opacity="0.4"/>
+      <polyline points="20,130 40,130 40,145 65,145" stroke="#ff3333" opacity="0.5"/>
+      <polyline points="65,55 65,145" stroke="#ff4400" opacity="0.3"/>
+      <polyline points="65,80 85,80 85,100 105,100" stroke="#ff4400" opacity="0.35"/>
+      <polyline points="65,120 85,120 85,100" stroke="#ff4400" opacity="0.35"/>
+      <circle cx="65" cy="55"  r="3" fill="#ff3333" opacity="0.7"/>
+      <circle cx="65" cy="145" r="3" fill="#ff3333" opacity="0.7"/>
+      <circle cx="65" cy="80"  r="2" fill="#ff5500" opacity="0.6"/>
+      <circle cx="65" cy="120" r="2" fill="#ff5500" opacity="0.6"/>
+      <circle cx="85" cy="100" r="3.5" fill="none" stroke="#ff4400" opacity="0.6"/>
+      <circle cx="85" cy="100" r="1.5" fill="#ff6600" opacity="0.8"/>
+    </g>
+
+    <!-- Right circuit traces -->
+    <g fill="none" stroke-width="1.2" filter="url(#subtleglow)">
+      <polyline points="780,70 760,70 760,55 735,55" stroke="#ff3333" opacity="0.5"/>
+      <polyline points="780,100 745,100" stroke="#ff5500" opacity="0.4"/>
+      <polyline points="780,130 760,130 760,145 735,145" stroke="#ff3333" opacity="0.5"/>
+      <polyline points="735,55 735,145" stroke="#ff4400" opacity="0.3"/>
+      <polyline points="735,80 715,80 715,100 695,100" stroke="#ff4400" opacity="0.35"/>
+      <polyline points="735,120 715,120 715,100" stroke="#ff4400" opacity="0.35"/>
+      <circle cx="735" cy="55"  r="3" fill="#ff3333" opacity="0.7"/>
+      <circle cx="735" cy="145" r="3" fill="#ff3333" opacity="0.7"/>
+      <circle cx="735" cy="80"  r="2" fill="#ff5500" opacity="0.6"/>
+      <circle cx="735" cy="120" r="2" fill="#ff5500" opacity="0.6"/>
+      <circle cx="715" cy="100" r="3.5" fill="none" stroke="#ff4400" opacity="0.6"/>
+      <circle cx="715" cy="100" r="1.5" fill="#ff6600" opacity="0.8"/>
+    </g>
+
+    <!-- HUD corner brackets -->
+    <g stroke="#ff4400" stroke-width="1.8" fill="none" opacity="0.7" filter="url(#subtleglow)">
+      <!-- top-left -->
+      <polyline points="115,14 115,8 8,8 8,14"/>
+      <polyline points="8,8 8,50"/>
+      <!-- top-right -->
+      <polyline points="685,14 685,8 792,8 792,14"/>
+      <polyline points="792,8 792,50"/>
+      <!-- bottom-left -->
+      <polyline points="115,186 115,192 8,192 8,186"/>
+      <polyline points="8,192 8,150"/>
+      <!-- bottom-right -->
+      <polyline points="685,186 685,192 792,192 792,186"/>
+      <polyline points="792,192 792,150"/>
+    </g>
+
+    <!-- Accent lines flanking text -->
+    <g filter="url(#subtleglow)">
+      <line x1="115" y1="100" x2="225" y2="100" stroke="#ff4400" stroke-width="1" opacity="0.3"/>
+      <line x1="575" y1="100" x2="685" y2="100" stroke="#ff4400" stroke-width="1" opacity="0.3"/>
+      <line x1="115" y1="155" x2="685" y2="155" stroke="url(#accentGrad)" stroke-width="1.5" opacity="0.6"/>
+    </g>
+
+    <!-- Small status indicators top -->
+    <g font-family="'Courier New', monospace" font-size="8" fill="#ff4400" opacity="0.5" filter="url(#subtleglow)">
+      <rect x="120" y="10" width="6" height="6" rx="1" fill="#ff3333" opacity="0.6"/>
+      <rect x="130" y="10" width="6" height="6" rx="1" fill="#ff6600" opacity="0.4"/>
+      <rect x="140" y="10" width="6" height="6" rx="1" fill="#ff3333" opacity="0.2"/>
+      <text x="152" y="17">SYS_READY</text>
+      <text x="630" y="17">TARGET: 0.0.0.0</text>
+    </g>
+
+    <!-- AIX main text -->
+    <text
+      x="400" y="118"
+      font-family="'Orbitron', 'Courier New', monospace"
+      font-size="86"
+      font-weight="900"
+      text-anchor="middle"
+      fill="url(#accentGrad)"
+      filter="url(#textglow)"
+      letter-spacing="16"
+    >AIX</text>
+
+    <!-- Subtitle -->
+    <text
+      x="400" y="143"
+      font-family="'Orbitron', 'Courier New', monospace"
+      font-size="10"
+      font-weight="400"
+      text-anchor="middle"
+      fill="#8b949e"
+      letter-spacing="6"
+      opacity="0.9"
+    >AI RED TEAM FRAMEWORK</text>
+
+    <!-- Version badge -->
+    <rect x="672" y="19" width="56" height="18" rx="3" fill="#ff3333" opacity="0.12"/>
+    <rect x="672" y="19" width="56" height="18" rx="3" fill="none" stroke="#ff3333" stroke-width="0.8" opacity="0.5"/>
+    <text x="700" y="32" font-family="'Courier New', monospace" font-size="10" text-anchor="middle" fill="#ff5500" opacity="0.9">v1.2.0</text>
+
+    <!-- Animated scanline -->
+    <rect x="0" y="0" width="800" height="60" fill="url(#scanGrad)">
+      <animateTransform
+        attributeName="transform"
+        type="translate"
+        from="0,-60"
+        to="0,260"
+        dur="3.5s"
+        repeatCount="indefinite"
+        calcMode="linear"
+      />
+    </rect>
+
+    <!-- Pulsing circuit node left -->
+    <circle cx="85" cy="100" r="7" fill="none" stroke="#ff4400" stroke-width="1" opacity="0">
+      <animate attributeName="r" values="5;12;5" dur="2.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;0;0.6" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- Pulsing circuit node right -->
+    <circle cx="715" cy="100" r="7" fill="none" stroke="#ff4400" stroke-width="1" opacity="0">
+      <animate attributeName="r" values="5;12;5" dur="2.5s" begin="1.25s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;0;0.6" dur="2.5s" begin="1.25s" repeatCount="indefinite"/>
+    </circle>
+
+  </g>
+</svg>
