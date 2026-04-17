@@ -695,9 +695,7 @@ class APIConnector(Connector):
                 response = await self.client.post(url, data=body, headers=headers)
             elif self.body_format == "multipart":
                 files = (
-                    {k: (None, str(v)) for k, v in body.items()}
-                    if isinstance(body, dict)
-                    else body
+                    {k: (None, str(v)) for k, v in body.items()} if isinstance(body, dict) else body
                 )
                 response = await self.client.post(url, files=files, headers=headers)
             else:

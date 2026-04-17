@@ -292,7 +292,12 @@ class ReconScanner(BaseScanner):
             if family not in family_results:
                 family_results[family] = []
             family_results[family].append(
-                {"id": probe["id"], "triggered": triggered, "weight": probe["weight"], "response": resp}
+                {
+                    "id": probe["id"],
+                    "triggered": triggered,
+                    "weight": probe["weight"],
+                    "response": resp,
+                }
             )
 
         # Phase 2: HTTP-level probing (APIConnector only — other connectors lack send_raw)
@@ -349,8 +354,7 @@ class ReconScanner(BaseScanner):
                 triggered_signals[provider] = found
 
         sensitivity_profile = {
-            family: any(r["triggered"] for r in items)
-            for family, items in family_results.items()
+            family: any(r["triggered"] for r in items) for family, items in family_results.items()
         }
 
         if scores:

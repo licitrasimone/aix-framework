@@ -21,7 +21,7 @@ pytest tests/test_guardrail.py::TestIsRefusal::test_llama_guard_unsafe_prefix -v
 # Coverage
 pytest --cov=aix --cov-report=html
 
-# Lint / format
+# Lint / format — run black before every commit; CI runs black --check and will fail if skipped
 black aix/
 ruff check aix/
 ruff check --fix aix/
