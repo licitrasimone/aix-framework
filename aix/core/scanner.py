@@ -12,11 +12,11 @@ from typing import Any, Optional
 from rich.console import Console
 
 from aix.core.ai_engine import AIEngine
+from aix.core.atlas import get_atlas_for_module, parse_atlas_list
 from aix.core.connector import APIConnector, RequestConnector, WebSocketConnector
 from aix.core.context import TargetContext
 from aix.core.evaluator import LLMEvaluator
 from aix.core.evasion import PayloadEvasion
-from aix.core.atlas import get_atlas_for_module, parse_atlas_list
 from aix.core.owasp import get_owasp_for_module, parse_owasp_list
 from aix.core.reporting.base import Severity
 from aix.core.request_parser import ParsedRequest
