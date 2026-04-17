@@ -10,7 +10,6 @@ The first comprehensive AI/LLM security testing tool
 """
 
 import os
-import sys
 
 import click
 from rich.console import Console
@@ -155,7 +154,7 @@ def main(ctx, version):
     """
     if version:
         console.print(f"[bold cyan]AIX[/bold cyan] version [green]{__version__}[/green]")
-        sys.exit(0)
+        raise SystemExit(0)
 
     if ctx.invoked_subcommand is None:
         print_banner()

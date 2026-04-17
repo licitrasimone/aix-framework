@@ -1,0 +1,225 @@
+{
+  "openai_moderation": {
+    "response_patterns": [
+      "\"flagged\":\\s*true",
+      "flagged.*true",
+      "content_policy_violation",
+      "category_scores",
+      "sexual/minors",
+      "violence/graphic",
+      "hate/threatening",
+      "self-harm/instructions"
+    ],
+    "refusal_patterns": [
+      "I'm unable to assist with",
+      "I can't help with that",
+      "I'm not able to provide",
+      "violates our usage policies",
+      "against OpenAI's usage policies"
+    ],
+    "header_keys": [],
+    "status_codes": [400],
+    "latency_threshold_ms": 50,
+    "sensitivity": "medium",
+    "known_weaknesses": [
+      "Base64 encoding",
+      "Token splitting",
+      "Language switching",
+      "Leetspeak substitution",
+      "Homoglyph characters"
+    ]
+  },
+  "azure_content_safety": {
+    "response_patterns": [
+      "ResponsibleAIPolicyViolation",
+      "content_filter_results",
+      "\"filtered\":\\s*true",
+      "content_filter_result",
+      "jailbreak",
+      "innererror.*content_filter",
+      "azure.*content.*filter"
+    ],
+    "refusal_patterns": [
+      "This content was filtered",
+      "Azure OpenAI's content management policy",
+      "content filtering system"
+    ],
+    "header_keys": [
+      "apim-request-id",
+      "x-ms-client-request-id",
+      "x-content-filter-result"
+    ],
+    "status_codes": [400],
+    "latency_threshold_ms": 80,
+    "sensitivity": "high",
+    "known_weaknesses": [
+      "Indirect prompt injection",
+      "Homoglyph substitution",
+      "Multilingual evasion",
+      "Document-level injection via RAG"
+    ]
+  },
+  "aws_bedrock_guardrails": {
+    "response_patterns": [
+      "INTERVENED",
+      "guardrailAction",
+      "stopReason.*guardrail",
+      "amazon-bedrock",
+      "bedrock.*guardrail",
+      "\"action\":\\s*\"BLOCKED\""
+    ],
+    "refusal_patterns": [
+      "I apologize, but I'm not able",
+      "blocked by Amazon Bedrock"
+    ],
+    "header_keys": [
+      "amazon-bedrock-guardrailaction",
+      "x-amzn-requestid",
+      "x-amzn-bedrock-guardrail"
+    ],
+    "status_codes": [400, 403],
+    "latency_threshold_ms": 100,
+    "sensitivity": "configurable",
+    "known_weaknesses": [
+      "Multi-turn context accumulation",
+      "Tool call injection",
+      "Role-play framing",
+      "Indirect retrieval injection"
+    ]
+  },
+  "llama_guard": {
+    "response_patterns": [
+      "\\[UNSAFE\\]",
+      "unsafe\\nS[0-9]",
+      "^unsafe",
+      "\\bS1\\b",
+      "\\bS2\\b",
+      "\\bS3\\b",
+      "\\bS4\\b",
+      "\\bS5\\b",
+      "\\bS6\\b",
+      "\\bS7\\b",
+      "\\bS8\\b",
+      "\\bS9\\b",
+      "\\bS10\\b",
+      "\\bS11\\b",
+      "\\bS12\\b",
+      "\\bS13\\b",
+      "llama.guard"
+    ],
+    "refusal_patterns": [],
+    "header_keys": [],
+    "status_codes": [],
+    "latency_threshold_ms": 200,
+    "sensitivity": "medium",
+    "known_weaknesses": [
+      "Jailbreak prefixes before harmful content",
+      "Role-play and fictional context framing",
+      "Fictional character persona bypass",
+      "Soft prompting and indirect requests",
+      "Multi-turn gradual escalation"
+    ]
+  },
+  "lakera_guard": {
+    "response_patterns": [
+      "lakera",
+      "prompt_injection_detected",
+      "guard.*blocked",
+      "policy_violation",
+      "lakera.*flagged",
+      "pii.*detected",
+      "injection.*detected"
+    ],
+    "refusal_patterns": [
+      "Lakera Guard",
+      "blocked by security policy"
+    ],
+    "header_keys": [
+      "x-lakera-guard",
+      "x-lakera-guard-dev-info",
+      "x-lakera-request-id"
+    ],
+    "status_codes": [400, 403],
+    "latency_threshold_ms": 100,
+    "sensitivity": "high",
+    "known_weaknesses": [
+      "Indirect injection via retrieved documents",
+      "Multi-turn obfuscation over many turns",
+      "Encoding-based evasion at document ingestion",
+      "Low-resource language injection"
+    ]
+  },
+  "perspective_api": {
+    "response_patterns": [
+      "attributeScores",
+      "TOXICITY",
+      "spamScore",
+      "SEVERE_TOXICITY",
+      "IDENTITY_ATTACK",
+      "INSULT",
+      "PROFANITY",
+      "THREAT",
+      "summaryScore"
+    ],
+    "refusal_patterns": [],
+    "header_keys": [],
+    "status_codes": [],
+    "latency_threshold_ms": 150,
+    "sensitivity": "configurable",
+    "known_weaknesses": [
+      "Deliberate misspellings",
+      "Leetspeak and character substitution",
+      "Punctuation insertion between letters",
+      "Synonym and paraphrase substitution",
+      "Non-English languages (lower accuracy)"
+    ]
+  },
+  "nemo_guardrails": {
+    "response_patterns": [
+      "colang",
+      "bot refuse",
+      "guardrails activated",
+      "nemo.*guard",
+      "I'm not able to discuss",
+      "rails.*blocked"
+    ],
+    "refusal_patterns": [
+      "I'm not able to discuss",
+      "cannot engage with that topic",
+      "NeMo Guardrails"
+    ],
+    "header_keys": [],
+    "status_codes": [],
+    "latency_threshold_ms": 300,
+    "sensitivity": "configurable",
+    "known_weaknesses": [
+      "Prompt injection via canonical form manipulation",
+      "Multi-turn context drift",
+      "Colang flow bypass via unexpected input patterns",
+      "Embedding similarity threshold attacks"
+    ]
+  },
+  "custom_filter": {
+    "response_patterns": [
+      "content.*policy",
+      "safety.*filter",
+      "moderation.*triggered",
+      "blocked.*content",
+      "request.*denied",
+      "not allowed",
+      "prohibited",
+      "against.*terms",
+      "cannot.*assist"
+    ],
+    "refusal_patterns": [
+      "I cannot assist with this",
+      "This request has been blocked",
+      "Content policy violation"
+    ],
+    "header_keys": [],
+    "status_codes": [400, 403, 451],
+    "latency_threshold_ms": 50,
+    "sensitivity": "unknown",
+    "known_weaknesses": []
+  }
+}

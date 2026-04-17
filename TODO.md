@@ -60,12 +60,20 @@ This document outlines the planned improvements, feature requests, and future di
 - [ ] **Autonomous Attack Agent**: Full autopilot mode with goal specification
 - [ ] **Strategy Learning**: Improve over time based on successful attacks
 
-### 2.3 Guardrail Fingerprinting Module
-- [ ] **LlamaGuard Detection**: Identify LlamaGuard-protected endpoints
-- [ ] **NeMo Guardrails Signatures**: Detect NeMo-based safety layers
-- [ ] **OpenAI Moderation API Detection**: Identify moderation layer
-- [ ] **Custom Guardrail Fingerprinting**: Detect proprietary safety systems
-- [ ] **Bypass Strategy Mapping**: Auto-suggest bypasses per guardrail type
+### 2.3 Guardrail Fingerprinting ✅ COMPLETED
+- [x] **LlamaGuard Detection**: Identify LlamaGuard-protected endpoints via `[UNSAFE]` prefix and category codes
+- [x] **NeMo Guardrails Signatures**: Detect NeMo-based safety layers via refusal patterns
+- [x] **OpenAI Moderation API Detection**: Identify via `flagged`/`category_scores` JSON fields
+- [x] **Azure Content Safety Detection**: Identify via `ResponsibleAIPolicyViolation`, `content_filter_results`, and `apim-request-id` header
+- [x] **AWS Bedrock Guardrails Detection**: Identify via `INTERVENED`/`guardrailAction` fields and `amazon-bedrock-guardrailaction` header
+- [x] **Lakera Guard Detection**: Identify via `x-lakera-guard` response headers
+- [x] **Perspective API Detection**: Identify via `attributeScores`/`TOXICITY` response fields
+- [x] **Custom Guardrail Fingerprinting**: Detect proprietary safety systems via refusal pattern fallback
+- [x] **Bypass Strategy Mapping**: Known weaknesses returned per detected provider
+- [x] **Sensitivity Profiling**: Map which content categories (violence, hate, CBRN, PII, etc.) trigger the guardrail
+- [x] **HTTP-Level Detection**: `send_raw()` captures status codes and headers for header-based providers
+- [x] **20 Calibrated Probes**: 8 content families for comprehensive coverage
+- [x] **Adaptive Bypass Engine**: Session-aware auto-bypass; `BypassEngine` maps `known_weaknesses` → `PayloadEvasion` techniques; activates transparently after recon; `--no-bypass` flag to suppress
 
 ---
 
@@ -138,7 +146,7 @@ steps:
 - [ ] **Alerting**: Slack, Discord, PagerDuty integrations
 
 ### 4.3 Threat Intelligence Mapping
-- [ ] **MITRE ATLAS Mapping**: Map findings to adversarial ML taxonomy
+- [x] **MITRE ATLAS Mapping**: `ATLASCategory` enum (11 techniques); `MODULE_ATLAS_MAPPING`; `Finding.atlas` field; DB `atlas` column; all 11 payload files updated
 - [ ] **OWASP LLM Top 10**: Compliance reporting and gap analysis
 - [ ] **CVE-Style Identifiers**: Standardized vulnerability naming (AIX-2026-XXXX)
 - [ ] **Risk Scoring Engine**: Business context-aware severity calculation
@@ -233,6 +241,7 @@ steps:
 - [x] **Model Fingerprinting 2.0**: GPT-4/Claude/Llama detection
 - [x] **RAG Exploitation Module**: Knowledge base poisoning
 - [x] **Fingerprint Module**: Embedding + pattern-based probabilistic model identification
+- [x] **Guardrail Fingerprinting**: Provider detection (OpenAI, Azure, AWS Bedrock, Llama Guard, Lakera, Perspective API, NeMo, custom) integrated into `aix recon` with sensitivity profiling and known bypass weaknesses
 - [x] **Code Quality Refactoring**: Template method pattern for scan modules, eliminated ~1200 lines of duplication
 
 ### Modules Implemented
@@ -277,11 +286,38 @@ steps:
 
 ---
 
-*Last Updated: February 20, 2026*
+*Last Updated: April 17, 2026*
 
 ---
 
 ## Recent Changes
+
+### v1.2.0 - Adaptive Bypass Engine + MITRE ATLAS Mapping + Guardrail Fingerprinting
+- Added **Adaptive Bypass Engine** — after `aix recon` detects a guardrail and stores it in the session, all subsequent attack modules auto-apply targeted evasion techniques without any user action
+  - `BypassEngine` class with `WEAKNESS_EVASION_MAP` and `WEAKNESS_MODULE_SUGGESTIONS`
+  - `apply_bypass_to_payloads()` expands each payload with one variant per applicable technique
+  - Sessions DB extended with `guardrail_result TEXT` column
+  - `--no-bypass` flag added to all attack modules via `standard_options`
+- Added **MITRE ATLAS Mapping** — all findings carry `atlas` field alongside `owasp`
+  - `ATLASCategory` enum with 11 ATLAS techniques (`aix/core/atlas.py`)
+  - `MODULE_ATLAS_MAPPING` wires every attack module to its techniques
+  - `Finding.atlas` field; `atlas TEXT` column in `results` DB table
+  - All 11 attack payload JSON files updated with `"atlas"` field
+  - `ATLASCategory` exported from `aix.core` public API
+- Added `tests/test_bypass_engine.py` (30 tests) and `tests/test_atlas.py` (23 tests)
+
+### v1.2.0 - Guardrail Fingerprinting
+- Added **Guardrail Fingerprinting** to `aix recon` (runs automatically as step 8 of enhanced detection):
+  - Detects 8 known safety providers: OpenAI Moderation, Azure Content Safety, AWS Bedrock Guardrails, Llama Guard, Lakera Guard, Perspective API, NeMo Guardrails, custom/unknown filters
+  - Two-phase detection: text-based (response patterns, refusal text, JSON error fields) + HTTP-level (status codes, response headers via new `send_raw()` on APIConnector)
+  - **20 calibrated probes** across 8 content families: `benign_baseline`, `violence_harm`, `hate_speech`, `self_harm`, `sexual_explicit`, `chemical_bio`, `privacy_pii`, `encoding_evasion`
+  - **Sensitivity profiling**: records which content categories triggered the guardrail
+  - **Bypass weaknesses**: returns known evasion techniques per detected provider
+  - Falls back to `custom_filter` when refusals are detected but no known signature matches
+  - Results stored in `guardrails` key of JSON output (`-o results.json`)
+- Added `send_raw()` method to `APIConnector` — returns `{text, status, headers, latency_ms}` for HTTP-level guardrail fingerprinting
+- Added `guardrail_probes.json` (20 probes) and `guardrail_db.json` (8 provider signatures) to `aix/payloads/`
+- Added `tests/test_guardrail.py` with 25 unit and integration tests
 
 ### v1.1.0 - WebSocket Support & Sessions
 - Added **WebSocket Connector** (`ws://` / `wss://` targets):

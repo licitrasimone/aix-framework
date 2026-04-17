@@ -22,10 +22,24 @@ def _serialize_owasp(owasp: list | None) -> str | None:
     """Convert OWASP categories to JSON string, handling both strings and enums."""
     if not owasp:
         return None
-    # Convert OWASPCategory enums to their ID strings if needed
     serialized = []
     for item in owasp:
         if hasattr(item, "id"):  # OWASPCategory enum
+            serialized.append(item.id)
+        elif isinstance(item, str):
+            serialized.append(item)
+        else:
+            serialized.append(str(item))
+    return json.dumps(serialized)
+
+
+def _serialize_atlas(atlas: list | None) -> str | None:
+    """Convert ATLAS categories to JSON string, handling both strings and enums."""
+    if not atlas:
+        return None
+    serialized = []
+    for item in atlas:
+        if hasattr(item, "id"):  # ATLASCategory enum
             serialized.append(item.id)
         elif isinstance(item, str):
             serialized.append(item)
@@ -85,11 +99,19 @@ class AIXDatabase:
         try:
             cursor.execute("SELECT owasp FROM results LIMIT 1")
         except sqlite3.OperationalError:
-            # Column missing, add it
             console.print(
                 "[yellow][*] Migrating database: Adding 'owasp' column to results table[/yellow]"
             )
             cursor.execute("ALTER TABLE results ADD COLUMN owasp TEXT")
+
+        # Migration: Check if atlas column exists
+        try:
+            cursor.execute("SELECT atlas FROM results LIMIT 1")
+        except sqlite3.OperationalError:
+            console.print(
+                "[yellow][*] Migrating database: Adding 'atlas' column to results table[/yellow]"
+            )
+            cursor.execute("ALTER TABLE results ADD COLUMN atlas TEXT")
 
         # Sessions table
         cursor.execute("""
@@ -122,6 +144,15 @@ class AIXDatabase:
                 FOREIGN KEY (session_id) REFERENCES sessions(id)
             )
         """)
+
+        # Migration: Add guardrail_result column to sessions
+        try:
+            cursor.execute("SELECT guardrail_result FROM sessions LIMIT 1")
+        except sqlite3.OperationalError:
+            console.print(
+                "[yellow][*] Migrating database: Adding 'guardrail_result' column to sessions table[/yellow]"
+            )
+            cursor.execute("ALTER TABLE sessions ADD COLUMN guardrail_result TEXT")
 
         # Migration: Add session_id column to results
         try:
@@ -195,6 +226,7 @@ class AIXDatabase:
         severity: str = "high",
         reason: str = "",
         owasp: list[str] | None = None,
+        atlas: list[str] | None = None,
         dedup_payload: str | None = None,
         session_id: str | None = None,
         conversation_id: str | None = None,
@@ -208,11 +240,13 @@ class AIXDatabase:
 
         Args:
             owasp: List of OWASP LLM Top 10 IDs (e.g., ["LLM01", "LLM06"])
+            atlas: List of MITRE ATLAS technique IDs (e.g., ["AML.T0048"])
         """
         cursor = self.conn.cursor()
 
         existing = None
         owasp_json = _serialize_owasp(owasp)
+        atlas_json = _serialize_atlas(atlas)
 
         if dedup_payload:
             # Randomized evasion active: Dedup by technique name only.
@@ -243,7 +277,7 @@ class AIXDatabase:
             cursor.execute(
                 """
                 UPDATE results
-                SET result = ?, payload = ?, response = ?, severity = ?, reason = ?, owasp = ?,
+                SET result = ?, payload = ?, response = ?, severity = ?, reason = ?, owasp = ?, atlas = ?,
                     session_id = COALESCE(?, session_id), conversation_id = COALESCE(?, conversation_id),
                     timestamp = CURRENT_TIMESTAMP
                 WHERE id = ?
@@ -255,6 +289,7 @@ class AIXDatabase:
                     severity,
                     reason,
                     owasp_json,
+                    atlas_json,
                     session_id,
                     conversation_id,
                     row_id,
@@ -266,8 +301,8 @@ class AIXDatabase:
             # Insert new result
             cursor.execute(
                 """
-                INSERT INTO results (target, module, technique, result, payload, response, severity, reason, owasp, session_id, conversation_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO results (target, module, technique, result, payload, response, severity, reason, owasp, atlas, session_id, conversation_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
                     target,
@@ -279,6 +314,7 @@ class AIXDatabase:
                     severity,
                     reason,
                     owasp_json,
+                    atlas_json,
                     session_id,
                     conversation_id,
                 ),
@@ -471,6 +507,27 @@ class AIXDatabase:
     def get_session_results(self, session_id: str) -> list[dict[str, Any]]:
         """Get all results for a specific session."""
         return self.get_results(session_id=session_id, limit=10000)
+
+    def store_session_guardrail(self, session_id: str, guardrail_result: dict) -> None:
+        """Persist guardrail detection result for a session."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "UPDATE sessions SET guardrail_result = ? WHERE id = ?",
+            (json.dumps(guardrail_result), session_id),
+        )
+        self.conn.commit()
+
+    def get_session_guardrail(self, session_id: str) -> dict | None:
+        """Return stored guardrail detection result for a session, or None."""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT guardrail_result FROM sessions WHERE id = ?", (session_id,))
+        row = cursor.fetchone()
+        if row and row[0]:
+            try:
+                return json.loads(row[0])
+            except (json.JSONDecodeError, TypeError):
+                return None
+        return None
 
     def get_or_create_session(self, target: str) -> str:
         """Find active session for target or create new one. Returns session_id."""

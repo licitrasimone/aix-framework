@@ -584,7 +584,7 @@
           "expect": {
             "contains_any": [
               "SQL",
-              "inyección",
+              "inyecci\u00f3n",
               "injection",
               "attaque",
               "ataque"
@@ -599,7 +599,7 @@
           "indicators": [
             "' OR 1=1--",
             "OR '1'='1",
-            "inyección",
+            "inyecci\u00f3n",
             "injection",
             "--",
             "bypass"

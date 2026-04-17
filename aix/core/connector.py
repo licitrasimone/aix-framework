@@ -25,6 +25,12 @@ if TYPE_CHECKING:
 console = Console()
 
 
+class AIXConnectionError(Exception):
+    """Raised when an AIX connector fails to reach or communicate with a target."""
+
+    pass
+
+
 @dataclass
 class ConnectorConfig:
     """Configuration for a connector"""
@@ -555,9 +561,9 @@ class APIConnector(Connector):
                 error_msg += " (Rate Limit Exceeded)"
             elif status >= 500:
                 error_msg += " (Server Error)"
-            raise ConnectionError(f"{error_msg}: {e.response.text[:200]}")
+            raise AIXConnectionError(f"{error_msg}: {e.response.text[:200]}")
         except Exception as e:
-            raise ConnectionError(f"Request failed: {e!s}")
+            raise AIXConnectionError(f"Request failed: {e!s}")
 
     async def send(self, payload: str) -> str:
         """Send message to API and return response"""
@@ -648,7 +654,7 @@ class APIConnector(Connector):
                 elif status >= 500:
                     error_msg += " (Server Error)"
 
-                raise ConnectionError(f"{error_msg}: {e.response.text[:200]}")
+                raise AIXConnectionError(f"{error_msg}: {e.response.text[:200]}")
             except json.JSONDecodeError:
                 # Check for content error match on non-JSON response too
                 refresh_error_sig = self.refresh_config.get("error")
@@ -663,9 +669,54 @@ class APIConnector(Connector):
 
                 return self._apply_regex(response.text)
             except httpx.ConnectError:
-                raise ConnectionError(f"Failed to connect to {url}. Check your proxy settings.")
+                raise AIXConnectionError(f"Failed to connect to {url}. Check your proxy settings.")
             except Exception as e:
-                raise ConnectionError(f"Request failed: {e!s}")
+                raise AIXConnectionError(f"Request failed: {e!s}")
+
+    async def send_raw(self, payload: str) -> dict:
+        """Like send() but returns full HTTP response metadata for guardrail fingerprinting."""
+        import time
+
+        if not self.client:
+            await self.connect()
+
+        endpoint = self.format_config.get("endpoint", "")
+        if self.url.rstrip("/").endswith(endpoint.rstrip("/")):
+            url = self.url
+        else:
+            url = self.url.rstrip("/") + endpoint
+
+        headers = self._build_headers()
+        body = self._build_payload(payload)
+
+        t0 = time.monotonic()
+        try:
+            if self.body_format == "form":
+                response = await self.client.post(url, data=body, headers=headers)
+            elif self.body_format == "multipart":
+                files = (
+                    {k: (None, str(v)) for k, v in body.items()}
+                    if isinstance(body, dict)
+                    else body
+                )
+                response = await self.client.post(url, files=files, headers=headers)
+            else:
+                response = await self.client.post(url, json=body, headers=headers)
+
+            latency_ms = (time.monotonic() - t0) * 1000
+            try:
+                text = self._extract_response(response.json())
+            except Exception:
+                text = response.text
+
+            return {
+                "text": text,
+                "status": response.status_code,
+                "headers": dict(response.headers),
+                "latency_ms": round(latency_ms, 1),
+            }
+        except Exception:
+            return {"text": "", "status": 0, "headers": {}, "latency_ms": 0.0}
 
     async def close(self) -> None:
         """Close HTTP client"""
@@ -808,7 +859,7 @@ class WebSocketConnector(Connector):
             await self.ws.send(message)
             raw = await asyncio.wait_for(self.ws.recv(), timeout=self.timeout)
         except asyncio.TimeoutError:
-            raise ConnectionError(f"WebSocket recv() timed out after {self.timeout}s")
+            raise AIXConnectionError(f"WebSocket recv() timed out after {self.timeout}s")
         except Exception as e:
             # Auto-reconnect once on connection closed
             if "close" in str(e).lower() or "closed" in str(e).lower():
@@ -817,7 +868,7 @@ class WebSocketConnector(Connector):
                 await self.ws.send(message)
                 raw = await asyncio.wait_for(self.ws.recv(), timeout=self.timeout)
             else:
-                raise ConnectionError(f"WebSocket error: {e!s}")
+                raise AIXConnectionError(f"WebSocket error: {e!s}")
 
         if self.verbose >= 3:
             self.console.print(f"[cyan]WS-CONN[/cyan] [*] Received: {raw[:200]}")
@@ -1095,13 +1146,13 @@ class RequestConnector(Connector):
             elif status >= 500:
                 error_msg += " (Server Error)"
 
-            raise ConnectionError(f"{error_msg}: {e.response.text[:200]}")
+            raise AIXConnectionError(f"{error_msg}: {e.response.text[:200]}")
         except httpx.ConnectError:
-            raise ConnectionError(
+            raise AIXConnectionError(
                 f"Failed to connect to {injected_request.url}. Check your proxy settings."
             )
         except Exception as e:
-            raise ConnectionError(f"Request failed: {e!s}")
+            raise AIXConnectionError(f"Request failed: {e!s}")
 
     def _extract_response(self, data: Any) -> str:
         """Extract response text from API response"""

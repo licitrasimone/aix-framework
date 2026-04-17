@@ -167,6 +167,13 @@ def standard_options(func):
     @ai_options
     @scan_options
     @chat_id_options
+    @click.option(
+        "--no-bypass",
+        "no_bypass",
+        is_flag=True,
+        default=False,
+        help="Disable automatic guardrail bypass (ignores stored session guardrail data)",
+    )
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)

@@ -16,6 +16,7 @@ from aix.core.connector import APIConnector, RequestConnector, WebSocketConnecto
 from aix.core.context import TargetContext
 from aix.core.evaluator import LLMEvaluator
 from aix.core.evasion import PayloadEvasion
+from aix.core.atlas import get_atlas_for_module, parse_atlas_list
 from aix.core.owasp import get_owasp_for_module, parse_owasp_list
 from aix.core.reporting.base import Severity
 from aix.core.request_parser import ParsedRequest
@@ -57,6 +58,7 @@ class BaseScanner(ABC):
         self.console = console if console else Console()
 
         # Common optional arguments
+        self.output = kwargs.get("output")
         self.proxy = kwargs.get("proxy")
         self.cookies = kwargs.get("cookies")
         self.headers = kwargs.get("headers")
@@ -73,6 +75,7 @@ class BaseScanner(ABC):
 
         # Session config
         self.session_id = kwargs.get("session_id")
+        self.no_bypass = kwargs.get("no_bypass", False)
 
         # Filtering config
         self.level = kwargs.get("level", 1)
@@ -193,8 +196,22 @@ class BaseScanner(ABC):
                     if "owasp" in p and isinstance(p["owasp"], list):
                         p["owasp"] = parse_owasp_list(p["owasp"])
                     else:
-                        # Default from module mapping
                         p["owasp"] = get_owasp_for_module(self.module_name.lower())
+
+                    # Parse ATLAS categories
+                    if "atlas" in p and isinstance(p["atlas"], list):
+                        p["atlas_parsed"] = parse_atlas_list(p["atlas"])
+                    else:
+                        p["atlas_parsed"] = get_atlas_for_module(self.module_name.lower())
+
+                    # Ensure all optional fields have safe defaults
+                    _PAYLOAD_DEFAULTS = {
+                        "indicators": [],
+                        "category": "general",
+                        "description": "",
+                    }
+                    for _k, _v in _PAYLOAD_DEFAULTS.items():
+                        p.setdefault(_k, _v)
 
                     filtered_payloads.append(p)
 
@@ -556,6 +573,17 @@ class BaseScanner(ABC):
         await connector.connect()
         await self.gather_context(connector)
 
+        # Auto-bypass: apply targeted evasion if a guardrail was previously detected for this target
+        if not self.no_bypass and self.session_id:
+            guardrail_result = self.db.get_session_guardrail(self.session_id)
+            if guardrail_result and guardrail_result.get("detected"):
+                from aix.core.bypass_engine import BypassEngine
+
+                engine = BypassEngine(guardrail_result)
+                if engine.get_targeted_techniques():
+                    self._print("warning", f"Auto-bypass active: {engine.summary()}")
+                    payloads = engine.apply_bypass_to_payloads(payloads)
+
         # Generate context-aware payloads if requested
         if self.generate_count > 0 and self.ai_engine and self.context:
             generated = await self.generate_payloads()
@@ -625,6 +653,7 @@ class BaseScanner(ABC):
                                 target=self.target,
                                 reason=self.last_eval_reason,
                                 owasp=p.get("owasp", []),
+                                atlas=p.get("atlas_parsed", []),
                             )
                         )
 
@@ -642,6 +671,7 @@ class BaseScanner(ABC):
                             p["severity"].value,
                             reason=self.last_eval_reason,
                             owasp=p.get("owasp", []),
+                            atlas=p.get("atlas", []),
                             session_id=self.session_id,
                             conversation_id=conv_id,
                             **db_kwargs,
@@ -663,6 +693,17 @@ class BaseScanner(ABC):
 
         self._on_scan_complete()
         return self.findings
+
+    def save_findings(self, output_path: str) -> None:
+        """Serialize self.findings to a JSON file."""
+        data = {
+            "target": self.target,
+            "module": getattr(self, "module_name", self.__class__.__name__),
+            "findings": [f.to_dict() for f in self.findings],
+            "total": len(self.findings),
+        }
+        with open(output_path, "w") as fh:
+            json.dump(data, fh, indent=2)
 
     async def run(self):
         """Main execution method - usually overridden by subclasses but can provide skeleton"""
@@ -858,4 +899,13 @@ def run_scanner(scanner_cls, target: str = None, api_key: str = None, **kwargs):
     scanner = scanner_cls(target, api_key=api_key, **kwargs)
 
     # Run async
-    return asyncio.run(scanner.run())
+    result = asyncio.run(scanner.run())
+
+    if scanner.output and scanner.findings:
+        try:
+            scanner.save_findings(scanner.output)
+            Console().print(f"[green][+][/green] Findings saved to {scanner.output}")
+        except Exception as e:
+            Console().print(f"[red][-][/red] Failed to save findings: {e}")
+
+    return result

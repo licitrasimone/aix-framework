@@ -2,7 +2,7 @@
 
 ```
     ▄▀█ █ ▀▄▀
-    █▀█ █ █ █  v1.1.0
+    █▀█ █ █ █  v1.2.0
 
     AI Security Testing Framework
 ```
@@ -30,6 +30,9 @@ AIX is an automated security testing framework for AI/LLM endpoints. It provides
 - **RAG Attacks** - Knowledge base and retrieval vulnerabilities
 - **Multi-Turn Attacks** - Conversation-based exploitation (crescendo, trust building, context poisoning)
 - **Model Fingerprinting** - Probabilistic LLM identification via embedding and pattern analysis
+- **Guardrail Fingerprinting** - Detect and identify safety/content moderation layers (OpenAI Moderation, Azure Content Safety, AWS Bedrock, Llama Guard, Lakera, and more)
+- **Adaptive Bypass Engine** - After recon detects a guardrail, automatically applies targeted evasion techniques on subsequent attack scans (session-aware, `--no-bypass` to disable)
+- **MITRE ATLAS Mapping** - All findings tagged with MITRE ATLAS technique IDs (`AML.T0048`, etc.) alongside OWASP LLM Top 10
 - **Attack Chains** - YAML-defined attack workflows with conditional branching and state passing
 
 ---
@@ -104,13 +107,28 @@ aix db --conversations
 ## Modules
 
 ### recon - Reconnaissance
-Discover AI endpoint details including API structure, authentication, input filters, model fingerprinting, and rate limits. Includes built-in fingerprinting to identify the underlying LLM model.
+Discover AI endpoint details including API structure, authentication, input filters, model fingerprinting, rate limits, and **content guardrail fingerprinting**. Automatically runs as part of every recon scan.
 
 ```bash
 aix recon https://company.com/chatbot
 aix recon -r request.txt -p "messages[0].content"
 aix recon https://api.company.com -o profile.json
 ```
+
+**Guardrail Fingerprinting** detects which safety/moderation layer is deployed in front of the model:
+
+| Provider | Detection Method |
+|---|---|
+| OpenAI Moderation API | Response JSON fields (`flagged`, `category_scores`) |
+| Azure Content Safety | HTTP 400 body (`ResponsibleAIPolicyViolation`, `content_filter_results`), headers |
+| AWS Bedrock Guardrails | Response fields (`INTERVENED`, `guardrailAction`), `amazon-bedrock-guardrailaction` header |
+| Llama Guard | Response prefix (`[UNSAFE]`, `unsafe\nS<category>`) |
+| Lakera Guard | `x-lakera-guard` response headers |
+| Perspective API | Response JSON (`attributeScores`, `TOXICITY`) |
+| NeMo Guardrails | Refusal patterns (`colang`, `rails.*blocked`) |
+| Custom filter | Detected via refusal patterns when no known signature matches |
+
+Results include: detected provider, confidence %, sensitivity profile per content category (violence, hate speech, CBRN, PII, etc.), and known bypass weaknesses. All stored in the `guardrails` key of the JSON output (`-o results.json`).
 
 ### fingerprint - Model Fingerprinting
 Identify the underlying LLM model behind an endpoint using probabilistic analysis. Supports two strategies: embedding-based (high accuracy, requires `aix-framework[ml]`) and pattern-based (default fallback using regex matching and softmax scoring).
@@ -310,6 +328,7 @@ aix scan --profile company.com --evasion aggressive
 | `--risk` | | Risk level (1-3, higher = riskier tests) |
 | `--show-response` | | Show AI response for findings |
 | `--verify-attempts` | `-va` | Number of verification attempts |
+| `--no-bypass` | | Disable automatic guardrail bypass (ignores session guardrail data) |
 
 ### Session Refresh Options
 | Option | Description |
@@ -569,7 +588,9 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
     "severity": "CRITICAL|HIGH|MEDIUM|LOW",
     "category": "category_name",
     "level": 1,
-    "risk": 1
+    "risk": 1,
+    "owasp": ["LLM01"],
+    "atlas": ["AML.T0048"]
 }
 ```
 4. Test against safe targets

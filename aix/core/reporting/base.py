@@ -16,6 +16,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 if TYPE_CHECKING:
+    from aix.core.atlas import ATLASCategory
     from aix.core.owasp import OWASPCategory
 
 console = Console()
@@ -126,7 +127,8 @@ class Finding:
     target: str = ""
     details: str = ""
     reason: str = ""  # New field for exploit motivation/reason
-    owasp: list["OWASPCategory"] = field(default_factory=list)  # OWASP LLM Top 10 mapping
+    owasp: list["OWASPCategory"] = field(default_factory=list)
+    atlas: list["ATLASCategory"] = field(default_factory=list)
     timestamp: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict[str, Any]:
@@ -140,6 +142,7 @@ class Finding:
             "details": self.details,
             "reason": self.reason,
             "owasp": [cat.id for cat in self.owasp] if self.owasp else [],
+            "atlas": [cat.id for cat in self.atlas] if self.atlas else [],
             "timestamp": self.timestamp.isoformat(),
         }
 

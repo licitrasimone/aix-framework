@@ -38,6 +38,7 @@ env/
 aix/db/*.db
 *.sqlite
 *.sqlite3
+aix.db
 
 # Logs and Reports
 *.log
