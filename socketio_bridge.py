@@ -236,6 +236,40 @@ class SocketIOBridge:
             except asyncio.TimeoutError:
                 log.info("[4/5] Namespace connected (timeout waiting for confirm, proceeding)")
 
+            # Wait for on_chat_start sequence to complete before sending
+            log.info("[4b/5] Waiting for on_chat_start sequence...")
+            seen_chat_start = False
+            init_deadline = asyncio.get_event_loop().time() + 15.0
+            while asyncio.get_event_loop().time() < init_deadline:
+                try:
+                    raw = await asyncio.wait_for(ws.recv(), timeout=2.0)
+                except asyncio.TimeoutError:
+                    log.info("  [init] 2s silence — proceeding")
+                    break
+                if raw == "2":
+                    await ws.send("3")
+                    continue
+                if not raw.startswith("42"):
+                    log.debug(f"  [init] non-event: {raw[:30]}")
+                    continue
+                try:
+                    parsed = json.loads(raw[2:])
+                    ev = parsed[0]
+                    ed = parsed[1] if len(parsed) > 1 else {}
+                except Exception:
+                    continue
+                log.info(f"  [init] ← {ev} name={ed.get('name','')} threadId={ed.get('threadId','')[:8]}")
+                # capture threadId from on_chat_start
+                tid = ed.get("threadId", "")
+                if tid and not self._thread_id:
+                    self._thread_id = tid
+                    log.info(f"  [init] threadId captured: {tid}")
+                if ev in ("new_message", "update_message") and ed.get("name") == "on_chat_start":
+                    seen_chat_start = True
+                if ev == "task_end" and seen_chat_start:
+                    log.info("  [init] on_chat_start complete — ready to send")
+                    break
+
             # Send payload
             frame = self._build_frame(payload)
             log.info(f"[5/5] Sending payload: {payload[:80]}")
