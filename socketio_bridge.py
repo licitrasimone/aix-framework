@@ -56,6 +56,7 @@ class SocketIOBridge:
         self.timeout = timeout
         self.proxy = proxy  # e.g. "http://127.0.0.1:8080"
         self._eio_version = 4  # detected at handshake time
+        self._thread_id = ""  # captured from server on first response, reused after
 
         # Derive HTTP and WS base URLs
         if self.base_url.startswith("https://"):
@@ -142,7 +143,7 @@ class SocketIOBridge:
             "client_message",
             {
                 "message": {
-                    "threadId": "",
+                    "threadId": self._thread_id,
                     "id": msg_id,
                     "name": self.user_email,
                     "type": "user_message",
@@ -272,18 +273,27 @@ class SocketIOBridge:
                     continue
 
                 events_seen.append(event_name)
-                log.debug(f"  ← event: {event_name}")
+                msg_type = event_data.get("type", "")
+                msg_id = event_data.get("id", "")[:8]
+                out_preview = str(event_data.get("output", ""))[:60]
+                log.info(f"  ← [{event_name}] type={msg_type} id={msg_id} output={out_preview!r}")
+
+                # Capture threadId from any server event
+                tid = event_data.get("threadId", "")
+                if tid and not self._thread_id:
+                    self._thread_id = tid
+                    log.info(f"  threadId captured: {tid}")
 
                 if event_name == "task_end":
-                    log.info(f"  task_end received — events seen: {events_seen}")
+                    log.info(f"  task_end — events seen: {events_seen}")
                     break
 
-                if event_name in ("stream_start", "new_message"):
-                    if event_data.get("type") == "assistant_message":
+                if event_name in ("stream_start", "new_message", "update_message"):
+                    if msg_type == "assistant_message":
                         out = event_data.get("output", "")
                         if out:
                             ai_output = out
-                            log.info(f"  AI response ({len(out)} chars): {out[:120]}")
+                            log.info(f"  ✓ captured AI response ({len(out)} chars): {out[:120]}")
 
         return ai_output
 
