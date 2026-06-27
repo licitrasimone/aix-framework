@@ -24,11 +24,12 @@ import json
 import logging
 import ssl
 import urllib.error
+import urllib.request
 import uuid
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 import websockets
 
@@ -44,7 +45,8 @@ def set_debug():
 class SocketIOBridge:
     def __init__(self, base_url: str, user_email: str, location: str,
                  sio_path: str = "/socket.io/",
-                 cookies: str = "", headers: str = "", timeout: int = 60):
+                 cookies: str = "", headers: str = "", timeout: int = 60,
+                 proxy: str = ""):
         self.base_url = base_url.rstrip("/")
         self.user_email = user_email
         self.location = location
@@ -52,6 +54,7 @@ class SocketIOBridge:
         self.cookies = cookies
         self.headers = headers
         self.timeout = timeout
+        self.proxy = proxy  # e.g. "http://127.0.0.1:8080"
         self._eio_version = 4  # detected at handshake time
 
         # Derive HTTP and WS base URLs
@@ -86,6 +89,16 @@ class SocketIOBridge:
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
 
+        # Build opener — route through proxy if set (Burp = http://127.0.0.1:8080)
+        if self.proxy:
+            log.info(f"  HTTP polling via proxy: {self.proxy}")
+            opener = urllib.request.build_opener(
+                urllib.request.ProxyHandler({"http": self.proxy, "https": self.proxy}),
+                urllib.request.HTTPSHandler(context=ctx),
+            )
+        else:
+            opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx))
+
         # Try EIO=4 first, fall back to EIO=3
         for eio in (4, 3):
             poll_url = f"{self._http_base}{self.sio_path}?EIO={eio}&transport=polling"
@@ -94,7 +107,7 @@ class SocketIOBridge:
             for k, v in self._extra_headers().items():
                 req.add_header(k, v)
             try:
-                with urlopen(req, timeout=self.timeout, context=ctx) as resp:
+                with opener.open(req, timeout=self.timeout) as resp:
                     body = resp.read().decode()
                 log.debug(f"Polling response: {body[:300]}")
                 json_start = body.find("{")
@@ -158,13 +171,32 @@ class SocketIOBridge:
 
         ai_output = ""
 
-        async with websockets.connect(
-            ws_url,
+        # Route WebSocket through proxy (Burp) if set
+        ws_kwargs = dict(
             additional_headers=self._extra_headers(),
             ssl=ssl_ctx,
             open_timeout=self.timeout,
             close_timeout=self.timeout,
-        ) as ws:
+        )
+        if self.proxy:
+            try:
+                from python_socks.async_.asyncio import Proxy as SocksProxy
+            except ImportError:
+                raise RuntimeError(
+                    "python-socks is required for WebSocket proxy support.\n"
+                    "Install with: pip install python-socks"
+                )
+            from urllib.parse import urlparse
+            parsed = urlparse(ws_url)
+            host = parsed.hostname
+            port = parsed.port or (443 if ws_url.startswith("wss://") else 80)
+            log.info(f"  WS connecting via proxy {self.proxy} → {host}:{port}")
+            proxy_conn = SocksProxy.from_url(self.proxy)
+            sock = await proxy_conn.connect(dest_host=host, dest_port=port, timeout=self.timeout)
+            ws_kwargs["sock"] = sock
+            ws_kwargs["server_hostname"] = host
+
+        async with websockets.connect(ws_url, **ws_kwargs) as ws:
             # Engine.IO upgrade probe
             await ws.send("2probe")
             log.debug("  → sent: 2probe")
@@ -326,6 +358,7 @@ def main():
     parser.add_argument("--header", default="", help="Headers: Key:Val;Key2:Val2")
     parser.add_argument("--port", type=int, default=8765, help="Local HTTP port (default 8765)")
     parser.add_argument("--timeout", type=int, default=60, help="Timeout in seconds (default 60)")
+    parser.add_argument("--proxy", default="", help="HTTP proxy for Burp interception, e.g. http://127.0.0.1:8080")
     parser.add_argument("--debug", action="store_true", help="Show all raw WS frames")
     parser.add_argument("--test", action="store_true", help="Send a test message at startup and exit")
     args = parser.parse_args()
@@ -342,6 +375,7 @@ def main():
         cookies=args.cookie,
         headers=args.header,
         timeout=args.timeout,
+        proxy=args.proxy,
     )
 
     _loop = asyncio.new_event_loop()
