@@ -10,7 +10,7 @@ Usage:
     aix jailbreak https://chat.company.com
 """
 
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 __author__ = "AIX Team"
 __license__ = "MIT"
 

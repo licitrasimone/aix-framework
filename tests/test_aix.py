@@ -15,7 +15,7 @@ class TestVersion:
 
     def test_version_is_set(self):
         """Test version is set correctly"""
-        assert __version__ == "1.2.1"
+        assert __version__ == "1.2.2"
 
     def test_version_format(self):
         """Test version follows semver format"""
