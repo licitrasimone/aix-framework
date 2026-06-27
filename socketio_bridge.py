@@ -143,7 +143,7 @@ class SocketIOBridge:
             "client_message",
             {
                 "message": {
-                    "threadId": self._thread_id,
+                    "threadId": "",  # always empty — server assigns to session thread
                     "id": msg_id,
                     "name": self.user_email,
                     "type": "user_message",
@@ -320,7 +320,10 @@ class SocketIOBridge:
 
                 if event_name == "task_end":
                     log.info(f"  task_end — events seen: {events_seen}")
-                    break
+                    if ai_output:  # only stop if we already have the response
+                        break
+                    log.info("  (no response yet, waiting...)")
+                    continue
 
                 if event_name in ("stream_start", "new_message", "update_message"):
                     if msg_type == "assistant_message":
