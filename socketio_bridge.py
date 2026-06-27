@@ -214,11 +214,13 @@ class SocketIOBridge:
             deadline = asyncio.get_event_loop().time() + self.timeout
             while asyncio.get_event_loop().time() < deadline:
                 remaining = deadline - asyncio.get_event_loop().time()
+                if remaining <= 0:
+                    break
                 try:
                     raw = await asyncio.wait_for(ws.recv(), timeout=min(5.0, remaining))
                 except asyncio.TimeoutError:
-                    log.warning("  Timed out waiting for next frame")
-                    break
+                    log.debug("  (no frame in last 5s, still waiting...)")
+                    continue
 
                 if raw == "2":
                     await ws.send("3")
@@ -265,7 +267,10 @@ class BridgeHandler(BaseHTTPRequestHandler):
         log.info(f"HTTP {format % args}")
 
     def do_GET(self):
-        """Quick health-check: GET http://localhost:8765/ shows bridge config."""
+        """Health-check only at /. Return 404 for all other paths to prevent recon false positives."""
+        if self.path != "/":
+            self._respond(404, {"error": "not found"})
+            return
         info = {
             "status": "ok",
             "target": f"{_bridge._http_base}{_bridge.sio_path}",
