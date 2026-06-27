@@ -206,6 +206,7 @@ def recon_cmd(
     chat_id_param,
     new_chat,
     reuse_chat,
+    no_bypass,
     key=None,
     profile=None,
 ):
@@ -273,6 +274,7 @@ def recon_cmd(
         chat_id_param=chat_id_param,
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
+        no_bypass=no_bypass,
     )
 
 
@@ -331,6 +333,7 @@ def inject_cmd(
     chat_id_param,
     new_chat,
     reuse_chat,
+    no_bypass,
 ):
     """
     Inject - Prompt injection attacks
@@ -402,6 +405,7 @@ def inject_cmd(
         chat_id_param=chat_id_param,
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
+        no_bypass=no_bypass,
     )
 
 
@@ -455,6 +459,7 @@ def jailbreak_cmd(
     chat_id_param,
     new_chat,
     reuse_chat,
+    no_bypass,
 ):
     """
     Jailbreak - Bypass AI restrictions
@@ -520,6 +525,7 @@ def jailbreak_cmd(
         chat_id_param=chat_id_param,
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
+        no_bypass=no_bypass,
     )
 
 
@@ -571,6 +577,7 @@ def extract_cmd(
     chat_id_param,
     new_chat,
     reuse_chat,
+    no_bypass,
 ):
     """
     Extract - System prompt extraction
@@ -636,6 +643,7 @@ def extract_cmd(
         chat_id_param=chat_id_param,
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
+        no_bypass=no_bypass,
     )
 
 
@@ -687,6 +695,7 @@ def leak_cmd(
     chat_id_param,
     new_chat,
     reuse_chat,
+    no_bypass,
 ):
     """
     Leak - Training data extraction
@@ -752,6 +761,7 @@ def leak_cmd(
         chat_id_param=chat_id_param,
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
+        no_bypass=no_bypass,
     )
 
 
@@ -799,6 +809,7 @@ def exfil_cmd(
     chat_id_param,
     new_chat,
     reuse_chat,
+    no_bypass,
     refresh_url=None,
     refresh_regex=None,
     refresh_param=None,
@@ -863,6 +874,7 @@ def exfil_cmd(
         chat_id_param=chat_id_param,
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
+        no_bypass=no_bypass,
     )
 
 
@@ -914,6 +926,7 @@ def agent_cmd(
     chat_id_param,
     new_chat,
     reuse_chat,
+    no_bypass,
 ):
     """
     Agent - AI agent exploitation
@@ -979,6 +992,7 @@ def agent_cmd(
         chat_id_param=chat_id_param,
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
+        no_bypass=no_bypass,
     )
 
 
@@ -1030,6 +1044,7 @@ def dos_cmd(
     chat_id_param,
     new_chat,
     reuse_chat,
+    no_bypass,
 ):
     """
     DoS - Denial of Service testing
@@ -1091,6 +1106,7 @@ def dos_cmd(
         chat_id_param=chat_id_param,
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
+        no_bypass=no_bypass,
     )
 
 
@@ -1144,6 +1160,7 @@ def fuzz_cmd(
     chat_id_param,
     new_chat,
     reuse_chat,
+    no_bypass,
 ):
     """
     Fuzz - Fuzzing and edge cases
@@ -1207,6 +1224,7 @@ def fuzz_cmd(
         chat_id_param=chat_id_param,
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
+        no_bypass=no_bypass,
     )
 
 
@@ -1258,6 +1276,7 @@ def memory_cmd(
     chat_id_param,
     new_chat,
     reuse_chat,
+    no_bypass,
 ):
     """
     Memory - Memory and context manipulation attacks
@@ -1325,6 +1344,7 @@ def memory_cmd(
         chat_id_param=chat_id_param,
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
+        no_bypass=no_bypass,
     )
 
 
@@ -1400,6 +1420,7 @@ def rag_cmd(
     chat_id_param,
     new_chat,
     reuse_chat,
+    no_bypass,
     canary,
     category,
 ):
@@ -1492,6 +1513,7 @@ def rag_cmd(
         chat_id_param=chat_id_param,
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
+        no_bypass=no_bypass,
         canary=canary,
         category=category,
     )
@@ -1566,6 +1588,7 @@ def multiturn_cmd(
     chat_id_param,
     new_chat,
     reuse_chat,
+    no_bypass,
     category,
     max_turns,
     turn_delay,
@@ -1653,6 +1676,7 @@ def multiturn_cmd(
         chat_id_param=chat_id_param,
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat, is_multiturn=True),
         session_id=session_id,
+        no_bypass=no_bypass,
     )
 
 
