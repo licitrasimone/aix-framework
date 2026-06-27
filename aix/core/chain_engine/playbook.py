@@ -189,7 +189,7 @@ class PlaybookParser:
             raise PlaybookParseError(f"Playbook file not found: {path}")
 
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
         except yaml.YAMLError as e:
             raise PlaybookParseError(f"Invalid YAML in {path}: {e}")

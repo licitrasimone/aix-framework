@@ -38,7 +38,7 @@ class LLMEvaluator:
             os.path.dirname(os.path.dirname(__file__)), "prompts", "evaluator.txt"
         )
         try:
-            with open(prompt_path) as f:
+            with open(prompt_path, encoding="utf-8") as f:
                 self.prompt_template = f.read()
         except FileNotFoundError:
             console.print(

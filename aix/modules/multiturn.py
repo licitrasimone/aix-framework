@@ -78,7 +78,7 @@ class MultiTurnScanner(BaseScanner):
         payload_path = os.path.join(os.path.dirname(__file__), "..", "payloads", "multiturn.json")
 
         try:
-            with open(payload_path) as f:
+            with open(payload_path, encoding="utf-8") as f:
                 data = json.load(f)
 
             sequences = data.get("sequences", [])

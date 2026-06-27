@@ -86,7 +86,7 @@ class AIEngine:
         """Load a prompt template from file."""
         prompt_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "prompts", filename)
         try:
-            with open(prompt_path) as f:
+            with open(prompt_path, encoding="utf-8") as f:
                 return f.read()
         except FileNotFoundError:
             console.print(f"[yellow]AI_ENGINE[/yellow] [!] Prompt not found: {filename}")

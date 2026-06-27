@@ -30,19 +30,19 @@ def _get_payloads_dir() -> Path:
 
 def _load_probes() -> list:
     path = _get_payloads_dir() / "fingerprint_probes.json"
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
 def _load_signature_db() -> dict:
     path = _get_payloads_dir() / "fingerprint_embeddings.json"
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
 def _save_signature_db(db: dict):
     path = _get_payloads_dir() / "fingerprint_embeddings.json"
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(db, f, indent=2)
     print(f"[+] Saved signature database to {path}")
 

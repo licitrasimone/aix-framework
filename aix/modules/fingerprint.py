@@ -82,7 +82,7 @@ class FingerprintScanner:
         """Load fingerprint database"""
         try:
             path = Path(__file__).parent.parent / "payloads" / "fingerprint_db.json"
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
             if hasattr(self, "console") and not getattr(self, "quiet", False):
@@ -105,7 +105,7 @@ class FingerprintScanner:
         """Load embedding probe queries from fingerprint_probes.json."""
         try:
             path = Path(__file__).parent.parent / "payloads" / "fingerprint_probes.json"
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return []
@@ -114,7 +114,7 @@ class FingerprintScanner:
         """Load embedding signature database from fingerprint_embeddings.json."""
         try:
             path = Path(__file__).parent.parent / "payloads" / "fingerprint_embeddings.json"
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return {}

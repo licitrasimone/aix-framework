@@ -33,7 +33,7 @@ class LeakScanner(BaseScanner):
         # Load config (PII patterns)
         config_path = os.path.join(os.path.dirname(__file__), "..", "payloads", "leak_config.json")
         try:
-            with open(config_path) as f:
+            with open(config_path, encoding="utf-8") as f:
                 self.config = json.load(f)
         except Exception as e:
             console.print(f"[yellow][!] Could not load config from {config_path}: {e}[/yellow]")

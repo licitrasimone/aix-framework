@@ -50,7 +50,7 @@ class ReconScanner(BaseScanner):
         # Load config from JSON
         config_path = os.path.join(os.path.dirname(__file__), "..", "payloads", "recon_config.json")
         try:
-            with open(config_path) as f:
+            with open(config_path, encoding="utf-8") as f:
                 self.config = json.load(f)
         except Exception as e:
             if not self.quiet:
@@ -117,12 +117,12 @@ class ReconScanner(BaseScanner):
             os.path.dirname(__file__), "..", "payloads", "guardrail_db.json"
         )
         try:
-            with open(guardrail_probes_path) as f:
+            with open(guardrail_probes_path, encoding="utf-8") as f:
                 self.guardrail_probes = json.load(f)
         except Exception:
             self.guardrail_probes = []
         try:
-            with open(guardrail_db_path) as f:
+            with open(guardrail_db_path, encoding="utf-8") as f:
                 self.guardrail_db = json.load(f)
         except Exception:
             self.guardrail_db = {}
@@ -132,7 +132,7 @@ class ReconScanner(BaseScanner):
             paths_file = os.path.join(
                 os.path.dirname(__file__), "..", "payloads", "discovery_paths.json"
             )
-            with open(paths_file) as f:
+            with open(paths_file, encoding="utf-8") as f:
                 self.discovery_paths = json.load(f)
         except Exception:
             self.discovery_paths = ["/v1/chat/completions", "/api/chat", "/api/generate"]
@@ -1410,7 +1410,7 @@ class ReconScanner(BaseScanner):
         # Save results if output file specified
         if self.output:
             try:
-                with open(self.output, "w") as f:
+                with open(self.output, "w", encoding="utf-8") as f:
                     json.dump(self.results, f, indent=2)
                 self.console.print(f"[green][+][/green] Results saved to {self.output}")
             except Exception as e:

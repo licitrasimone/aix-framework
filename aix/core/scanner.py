@@ -166,7 +166,7 @@ class BaseScanner(ABC):
         payload_path = os.path.join(os.path.dirname(__file__), "..", "payloads", filename)
         # self.console.print(f"[debug] Loading {filename} from {payload_path}")
         try:
-            with open(payload_path) as f:
+            with open(payload_path, encoding="utf-8") as f:
                 payloads = json.load(f)
                 # self.console.print(f"[debug] Parsed JSON for {filename}: {len(payloads)} items")
 
@@ -702,7 +702,7 @@ class BaseScanner(ABC):
             "findings": [f.to_dict() for f in self.findings],
             "total": len(self.findings),
         }
-        with open(output_path, "w") as fh:
+        with open(output_path, "w", encoding="utf-8") as fh:
             json.dump(data, fh, indent=2)
 
     async def run(self):
