@@ -209,66 +209,37 @@ class SocketIOBridge:
             log.debug("  → sent: 5 (upgrade confirmed)")
             log.info("[3/5] WS upgrade complete")
 
-            # Socket.IO namespace connect
-            await ws.send("40")
-            log.debug("  → sent: 40 (namespace connect)")
-            # Wait up to 3s for "40" confirmation; some servers (uvicorn/fastapi)
-            # send NOOP "6" or nothing — treat that as implicit connect OK
-            try:
-                ns_deadline = asyncio.get_event_loop().time() + 3.0
-                while asyncio.get_event_loop().time() < ns_deadline:
-                    raw = await asyncio.wait_for(ws.recv(), timeout=1.0)
-                    log.debug(f"  ← recv: {raw[:120]}")
-                    if raw == "2":
-                        await ws.send("3")
-                        log.debug("  → sent: 3 (pong)")
-                        continue
-                    if raw.startswith("40"):
-                        log.info("[4/5] Namespace connected (confirmed)")
-                        break
-                    if raw.startswith("44"):
-                        raise RuntimeError(f"Socket.IO namespace connect rejected: {raw}")
-                    # 6 = NOOP or anything else → server connected implicitly
-                    log.info(f"[4/5] Namespace connected (implicit, server sent: {raw[:20]})")
-                    break
-                else:
-                    log.info("[4/5] Namespace connected (no confirmation from server, proceeding)")
-            except asyncio.TimeoutError:
-                log.info("[4/5] Namespace connected (timeout waiting for confirm, proceeding)")
-
-            # Wait for on_chat_start sequence to complete before sending
-            log.info("[4b/5] Waiting for on_chat_start sequence...")
-            seen_chat_start = False
+            # Server runs on_chat_start and ends with "6" (NOOP) as ready signal.
+            # Do NOT send "40" — namespace connect is automatic on this server.
+            # Drain all init events until "6" is received.
+            log.info("[4/5] Waiting for server init sequence (ends with '6')...")
             init_deadline = asyncio.get_event_loop().time() + 15.0
             while asyncio.get_event_loop().time() < init_deadline:
                 try:
-                    raw = await asyncio.wait_for(ws.recv(), timeout=2.0)
+                    raw = await asyncio.wait_for(ws.recv(), timeout=3.0)
                 except asyncio.TimeoutError:
-                    log.info("  [init] 2s silence — proceeding")
+                    log.warning("  [init] timeout waiting for init sequence, proceeding anyway")
                     break
                 if raw == "2":
                     await ws.send("3")
+                    log.debug("  [init] ping/pong")
                     continue
-                if not raw.startswith("42"):
-                    log.debug(f"  [init] non-event: {raw[:30]}")
-                    continue
-                try:
-                    parsed = json.loads(raw[2:])
-                    ev = parsed[0]
-                    ed = parsed[1] if len(parsed) > 1 else {}
-                except Exception:
-                    continue
-                log.info(f"  [init] ← {ev} name={ed.get('name','')} threadId={ed.get('threadId','')[:8]}")
-                # capture threadId from on_chat_start
-                tid = ed.get("threadId", "")
-                if tid and not self._thread_id:
-                    self._thread_id = tid
-                    log.info(f"  [init] threadId captured: {tid}")
-                if ev in ("new_message", "update_message") and ed.get("name") == "on_chat_start":
-                    seen_chat_start = True
-                if ev == "task_end" and seen_chat_start:
-                    log.info("  [init] on_chat_start complete — ready to send")
+                if raw == "6":
+                    log.info("  [init] received '6' — server ready")
                     break
+                if raw.startswith("42"):
+                    try:
+                        parsed = json.loads(raw[2:])
+                        ev = parsed[0]
+                        ed = parsed[1] if len(parsed) > 1 else {}
+                        tid = ed.get("threadId", "")
+                        if tid and not self._thread_id:
+                            self._thread_id = tid
+                        log.info(f"  [init] ← {ev} name={ed.get('name','')} threadId={tid[:8] if tid else ''}")
+                    except Exception:
+                        log.debug(f"  [init] ← {raw[:60]}")
+                else:
+                    log.debug(f"  [init] ← {raw[:30]}")
 
             # Send payload
             frame = self._build_frame(payload)
