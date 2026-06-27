@@ -288,6 +288,23 @@ class SocketIOBridge:
         return ai_output
 
 
+def _extract_openai_content(data: dict) -> str:
+    """Extract text from OpenAI-format body: messages[-1].content or messages[0].content."""
+    msgs = data.get("messages")
+    if not msgs or not isinstance(msgs, list):
+        return ""
+    # prefer last user message
+    for msg in reversed(msgs):
+        if isinstance(msg, dict) and msg.get("role") == "user":
+            content = msg.get("content", "")
+            if isinstance(content, list):  # vision format
+                for part in content:
+                    if isinstance(part, dict) and part.get("type") == "text":
+                        return part.get("text", "")
+            return str(content) if content else ""
+    return str(msgs[-1].get("content", "")) if msgs else ""
+
+
 # --- HTTP server ---
 
 _bridge: SocketIOBridge = None
@@ -312,6 +329,10 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self._respond(200, info)
 
     def do_POST(self):
+        if self.path != "/":
+            self._respond(404, {"error": "not found"})
+            return
+
         length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(length)
         try:
@@ -320,17 +341,36 @@ class BridgeHandler(BaseHTTPRequestHandler):
             self._respond(400, {"error": "invalid JSON"})
             return
 
-        payload = data.get("message") or data.get("query") or data.get("input") or str(data)
+        # Extract payload — support generic {"message":...}, OpenAI {"messages":[...]},
+        # and any other single-field formats aix may send
+        payload = (
+            data.get("message")
+            or data.get("query")
+            or data.get("input")
+            or data.get("prompt")
+            or _extract_openai_content(data)
+            or None
+        )
+        if not payload:
+            log.warning(f"Could not extract payload from body: {str(data)[:120]}")
+            self._respond(400, {"error": "no payload found", "received": str(data)[:200]})
+            return
 
         try:
             future = asyncio.run_coroutine_threadsafe(_bridge.send(payload), _loop)
             result = future.result(timeout=_bridge.timeout + 10)
         except Exception as e:
             log.error(f"Bridge error: {e}")
-            self._respond(500, {"error": str(e)})
+            try:
+                self._respond(500, {"error": str(e)})
+            except Exception:
+                pass
             return
 
-        self._respond(200, {"output": result})
+        try:
+            self._respond(200, {"output": result})
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+            log.warning("aix closed the connection before response was sent (timeout on client side)")
 
     def _respond(self, status: int, body: dict):
         encoded = json.dumps(body).encode()
@@ -357,7 +397,7 @@ def main():
     parser.add_argument("--cookie", default="", help="Cookies: key=val;key2=val2")
     parser.add_argument("--header", default="", help="Headers: Key:Val;Key2:Val2")
     parser.add_argument("--port", type=int, default=8765, help="Local HTTP port (default 8765)")
-    parser.add_argument("--timeout", type=int, default=60, help="Timeout in seconds (default 60)")
+    parser.add_argument("--timeout", type=int, default=120, help="Timeout in seconds (default 120)")
     parser.add_argument("--proxy", default="", help="HTTP proxy for Burp interception, e.g. http://127.0.0.1:8080")
     parser.add_argument("--debug", action="store_true", help="Show all raw WS frames")
     parser.add_argument("--test", action="store_true", help="Send a test message at startup and exit")
@@ -398,7 +438,7 @@ def main():
     server = HTTPServer(("127.0.0.1", args.port), BridgeHandler)
     log.info(f"Bridge listening on http://127.0.0.1:{args.port}")
     log.info(f"Target: {args.base_url}{args.sio_path}")
-    log.info(f"Run aix: aix inject http://127.0.0.1:{args.port} --response-path output")
+    log.info(f"Run aix: aix inject http://127.0.0.1:{args.port} --response-path output --timeout 120")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
