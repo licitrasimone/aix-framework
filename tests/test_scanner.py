@@ -73,13 +73,12 @@ class TestBaseScanner:
         assert scanner.risk == 1
 
     def test_init_with_timeout(self):
-        """Test initialization with timeout - uses default timeout"""
+        """Test initialization with a custom timeout propagates to the scanner"""
         from aix.modules.inject import InjectScanner
 
         scanner = InjectScanner(target="https://example.com", timeout=60)
 
-        # Scanner uses default timeout (kwargs propagation is implementation-specific)
-        assert scanner.timeout == 30  # Default timeout
+        assert scanner.timeout == 60
 
     def test_init_default_timeout(self):
         """Test default timeout"""
@@ -249,15 +248,14 @@ class TestScannerConnectorCreation:
         assert connector.config.get("proxy") == "127.0.0.1:8080"
 
     def test_connector_inherits_timeout(self):
-        """Test connector inherits default timeout"""
+        """Test connector inherits the scanner's custom timeout"""
         from aix.modules.inject import InjectScanner
 
         scanner = InjectScanner(target="https://example.com", timeout=120)
 
         connector = scanner._create_connector()
 
-        # Connector uses scanner's timeout (default 30)
-        assert connector.config.get("timeout") == 30  # Default timeout
+        assert connector.config.get("timeout") == 120
 
     def test_create_connector_ws_url(self):
         """Test ws:// URL creates WebSocketConnector"""

@@ -1807,6 +1807,7 @@ def db(export, clear, target, module, sessions, session_id, conversations, conve
 @click.option("--param", "-p", help="Parameter path for injection (e.g., messages[0].content)")
 @click.option("--key", "-k", help="API key for direct API access")
 @click.option("--output", "-o", help="Output file for report (HTML or JSON)")
+@click.option("--timeout", "-t", default=30, help="Request timeout in seconds")
 @click.option("--verbose", "-v", count=True, help="Verbose output (-v: reasons, -vv: debug)")
 @click.option("--proxy", help="Use HTTP proxy for outbound requests (host:port)")
 @click.option("--cookie", "-C", help="Cookies for authentication (key=value; ...)")
@@ -2013,6 +2014,7 @@ def chain_cmd(
     help="Evasion level",
 )
 @click.option("--output", "-o", help="Output file for results")
+@click.option("--timeout", "-t", default=30, help="Request timeout in seconds")
 @click.option("--verbose", "-v", count=True, help="Verbose output (-v: reasons, -vv: debug)")
 @click.option("--proxy", help="Use HTTP proxy for outbound requests (host:port)")
 @click.option("--cookie", "-C", help="Cookies for authentication (key=value; ...)")
@@ -2062,6 +2064,7 @@ def scan(
     profile,
     evasion,
     output,
+    timeout,
     verbose,
     proxy,
     cookie,
@@ -2146,6 +2149,7 @@ def scan(
                 headers=headers,
                 injection_param=param,
                 body_format=format,
+                timeout=timeout,
                 refresh_config={
                     "url": refresh_url,
                     "regex": refresh_regex,

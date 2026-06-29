@@ -86,8 +86,6 @@ class BaseScanner(ABC):
         self.evasion_level = kwargs.get("evasion", "none")
         self.evasion = PayloadEvasion(self.evasion_level)
 
-        self.timeout = kwargs.get("timeout", 30)
-
         # State
         self.findings = []
         self.stats = {"total": 0, "success": 0, "blocked": 0}
