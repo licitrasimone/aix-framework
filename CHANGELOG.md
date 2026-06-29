@@ -136,8 +136,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All testing requires explicit authorization
 - Built for ethical security testing and red team operations
 
-[Unreleased]: https://github.com/licitrasimone/aix-framework/compare/1.2.3...HEAD
-[1.2.3]: https://github.com/licitrasimone/aix-framework/compare/1.2.2...1.2.3
+[Unreleased]: https://github.com/licitrasimone/aix-framework/compare/v1.2.3...HEAD
+[1.2.3]: https://github.com/licitrasimone/aix-framework/compare/1.2.2...v1.2.3
 [1.2.2]: https://github.com/licitrasimone/aix-framework/compare/1.2.1...1.2.2
 [1.2.1]: https://github.com/licitrasimone/aix-framework/compare/1.2.0...1.2.1
 [1.2.0]: https://github.com/licitrasimone/aix-framework/compare/v1.1.0...1.2.0
