@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-06-29
+
+### Fixed
+- **`--timeout` never reached the scanner** — `BaseScanner.__init__` set `self.timeout` from its named parameter, then immediately overwrote it with `kwargs.get("timeout", 30)`. Because `timeout` binds to the named parameter it was never present in `**kwargs`, so the value always reset to 30 and the flag was a silent no-op on every command (including `recon`, which already exposed it). Removed the clobbering assignment.
+- **Report export crashed on Windows (charmap)** — `Path.write_text()` calls in the HTML/JSON reporters (`aix/core/reporting/base.py`, `aix/core/reporting/chain.py`) and database export (`aix/db/database.py`) now pass `encoding="utf-8"`, fixing `UnicodeEncodeError: 'charmap'` when `aix db --export` writes non-ASCII content.
+
+### Added
+- `--timeout` / `-t` option on every attack command. Previously only `recon` and `chain` exposed it; it is now part of `standard_options` so `inject`, `jailbreak`, `extract`, `leak`, `exfil`, `agent`, `dos`, `fuzz`, `memory`, `rag`, and `multiturn` accept it, and the `scan` meta-command forwards it to each module.
+
+## [1.2.2] - 2026-06-27
+
+### Fixed
+- Added explicit `encoding="utf-8"` to all `open()` calls across the package to prevent Windows `charmap` decode/encode errors when loading payloads or writing output.
+
+## [1.2.1] - 2026-06-27
+
+### Fixed
+- Added the missing `no_bypass` parameter to all CLI command signatures. The `--no-bypass` flag was injected by `standard_options` but the command functions did not declare it, raising `unexpected keyword argument 'no_bypass'` at invocation.
+
 ## [1.2.0] - 2026-04-17
 
 ### Added
@@ -117,8 +136,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All testing requires explicit authorization
 - Built for ethical security testing and red team operations
 
-[Unreleased]: https://github.com/licitrasimone/aix-framework/compare/v1.2.0...HEAD
-[1.2.0]: https://github.com/licitrasimone/aix-framework/compare/v1.1.0...v1.2.0
+[Unreleased]: https://github.com/licitrasimone/aix-framework/compare/1.2.3...HEAD
+[1.2.3]: https://github.com/licitrasimone/aix-framework/compare/1.2.2...1.2.3
+[1.2.2]: https://github.com/licitrasimone/aix-framework/compare/1.2.1...1.2.2
+[1.2.1]: https://github.com/licitrasimone/aix-framework/compare/1.2.0...1.2.1
+[1.2.0]: https://github.com/licitrasimone/aix-framework/compare/v1.1.0...1.2.0
 [1.1.0]: https://github.com/licitrasimone/aix-framework/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/licitrasimone/aix-framework/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/licitrasimone/aix-framework/compare/v1.0.0...v1.0.1
