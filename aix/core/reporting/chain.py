@@ -564,7 +564,7 @@ class ChainReporter:
 </html>
         """
 
-        path.write_text(html)
+        path.write_text(html, encoding="utf-8")
         console.print(f"[green][+] Report saved to {path}[/green]")
 
     def _escape_html(self, text: str) -> str:

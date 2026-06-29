@@ -166,7 +166,6 @@ def main(ctx, version):
 # ============================================================================
 @main.command()
 @standard_options
-@click.option("--timeout", "-t", default=30, help="Request timeout in seconds")
 @click.option(
     "--evasion",
     "-e",
@@ -334,6 +333,7 @@ def inject_cmd(
     new_chat,
     reuse_chat,
     no_bypass,
+    timeout,
 ):
     """
     Inject - Prompt injection attacks
@@ -406,6 +406,7 @@ def inject_cmd(
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
         no_bypass=no_bypass,
+        timeout=timeout,
     )
 
 
@@ -460,6 +461,7 @@ def jailbreak_cmd(
     new_chat,
     reuse_chat,
     no_bypass,
+    timeout,
 ):
     """
     Jailbreak - Bypass AI restrictions
@@ -526,6 +528,7 @@ def jailbreak_cmd(
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
         no_bypass=no_bypass,
+        timeout=timeout,
     )
 
 
@@ -578,6 +581,7 @@ def extract_cmd(
     new_chat,
     reuse_chat,
     no_bypass,
+    timeout,
 ):
     """
     Extract - System prompt extraction
@@ -644,6 +648,7 @@ def extract_cmd(
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
         no_bypass=no_bypass,
+        timeout=timeout,
     )
 
 
@@ -696,6 +701,7 @@ def leak_cmd(
     new_chat,
     reuse_chat,
     no_bypass,
+    timeout,
 ):
     """
     Leak - Training data extraction
@@ -762,6 +768,7 @@ def leak_cmd(
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
         no_bypass=no_bypass,
+        timeout=timeout,
     )
 
 
@@ -810,6 +817,7 @@ def exfil_cmd(
     new_chat,
     reuse_chat,
     no_bypass,
+    timeout,
     refresh_url=None,
     refresh_regex=None,
     refresh_param=None,
@@ -875,6 +883,7 @@ def exfil_cmd(
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
         no_bypass=no_bypass,
+        timeout=timeout,
     )
 
 
@@ -927,6 +936,7 @@ def agent_cmd(
     new_chat,
     reuse_chat,
     no_bypass,
+    timeout,
 ):
     """
     Agent - AI agent exploitation
@@ -993,6 +1003,7 @@ def agent_cmd(
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
         no_bypass=no_bypass,
+        timeout=timeout,
     )
 
 
@@ -1045,6 +1056,7 @@ def dos_cmd(
     new_chat,
     reuse_chat,
     no_bypass,
+    timeout,
 ):
     """
     DoS - Denial of Service testing
@@ -1107,6 +1119,7 @@ def dos_cmd(
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
         no_bypass=no_bypass,
+        timeout=timeout,
     )
 
 
@@ -1161,6 +1174,7 @@ def fuzz_cmd(
     new_chat,
     reuse_chat,
     no_bypass,
+    timeout,
 ):
     """
     Fuzz - Fuzzing and edge cases
@@ -1225,6 +1239,7 @@ def fuzz_cmd(
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
         no_bypass=no_bypass,
+        timeout=timeout,
     )
 
 
@@ -1277,6 +1292,7 @@ def memory_cmd(
     new_chat,
     reuse_chat,
     no_bypass,
+    timeout,
 ):
     """
     Memory - Memory and context manipulation attacks
@@ -1345,6 +1361,7 @@ def memory_cmd(
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
         no_bypass=no_bypass,
+        timeout=timeout,
     )
 
 
@@ -1421,6 +1438,7 @@ def rag_cmd(
     new_chat,
     reuse_chat,
     no_bypass,
+    timeout,
     canary,
     category,
 ):
@@ -1514,6 +1532,7 @@ def rag_cmd(
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat),
         session_id=session_id,
         no_bypass=no_bypass,
+        timeout=timeout,
         canary=canary,
         category=category,
     )
@@ -1589,6 +1608,7 @@ def multiturn_cmd(
     new_chat,
     reuse_chat,
     no_bypass,
+    timeout,
     category,
     max_turns,
     turn_delay,
@@ -1677,6 +1697,7 @@ def multiturn_cmd(
         new_chat=_resolve_chat_id_flags(new_chat, reuse_chat, is_multiturn=True),
         session_id=session_id,
         no_bypass=no_bypass,
+        timeout=timeout,
     )
 
 
@@ -1786,7 +1807,6 @@ def db(export, clear, target, module, sessions, session_id, conversations, conve
 @click.option("--param", "-p", help="Parameter path for injection (e.g., messages[0].content)")
 @click.option("--key", "-k", help="API key for direct API access")
 @click.option("--output", "-o", help="Output file for report (HTML or JSON)")
-@click.option("--timeout", "-t", default=30, help="Request timeout in seconds")
 @click.option("--verbose", "-v", count=True, help="Verbose output (-v: reasons, -vv: debug)")
 @click.option("--proxy", help="Use HTTP proxy for outbound requests (host:port)")
 @click.option("--cookie", "-C", help="Cookies for authentication (key=value; ...)")

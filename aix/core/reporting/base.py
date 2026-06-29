@@ -364,7 +364,7 @@ class Reporter:
             data["scan_info"]["target"] = self.metadata.target
             data["scan_info"]["modules_run"] = self.metadata.modules_run
 
-        Path(filepath).write_text(json.dumps(data, indent=2))
+        Path(filepath).write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     def export_html(self, filepath: str) -> None:
         """Export findings to enhanced HTML report"""
@@ -1033,7 +1033,7 @@ class Reporter:
 </html>
         """
 
-        Path(filepath).write_text(html)
+        Path(filepath).write_text(html, encoding="utf-8")
 
     def _escape_html(self, text: str) -> str:
         """Escape HTML special characters"""

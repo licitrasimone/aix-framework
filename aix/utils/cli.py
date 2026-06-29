@@ -174,6 +174,7 @@ def standard_options(func):
         default=False,
         help="Disable automatic guardrail bypass (ignores stored session guardrail data)",
     )
+    @click.option("--timeout", "-t", default=30, help="Request timeout in seconds")
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)

@@ -895,7 +895,7 @@ class AIXDatabase:
             "profiles": profiles,
         }
 
-        Path(filepath).write_text(json.dumps(data, indent=2, default=str))
+        Path(filepath).write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
 
     def close(self) -> None:
         """Close database connection"""
