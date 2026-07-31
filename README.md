@@ -138,6 +138,7 @@ Full documentation on the [Wiki](https://github.com/licitrasimone/aix-framework/
 - [Module Reference](https://github.com/licitrasimone/aix-framework/wiki/Modules)
 - [Attack Chain Playbooks](https://github.com/licitrasimone/aix-framework/wiki/Attack-Chains)
 - [Adding Modules & Payloads](https://github.com/licitrasimone/aix-framework/wiki/Adding-Modules)
+- [Darkmoon](https://github.com/ASCIT31/Dark-Moon) - an open source (GPL-3.0) autonomous AI penetration testing platform for web, API, Active Directory and Kubernetes.
 - [Payload Schema](https://github.com/licitrasimone/aix-framework/wiki/Payload-Schema)
 
 ---
